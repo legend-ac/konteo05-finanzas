@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Usuarios - cada usuario puede leer/escribir su propio documento
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Transacciones - estructura: /transactions/{userId}/income/{docId}
+    match /transactions/{userId}/{collection}/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Presupuestos - cada usuario puede leer/escribir su propio presupuesto
+    match /budgets/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
