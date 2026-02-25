@@ -6,15 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- PWA Meta Tags -->
-    <meta name="description" content="Andy05 — Tu app personal de finanzas">
+    <meta name="description" content="Konteo 05 — Tu app personal de finanzas">
     <meta name="theme-color" content="#6d5bff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Andy05">
+    <meta name="apple-mobile-web-app-title" content="Konteo 05">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     <link rel="manifest" href="/manifest.json">
 
-    <title>Andy05 — Mis Finanzas</title>
+    <title>Konteo 05 — Mis Finanzas</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <!-- Excel -->
@@ -37,7 +37,7 @@
                 <div class="login-box">
                     <div class="login-logo">
                         <span class="logo-icon">💰</span>
-                        <h1>Andy05</h1>
+                        <h1>Konteo 05</h1>
                         <p class="subtitle">Mis Finanzas Personales</p>
                     </div>
                     <form id="login-form">
@@ -56,7 +56,7 @@
                 <div class="login-box">
                     <div class="login-logo">
                         <span class="logo-icon">🚀</span>
-                        <h1>Andy05</h1>
+                        <h1>Konteo 05</h1>
                         <p class="subtitle">Crea tu cuenta</p>
                     </div>
                     <form id="register-form">
@@ -76,7 +76,7 @@
             <header>
                 <div class="header-brand">
                     <span class="brand-icon">💰</span>
-                    <h2>Andy05</h2>
+                    <h2>Konteo 05</h2>
                 </div>
                 <div class="header-actions">
                     <span id="user-name"></span>
@@ -180,7 +180,7 @@
                     <p>
                         <a href="/privacy.html">Privacidad</a> · <a href="/terms.html">Términos</a>
                     </p>
-                    <p style="margin-top: 8px;">Andy05 © 2026 — Hecho con 💜</p>
+                    <p style="margin-top: 8px;">Konteo 05 © 2026 — Hecho con 💜</p>
                 </footer>
             </main>
         </div>
@@ -246,7 +246,7 @@
 
     <script>
         // ============================================
-        // ANDY05 — App de Finanzas Personales
+        // KONTEO 05 — App de Finanzas Personales
         // ============================================
 
         firebase.initializeApp({
@@ -372,7 +372,7 @@
             try {
                 const cred = await auth.createUserWithEmailAndPassword(email, password);
                 await cred.user.updateProfile({ displayName: sanitizedName });
-                showToast('¡Cuenta creada! Bienvenido a Andy05', 'success');
+                showToast('¡Cuenta creada! Bienvenido a Konteo 05', 'success');
             } catch (err) {
                 showToast('Error: ' + err.message, 'error');
             }
@@ -898,7 +898,7 @@
                 XLSX.utils.book_append_sheet(wb, ws4, "Análisis");
 
                 const periodName = period === 'semanal' ? 'Semanal' : 'Mensual';
-                XLSX.writeFile(wb, `Andy05_${periodName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+                XLSX.writeFile(wb, `Konteo05_${periodName}_${new Date().toISOString().split('T')[0]}.xlsx`);
                 showToast(`Reporte ${periodName} descargado ✅`, 'success');
             } catch (err) {
                 showToast('Error al exportar: ' + err.message, 'error');
@@ -1099,7 +1099,7 @@
                 // Header
                 doc.setFontSize(20);
                 doc.setTextColor(109, 91, 255);
-                doc.text('Andy05 — Reporte Financiero', 105, 20, { align: 'center' });
+                doc.text('Konteo 05 — Reporte Financiero', 105, 20, { align: 'center' });
 
                 doc.setFontSize(12);
                 doc.setTextColor(100);
@@ -1148,10 +1148,10 @@
                     doc.setFontSize(8);
                     doc.setTextColor(150);
                     doc.text(`Página ${i}/${pageCount}`, 105, 290, { align: 'center' });
-                    doc.text('Andy05 © 2026', 20, 290);
+                    doc.text('Konteo 05 © 2026', 20, 290);
                 }
 
-                doc.save(`Andy05_${typeText}_${new Date().toISOString().split('T')[0]}.pdf`);
+                doc.save(`Konteo05_${typeText}_${new Date().toISOString().split('T')[0]}.pdf`);
                 showToast('PDF generado ✅', 'success');
             } catch (err) {
                 showToast('Error PDF: ' + err.message, 'error');

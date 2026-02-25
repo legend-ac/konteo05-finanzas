@@ -1,5 +1,5 @@
-// Service Worker — Andy05
-const CACHE_NAME = 'andy05-v2.0.0';
+// Service Worker — Konteo 05
+const CACHE_NAME = 'konteo05-v2.0.0';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -60,7 +60,7 @@ self.addEventListener('fetch', (event) => {
 // Push notifications (future)
 self.addEventListener('push', (event) => {
   event.waitUntil(
-    self.registration.showNotification('Andy05', {
+    self.registration.showNotification('Konteo 05', {
       body: event.data ? event.data.text() : 'Nueva notificación',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/icon-72x72.png',

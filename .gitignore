@@ -7,3 +7,4 @@ Thumbs.db
 .firebase/
 *.backup
 css/*.backup
+.vercel
