@@ -342,9 +342,9 @@ mi-dinero/
 - ✅ Validación en backend (Firestore) y frontend
 
 ### Frontend
-- ✅ **Sin XSS**: Uso de `textContent` en lugar de `innerHTML`
+- ✅ **Mitigacion XSS**: Sanitizacion de entrada y escape al renderizado
 - ✅ **Validación robusta**: Números, fechas, inputs sanitizados
-- ✅ **Sin memory leaks**: Event listeners correctamente limpiados
+- ✅ **Sin memory leaks conocidos**: Event listeners centralizados
 - ✅ **HTTPS**: Forzado en producción (Netlify/Firebase)
 
 ### Firebase
@@ -369,10 +369,10 @@ mi-dinero/
 - ✅ **Loading states**: Mensajes durante operaciones asíncronas
 
 ### Code Quality
-- ✅ **0 bugs críticos**
-- ✅ **0 código duplicado**
-- ✅ **0 variables no usadas**
-- ✅ **100/100** en auditoría de calidad
+- ✅ **Deuda técnica identificada y priorizada**
+- ✅ **Validaciones backend y hardening de despliegue**
+- ✅ **Cobertura funcional manual de flujos principales**
+- ⏳ **Tests automatizados pendientes**
 
 ---
 
@@ -497,7 +497,7 @@ MIT License - Usa, modifica y distribuye libremente.
 
 - **Líneas de Código**: ~2,500 (HTML, CSS, JS)
 - **Tiempo de Desarrollo**: 2 semanas
-- **Calidad de Código**: 100/100
+- **Calidad de Código**: En mejora continua (auditoría interna)
 - **Cobertura de Tests**: 0% (próximamente)
 - **Performance Score**: 95+ (Lighthouse)
 
