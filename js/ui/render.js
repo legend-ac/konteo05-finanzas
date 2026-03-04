@@ -31,7 +31,8 @@ function createTransactionElement(item) {
     metaSmall.className = 'item-meta';
     metaSmall.textContent = isIncome
         ? `Fuente: ${item.source || 'otros'} · Cuenta: ${item.account || 'efectivo'}${item.tags ? ` · Etiquetas: ${item.tags}` : ''}`
-        : `Comercio: ${item.merchant || '-'} · Metodo: ${item.method || 'efectivo'} · Prioridad: ${item.priority || 'media'}`;
+        : `Comercio: ${item.merchant || '-'} · Método: ${item.method || 'efectivo'} · Prioridad: ${item.priority || 'media'}`;
+
 
     leftDiv.append(strong, dateSmall, metaSmall);
 

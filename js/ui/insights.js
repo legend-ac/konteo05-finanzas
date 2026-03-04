@@ -25,7 +25,7 @@ export function updateInsights({ totalIncome, totalExpenses, balance, expenseIte
     const elBurn = document.getElementById('insight-daily-burn');
     const elAnomalies = document.getElementById('insight-anomalies');
     if (elSavings) elSavings.textContent = `${savingsRate.toFixed(1)}%`;
-    if (elRunway) elRunway.textContent = `${runway} dias`;
+    if (elRunway) elRunway.textContent = `${runway} días`;
     if (elTop) elTop.textContent = categoryTotals[topCategoryKey] > 0 ? categoryLabel : 'Sin datos';
     if (elBurn) elBurn.textContent = `S/ ${dailyBurn.toFixed(2)}`;
     if (elAnomalies) elAnomalies.textContent = String(anomalies);
