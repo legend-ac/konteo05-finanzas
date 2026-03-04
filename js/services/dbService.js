@@ -65,15 +65,41 @@ export async function savePlan(uid, planData) {
  * Obtiene transacciones desde una fecha de inicio.
  */
 export async function getTransactions(uid, startTs) {
-    // Read complete collections and filter in UI layer to preserve legacy docs
-    // that may not have a valid `date` field.
-    const [incomeSnap, expenseSnap] = await Promise.all([
-        db.collection('transactions').doc(uid).collection('income').get(),
-        db.collection('transactions').doc(uid).collection('expenses').get()
-    ]);
+    const incomeRef = db.collection('transactions').doc(uid).collection('income');
+    const expenseRef = db.collection('transactions').doc(uid).collection('expenses');
+
+    let incomeDocs = [];
+    let expenseDocs = [];
+
+    try {
+        // Query by `date` for current schema and by `createdAt` for legacy docs.
+        const [incomeByDate, incomeByCreatedAt, expenseByDate, expenseByCreatedAt] = await Promise.all([
+            incomeRef.where('date', '>=', startTs).get(),
+            incomeRef.where('createdAt', '>=', startTs).get(),
+            expenseRef.where('date', '>=', startTs).get(),
+            expenseRef.where('createdAt', '>=', startTs).get()
+        ]);
+        incomeDocs = [...incomeByDate.docs, ...incomeByCreatedAt.docs];
+        expenseDocs = [...expenseByDate.docs, ...expenseByCreatedAt.docs];
+    } catch (_) {
+        // Safe fallback if indexed queries are not available yet.
+        const [incomeSnap, expenseSnap] = await Promise.all([
+            incomeRef.get(),
+            expenseRef.get()
+        ]);
+        incomeDocs = incomeSnap.docs;
+        expenseDocs = expenseSnap.docs;
+    }
+
+    const uniqueById = (docs) => {
+        const map = new Map();
+        docs.forEach((doc) => map.set(doc.id, doc));
+        return [...map.values()];
+    };
+
     return {
-        incomeItems: incomeSnap.docs.map(doc => ({ id: doc.id, type: 'income', ...doc.data() })),
-        expenseItems: expenseSnap.docs.map(doc => ({ id: doc.id, type: 'expense', ...doc.data() }))
+        incomeItems: uniqueById(incomeDocs).map(doc => ({ id: doc.id, type: 'income', ...doc.data() })),
+        expenseItems: uniqueById(expenseDocs).map(doc => ({ id: doc.id, type: 'expense', ...doc.data() }))
     };
 }
 

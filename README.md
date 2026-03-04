@@ -151,17 +151,18 @@ http://localhost:8000
 2. Scroll a "Tus aplicaciones" → **Web**
 3. Copiar configuración
 
-#### Actualizar Código
-En `index.html` línea 240-246:
+#### Actualizar Configuración
+Edita `js/firebase/runtime-config.js`:
 ```javascript
-firebase.initializeApp({
+window.__KONTEO_FIREBASE_CONFIG__ = {
     apiKey: "TU_API_KEY",
     authDomain: "TU_AUTH_DOMAIN",
     projectId: "TU_PROJECT_ID",
     storageBucket: "TU_STORAGE_BUCKET",
     messagingSenderId: "TU_SENDER_ID",
-    appId: "TU_APP_ID"
-});
+    appId: "TU_APP_ID",
+    measurementId: "TU_MEASUREMENT_ID"
+};
 ```
 
 ### 2. Configurar Firestore Rules

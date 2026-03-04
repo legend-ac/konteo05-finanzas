@@ -151,7 +151,8 @@ async function loadData() {
         startDate.setHours(0, 0, 0, 0);
     } else if (state.currentFilter === 'week') {
         startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
+        // Hoy + 6 dias previos = 7 dias calendario.
+        startDate.setDate(startDate.getDate() - 6);
         startDate.setHours(0, 0, 0, 0);
     } else if (state.currentFilter === 'custom') {
         if (!state.customRangeStart || !state.customRangeEnd) {
@@ -197,7 +198,7 @@ async function loadData() {
 
         const allInPeriod = [...incomeItems, ...expenseItems];
         const all = sortTransactions(allInPeriod, state.currentSort);
-        state.latestExpenseItem = sortTransactions(expenseItems, state.currentSort).find(item => item.type === 'expense') || null;
+        state.latestExpenseItem = sortTransactions(expenseItems, 'date_desc')[0] || null;
 
         // Search & category filter
         const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
@@ -754,10 +755,6 @@ if ('serviceWorker' in navigator) {
         });
     }
 }
-
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
-window.addEventListener('appinstalled', () => { deferredPrompt = null; });
 
 // ============================================
 // INIT

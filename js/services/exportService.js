@@ -43,7 +43,9 @@ function inPeriod(date, period) {
     const now = new Date();
     if (period === 'semanal') {
         const start = new Date(now);
-        start.setDate(start.getDate() - 7);
+        // Hoy + 6 dias previos = 7 dias calendario.
+        start.setDate(start.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
         return date >= start;
     }
     if (period === 'mensual') {

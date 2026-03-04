@@ -7,6 +7,7 @@ const APP_SHELL = [
   '/manifest.json',
   '/js/app.js',
   '/js/state.js',
+  '/js/firebase/runtime-config.js',
   '/js/firebase/config.js',
   '/js/services/dbService.js',
   '/js/services/exportService.js',
