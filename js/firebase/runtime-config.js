@@ -1,13 +1,13 @@
 // js/firebase/runtime-config.js
-// Replace these placeholder values with your Firebase Web App config.
-// Do not commit real production keys to public repositories.
+// If a config was already injected (for example by hosting env), keep it.
+// Otherwise, expose placeholders for local setup.
 
-window.__KONTEO_FIREBASE_CONFIG__ = {
-    apiKey: 'REPLACE_WITH_FIREBASE_API_KEY',
-    authDomain: 'REPLACE_WITH_AUTH_DOMAIN',
-    projectId: 'REPLACE_WITH_PROJECT_ID',
-    storageBucket: 'REPLACE_WITH_STORAGE_BUCKET',
-    messagingSenderId: 'REPLACE_WITH_MESSAGING_SENDER_ID',
-    appId: 'REPLACE_WITH_APP_ID',
-    measurementId: 'REPLACE_WITH_MEASUREMENT_ID'
+window.__KONTEO_FIREBASE_CONFIG__ = window.__KONTEO_FIREBASE_CONFIG__ || {
+    apiKey: 'AIzaSyAk8GkeImptx01NsSW9KbP7FnCRfv8BW30',
+    authDomain: 'control-financiero-andy.firebaseapp.com',
+    projectId: 'control-financiero-andy',
+    storageBucket: 'control-financiero-andy.firebasestorage.app',
+    messagingSenderId: '320231487787',
+    appId: '1:320231487787:web:8d9d35e74c51bb0b8ded6e',
+    measurementId: 'G-NG7DYTW26G'
 };
