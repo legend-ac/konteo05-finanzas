@@ -481,8 +481,8 @@ MIT License - Usa, modifica y distribuye libremente.
 ## 👨‍💻 Autor
 
 **Tu Nombre**
-- GitHub: [@tuusuario](https://github.com/tuusuario)
-- Email: tu@email.com
+- GitHub: [@legend-ac](https://github.com/legend-ac)
+- Email: andyc9750@gmail.com
 
 ---
 
