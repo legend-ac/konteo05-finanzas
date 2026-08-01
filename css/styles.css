@@ -768,3 +768,23 @@ canvas { width: 100% !important; }
 .balance-positive { color: var(--text); }
 .balance-negative { color: var(--expense); }
 #balance.zero     { color: var(--text-3); }
+
+/* ================================================
+   MISSING ITEM / RENDER CLASSES
+   ================================================ */
+.cat-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    display: inline-block;
+}
+.cat-dot.income  { background: var(--income); }
+.cat-dot.green   { background: var(--cat-green); }
+.cat-dot.yellow  { background: var(--cat-yellow); }
+.cat-dot.red     { background: var(--cat-red); }
+
+.item-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.account-meta {
+    font-size: 11px; color: var(--text-3);
+    margin-top: 4px; text-align: right;
+}
+.account-meta strong { color: var(--gold); }
