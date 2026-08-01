@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -147,10 +147,7 @@
         <header class="app-header">
             <div class="header-brand">
                 <span class="brand-icon" aria-hidden="true">K</span>
-                <div>
-                    <h2>Konteo 05</h2>
-                    <span>Control diario</span>
-                </div>
+                <div><h2>Konteo 05</h2><span>Control diario</span></div>
             </div>
             <div class="header-actions">
                 <span id="user-name"></span>
@@ -160,90 +157,132 @@
             </div>
         </header>
 
-        <main class="dashboard-shell">
-            <!-- LEFT PANEL -->
-            <div class="dash-left">
-                <div class="dash-left-body">
+        <div class="dashboard-shell">
 
-                    <!-- Balance hero -->
+            <!-- TOP: title + period + overview card -->
+            <div class="dashboard-top">
+
+                <div class="dashboard-title-row">
+                    <div class="dashboard-title-left">
+                        <p class="dashboard-eyebrow">Control financiero</p>
+                        <h1>Lo que importa, primero.</h1>
+                    </div>
+                    <div class="period-bar" role="group" aria-label="Periodo">
+                        <button class="filter active" data-filter="today">Hoy</button>
+                        <button class="filter" data-filter="week">7 d&iacute;as</button>
+                        <button class="filter" data-filter="month">Mes</button>
+                        <button class="filter" data-filter="custom">Rango</button>
+                    </div>
+                </div>
+
+                <div id="custom-range-panel" class="custom-range-panel hidden">
+                    <span class="range-label">Desde</span>
+                    <input type="date" id="range-start" aria-label="Fecha inicio">
+                    <span class="range-label">Hasta</span>
+                    <input type="date" id="range-end" aria-label="Fecha fin">
+                    <button id="btn-apply-range" class="btn-apply">Aplicar</button>
+                </div>
+
+                <div class="dashboard-overview">
                     <div class="balance-hero">
                         <p class="balance-period-label" id="balance-period-label">Hoy</p>
                         <div id="balance" class="balance-number balance-positive" aria-live="polite">S/ 0.00</div>
                         <p class="balance-caption">Saldo del per&iacute;odo seleccionado</p>
-                        <div class="balance-sub">
-                            <div class="balance-sub-item">
-                                <span class="balance-sub-label">Ingresos</span>
-                                <span class="balance-sub-value income" id="total-income">S/ 0.00</span>
-                            </div>
-                            <div class="balance-sub-item">
-                                <span class="balance-sub-label">Gastos</span>
-                                <span class="balance-sub-value expense" id="total-expenses">S/ 0.00</span>
-                            </div>
+                    </div>
+                    <div class="overview-stat income-stat">
+                        <span>Ingresos</span>
+                        <strong id="total-income">S/ 0.00</strong>
+                    </div>
+                    <div class="overview-stat expense-stat">
+                        <span>Gastos</span>
+                        <strong id="total-expenses">S/ 0.00</strong>
+                    </div>
+                    <div class="overview-actions">
+                        <p>Registra un movimiento</p>
+                        <div class="action-buttons-desktop">
+                            <button id="btn-income-d" class="btn-add-action btn-add-income" type="button">+ Ingreso</button>
+                            <button id="btn-expense-d" class="btn-add-action btn-add-expense" type="button">&minus; Gasto</button>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Period filters -->
-                    <div class="period-bar" role="tablist" aria-label="Per&iacute;odo">
-                        <button class="filter active" data-filter="today"  aria-pressed="true">Hoy</button>
-                        <button class="filter"        data-filter="week"   aria-pressed="false">7 d&iacute;as</button>
-                        <button class="filter"        data-filter="month"  aria-pressed="false">Mes</button>
-                        <button class="filter"        data-filter="custom" aria-pressed="false">Rango</button>
-                    </div>
+                <div class="metrics-strip" id="metrics-strip">
+                    <div class="metric-item"><span class="metric-label">Ahorro</span><span class="metric-value" id="metric-savings">&mdash;</span></div>
+                    <div class="metric-item"><span class="metric-label">Runway</span><span class="metric-value" id="metric-runway">&mdash;</span></div>
+                    <div class="metric-item"><span class="metric-label">Score</span><span class="metric-value" id="metric-score">&mdash;</span></div>
+                </div>
 
-                    <!-- Custom range -->
-                    <div id="custom-range-panel" class="custom-range-panel hidden">
-                        <span class="range-label">Desde</span>
-                        <input type="date" id="range-start" aria-label="Fecha inicio">
-                        <span class="range-label">Hasta</span>
-                        <input type="date" id="range-end" aria-label="Fecha fin">
-                        <button id="btn-apply-range" class="btn-apply">Aplicar</button>
-                    </div>
+            </div><!-- /dashboard-top -->
 
-                    <!-- Metrics -->
-                    <div class="metrics-strip" id="metrics-strip">
-                        <div class="metric-item">
-                            <span class="metric-label">Ahorro</span>
-                            <span class="metric-value" id="metric-savings">—</span>
+            <!-- GRID: ledger + support -->
+            <div class="dashboard-grid">
+
+                <section class="ledger-card">
+                    <div class="ledger-toolbar">
+                        <div class="ledger-title">
+                            <p class="ledger-eyebrow">Registro</p>
+                            <h2>Movimientos <span class="transactions-count" id="tx-count"></span></h2>
                         </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Runway</span>
-                            <span class="metric-value" id="metric-runway">—</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Score</span>
-                            <span class="metric-value" id="metric-score">—</span>
+                        <div class="filter-bar">
+                            <input type="text" id="search-input" placeholder="Buscar movimiento" class="search-input" aria-label="Buscar">
+                            <select id="category-filter" class="category-filter" aria-label="Filtrar categor&iacute;a">
+                                <option value="all">Todas</option>
+                                <option value="income">Ingresos</option>
+                                <option value="green">Fijo</option>
+                                <option value="yellow">Necesario</option>
+                                <option value="red">Antojo</option>
+                            </select>
+                            <select id="sort-select" aria-label="Ordenar">
+                                <option value="date_desc">Recientes</option>
+                                <option value="date_asc">Antiguos</option>
+                                <option value="amount_desc">Mayor monto</option>
+                                <option value="amount_asc">Menor monto</option>
+                            </select>
                         </div>
                     </div>
+                    <div id="list" role="list"></div>
+                    <div class="export-section">
+                        <h3>Exportar</h3>
+                        <div class="export-row">
+                            <button id="export-period-week"  class="export-period-btn active" data-period="semanal"  aria-pressed="true">Semana</button>
+                            <button id="export-period-month" class="export-period-btn"        data-period="mensual" aria-pressed="false">Mes</button>
+                            <button id="btn-export-excel" class="btn-export">Excel</button>
+                            <button id="btn-export-pdf"   class="btn-export">PDF</button>
+                        </div>
+                    </div>
+                    <footer class="app-footer">
+                        <p><a href="/privacy.html">Privacidad</a> &middot; <a href="/terms.html">T&eacute;rminos</a> &middot; Konteo 05 &copy; 2026</p>
+                    </footer>
+                </section>
 
-                    <!-- Plan / Budget -->
+                <aside class="dashboard-support">
+
                     <div class="plan-section" id="plan-card">
-                        <div class="plan-toggle-row" id="plan-toggle">
-                            <div class="plan-toggle-left">
-                                <span class="plan-toggle-label">Presupuesto</span>
-                                <span class="plan-toggle-status" id="strategy-status">Sin l&iacute;mite definido</span>
+                        <p class="plan-eyebrow">Presupuesto</p>
+                        <h2 class="plan-h2">L&iacute;mite de gasto</h2>
+                        <p class="plan-toggle-status" id="strategy-status">Sin l&iacute;mite definido</p>
+                        <div class="budget-bar"><div class="budget-bar-fill" id="budget-progress-bar" style="width:0%"></div></div>
+                        <div class="plan-kpis">
+                            <div class="plan-kpi">
+                                <span class="plan-kpi-label">Disponible</span>
+                                <strong class="plan-kpi-value" id="budget-status">&mdash;</strong>
                             </div>
-                            <span class="plan-chevron">&#9660;</span>
                         </div>
                         <div class="plan-body" id="plan-body">
-                            <div class="budget-bar"><div class="budget-bar-fill" id="budget-progress-bar" style="width:0%"></div></div>
-                            <div class="plan-kpis">
-                                <div class="plan-kpi">
-                                    <span id="budget-status-label">Disponible</span>
-                                    <strong id="budget-status">&mdash;</strong>
-                                </div>
-                            </div>
-                            <div class="plan-inputs">
+                            <div class="plan-input-row">
                                 <div class="plan-input-wrap">
-                                    <label for="plan-expense-limit">L&iacute;mite del per&iacute;odo</label>
-                                    <input type="number" id="plan-expense-limit" min="0" step="0.01" placeholder="0.00">
+                                    <label class="plan-input-label">L&iacute;mite del per&iacute;odo</label>
+                                    <input type="number" id="plan-expense-limit" placeholder="0.00" min="0" step="0.01" class="plan-input">
                                 </div>
-                                <input type="hidden" id="plan-income-target" value="0">
-                                <button id="btn-save-plan">Guardar l&iacute;mite</button>
+                                <div class="plan-input-wrap">
+                                    <label class="plan-input-label">Ingreso objetivo</label>
+                                    <input type="number" id="plan-income-target" placeholder="0.00" min="0" step="0.01" class="plan-input">
+                                </div>
                             </div>
+                            <button id="btn-save-plan" class="btn-save-plan" type="button">Guardar</button>
                         </div>
                     </div>
 
-                    <!-- Charts -->
                     <div class="charts-section-wrap" id="charts-card">
                         <div class="charts-toggle-row" id="charts-toggle">
                             <span class="charts-toggle-label">Actividad</span>
@@ -255,68 +294,19 @@
                         </div>
                     </div>
 
-                    <!-- Desktop action buttons -->
-                    <div class="action-buttons-desktop">
-                        <button id="btn-income-d" class="btn-add-action btn-add-income" type="button">+ Ingreso</button>
-                        <button id="btn-expense-d" class="btn-add-action btn-add-expense" type="button">&minus; Gasto</button>
-                    </div>
+                </aside>
 
-                </div><!-- /dash-left-body -->
-            </div><!-- /dash-left -->
+            </div><!-- /dashboard-grid -->
 
-            <!-- RIGHT PANEL: transactions -->
-            <div class="dash-right">
+        </div><!-- /dashboard-shell -->
 
-                <div class="filter-bar">
-                    <input type="text" id="search-input" placeholder="Buscar movimiento" class="search-input" aria-label="Buscar">
-                    <select id="category-filter" class="category-filter" aria-label="Filtrar categor&iacute;a">
-                        <option value="all">Todas</option>
-                        <option value="income">Ingresos</option>
-                        <option value="green">Fijo</option>
-                        <option value="yellow">Necesario</option>
-                        <option value="red">Antojo</option>
-                    </select>
-                    <select id="sort-select" aria-label="Ordenar">
-                        <option value="date_desc">Recientes</option>
-                        <option value="date_asc">Antiguos</option>
-                        <option value="amount_desc">Mayor monto</option>
-                        <option value="amount_asc">Menor monto</option>
-                    </select>
-                </div>
-
-                <div class="transactions-section">
-                    <div class="transactions-header">
-                        <span class="transactions-title">Movimientos</span>
-                        <span class="transactions-count" id="tx-count"></span>
-                    </div>
-                    <div id="list" role="list"></div>
-                </div>
-
-                <div class="export-section">
-                    <h3>Exportar</h3>
-                    <div class="export-row">
-                        <button id="export-period-week"  class="export-period-btn active" data-period="semanal"  aria-pressed="true">Semana</button>
-                        <button id="export-period-month" class="export-period-btn"        data-period="mensual" aria-pressed="false">Mes</button>
-                        <button id="btn-export-excel" class="btn-export">Excel</button>
-                        <button id="btn-export-pdf"   class="btn-export">PDF</button>
-                    </div>
-                </div>
-
-                <footer class="app-footer">
-                    <p><a href="/privacy.html">Privacidad</a> &middot; <a href="/terms.html">T&eacute;rminos</a> &middot; Konteo 05 &copy; 2026</p>
-                </footer>
-
-            </div><!-- /dash-right -->
-
-        </main>
-
-        <!-- Mobile sticky action bar -->
         <div class="action-bar-mobile">
             <button id="btn-income"  class="btn-add-action btn-add-income"  type="button">+ Ingreso</button>
             <button id="btn-expense" class="btn-add-action btn-add-expense" type="button">&minus; Gasto</button>
         </div>
 
     </div><!-- /dashboard-page -->
+
 
 </div><!-- /app -->
 
