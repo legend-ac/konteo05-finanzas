@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 /* ================================================
    DESIGN TOKENS — Editorial Finance (2-Column Desktop)
@@ -69,8 +69,9 @@ input,select,textarea,button{font-family:inherit;font-size:inherit;color:inherit
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px}
 .hidden{display:none!important}
-/* page: full height; overflow-x only for home/login pages, not dashboard */
+#app { min-height: 100vh; display: flex; flex-direction: column; }
 .page{min-height:100vh;}
+.dashboard-shell { flex: 1; min-height: 100vh; }
 
 /* ================================================
    HOME PAGE
@@ -327,12 +328,14 @@ input,select,textarea,button{font-family:inherit;font-size:inherit;color:inherit
    DASHBOARD LAYOUT
    ================================================ */
 
-/* Shell: centered max-width container */
+/* Shell: fills remaining height, centered */
 .dashboard-shell {
+    flex: 1;
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
     padding: 0 32px 60px;
+    min-height: 0;
 }
 
 /* TOP SECTION */
