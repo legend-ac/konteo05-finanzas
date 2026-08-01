@@ -4,8 +4,8 @@
     "description": "Tu app personal de finanzas — controla tus ingresos y gastos",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#0c0c0f",
-    "theme_color": "#6d5bff",
+    "background_color": "#0e0d0b",
+    "theme_color": "#d4a843",
     "orientation": "portrait-primary",
     "icons": [
         {

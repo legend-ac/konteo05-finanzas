@@ -1,5 +1,5 @@
 // Service Worker - Konteo 05
-const CACHE_NAME = 'konteo05-v4.0.0';
+const CACHE_NAME = 'konteo05-v5.0.0';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -17,6 +17,8 @@ const APP_SHELL = [
   '/js/ui/render.js',
   '/js/ui/charts.js',
   '/js/ui/insights.js',
+  '/images/og-konteo-05.png',
+  '/images/hero.jpg',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
 ];
@@ -58,39 +60,32 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
+    const { request } = event;
 
-  if (request.method !== 'GET' || isFirebaseRequest(request.url)) {
-    return;
-  }
+    if (request.method !== 'GET' || isFirebaseRequest(request.url)) {
+        return;
+    }
 
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (isCacheableRequest(request, response)) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match('/index.html'))
-    );
-    return;
-  }
+    const url = new URL(request.url);
+    if (url.origin !== self.location.origin) {
+        return;
+    }
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (isCacheableRequest(request, response)) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+    event.respondWith((async () => {
+        try {
+            const response = await fetch(request, { cache: 'no-store' });
+            if (isCacheableRequest(request, response)) {
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(request, response.clone());
+            }
+            return response;
+        } catch (_) {
+            const cached = await caches.match(request);
+            if (cached) return cached;
+            if (request.mode === 'navigate') return caches.match('/index.html');
+            return Response.error();
         }
-        return response;
-      });
-    })
-  );
+    })());
 });
 
 self.addEventListener('push', (event) => {

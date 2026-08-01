@@ -6,33 +6,23 @@ const charts = { incomeExpense: null, category: null };
 function getChartColors() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     return {
-        tick: isDark ? '#9ca3af' : '#64748b',
+        tick: isDark ? '#9a9286' : '#6b6560',
         grid: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
         legend: isDark ? '#9ca3af' : '#64748b',
-        emptyText: isDark ? '#4b5563' : '#94a3b8'
+        emptyText: isDark ? '#70695f' : '#827d74'
     };
 }
 
 /** Renders a "Sin datos" placeholder over an empty chart canvas */
 function renderEmptyState(ctx, message = 'Sin datos para este período') {
-    const colors = getChartColors();
     const parent = ctx.parentElement;
     let placeholder = parent.querySelector('.chart-empty');
     if (!placeholder) {
         placeholder = document.createElement('div');
         placeholder.className = 'chart-empty';
-        placeholder.style.cssText = `
-            position:absolute; inset:0; display:flex; flex-direction:column;
-            align-items:center; justify-content:center; gap:8px;
-            color:${colors.emptyText}; font-size:13px; font-weight:600;
-            pointer-events:none;
-        `;
-        const icon = document.createElement('span');
-        icon.style.fontSize = '28px';
-        icon.textContent = '📊';
         const txt = document.createElement('span');
         txt.textContent = message;
-        placeholder.append(icon, txt);
+        placeholder.append(txt);
         // Make parent relative for absolute positioning
         parent.style.position = 'relative';
         parent.appendChild(placeholder);
@@ -109,7 +99,7 @@ export function renderCharts(totalIncome, totalExpenses, expenseItems) {
             charts.category = new Chart(ctx2, {
                 type: 'doughnut',
                 data: {
-                    labels: ['🟢 Fijo', '🟡 Necesario', '🔴 Antojo'],
+                    labels: ['Fijo', 'Necesario', 'Antojo'],
                     datasets: [{
                         data: [categoryTotals.green, categoryTotals.yellow, categoryTotals.red],
                         backgroundColor: ['#34d399', '#fbbf24', '#f87171'],

@@ -1,12 +1,13 @@
 // js/ui/helpers.js — Shared utility functions
 
 export function showPage(page) {
-    document.getElementById('login-page')?.classList.add('hidden');
-    document.getElementById('register-page')?.classList.add('hidden');
-    document.getElementById('dashboard-page')?.classList.add('hidden');
-    if (page === 'login') document.getElementById('login-page')?.classList.remove('hidden');
-    if (page === 'register') document.getElementById('register-page')?.classList.remove('hidden');
-    if (page === 'dashboard') document.getElementById('dashboard-page')?.classList.remove('hidden');
+    const pages = ['home', 'login', 'register', 'dashboard'];
+    pages.forEach((name) => document.getElementById(`${name}-page`)?.classList.add('hidden'));
+
+    const nextPage = pages.includes(page) ? page : 'home';
+    document.getElementById(`${nextPage}-page`)?.classList.remove('hidden');
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
 }
 
 export function fmt(n) {

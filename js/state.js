@@ -10,7 +10,6 @@ export const state = {
     exportPeriod: localStorage.getItem('konteo.export.period') || 'semanal',
     customRangeStart: localStorage.getItem('konteo.range.start') || '',
     customRangeEnd: localStorage.getItem('konteo.range.end') || '',
-    latestExpenseItem: null,
     planConfig: {
         incomeTarget: 0,
         expenseLimit: 0

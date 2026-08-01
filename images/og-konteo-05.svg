@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Konteo 05 — Control financiero personal</title>
+  <desc id="desc">Una línea de registro dorada se transforma en una K, representando el orden de los movimientos financieros.</desc>
+  <rect width="1200" height="630" fill="#0e0d0b"/>
+  <rect x="32" y="32" width="1136" height="566" rx="22" fill="#131210" stroke="#332f2a" stroke-width="2"/>
+  <path d="M80 470H1120M80 522H1120" stroke="#272420" stroke-width="2"/>
+  <path d="M740 86V546M882 86V546M1024 86V546" stroke="#272420" stroke-width="2" stroke-dasharray="3 12"/>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="86" y="104" fill="#d4a843" font-size="17" font-weight="700" letter-spacing="4">KONTEO 05</text>
+    <text x="86" y="156" fill="#f0ebe0" font-size="25" font-weight="600" letter-spacing="-0.5">CONTROL FINANCIERO PERSONAL</text>
+    <text x="86" y="210" fill="#8a8070" font-size="20">Cada movimiento tiene lugar.</text>
+  </g>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M102 354H288C340 354 357 328 392 293C428 257 466 257 504 293L585 370C612 396 650 398 682 376L734 340" stroke="#d4a843" stroke-width="8"/>
+    <path d="M734 340L815 255L886 340L966 255" stroke="#d4a843" stroke-width="8"/>
+    <path d="M886 340L966 425L1047 340" stroke="#d4a843" stroke-width="8"/>
+    <path d="M1047 340H1100" stroke="#d4a843" stroke-width="8"/>
+    <path d="M102 354H288C340 354 357 328 392 293C428 257 466 257 504 293L585 370" stroke="#f0ebe0" stroke-opacity=".16" stroke-width="1"/>
+  </g>
+
+  <g>
+    <circle cx="102" cy="354" r="13" fill="#0e0d0b" stroke="#d4a843" stroke-width="5"/>
+    <circle cx="392" cy="293" r="10" fill="#22c55e"/>
+    <circle cx="585" cy="370" r="10" fill="#f43f5e"/>
+    <circle cx="734" cy="340" r="13" fill="#0e0d0b" stroke="#d4a843" stroke-width="5"/>
+    <circle cx="1100" cy="340" r="13" fill="#0e0d0b" stroke="#d4a843" stroke-width="5"/>
+  </g>
+
+  <g font-family="IBM Plex Mono, monospace" font-size="14" font-weight="500">
+    <text x="86" y="548" fill="#70695f">REGISTRA</text>
+    <text x="332" y="548" fill="#70695f">REVISA</text>
+    <text x="578" y="548" fill="#70695f">DECIDE</text>
+    <text x="1030" y="548" fill="#d4a843" text-anchor="end">K</text>
+  </g>
+</svg>

@@ -1,90 +1,101 @@
-// js/ui/render.js — Safe DOM rendering (no innerHTML)
+// js/ui/render.js — Compact ledger rows, income source visible, no meta noise
 
-const CATEGORY_LABELS = { green: 'Fijo', yellow: 'Necesario', red: 'Antojo' };
-const VALID_CATEGORIES = ['green', 'yellow', 'red'];
+const CAT_LABEL = { green: 'Fijo', yellow: 'Necesario', red: 'Antojo' };
+const SOURCE_LABEL = {
+    salario: 'Salario', freelance: 'Freelance',
+    negocio: 'Negocio', otros: null
+};
+const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
-function createTransactionElement(item) {
+function shortDate(d) {
+    return `${d.getDate()} ${MONTHS[d.getMonth()]}. ${d.getFullYear()}`;
+}
+
+function createRow(item, index) {
     const isIncome = item.type === 'income';
-    const date = item?.date?.toDate?.() || new Date(0);
-    const dateStr = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    const rawDate  = item?.date?.toDate?.() || new Date(0);
+    const dateStr  = shortDate(rawDate);
 
-    const el = document.createElement('div');
-    el.className = `item ${isIncome ? 'income' : 'expense'}`;
-
-    // Left side
-    const leftDiv = document.createElement('div');
-
-    const strong = document.createElement('strong');
-    strong.textContent = item.note || (isIncome ? 'Ingreso' : 'Gasto');
-
-    if (!isIncome && VALID_CATEGORIES.includes(item.category)) {
-        const badge = document.createElement('span');
-        badge.className = `category-badge badge-${item.category}`;
-        badge.textContent = CATEGORY_LABELS[item.category] || '';
-        strong.appendChild(badge);
+    let metaParts = [dateStr];
+    if (isIncome) {
+        const srcLabel = SOURCE_LABEL[item.source];
+        if (srcLabel) metaParts.push(srcLabel);
+    } else {
+        const catLabel = CAT_LABEL[item.category];
+        if (catLabel) metaParts.push(catLabel);
     }
 
-    const dateSmall = document.createElement('small');
-    dateSmall.textContent = dateStr;
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.setAttribute('role', 'listitem');
+    el.style.animationDelay = `${Math.min(index * 25, 250)}ms`;
 
-    const metaSmall = document.createElement('small');
-    metaSmall.className = 'item-meta';
-    metaSmall.textContent = isIncome
-        ? `Fuente: ${item.source || 'otros'} · Cuenta: ${item.account || 'efectivo'}${item.tags ? ` · Etiquetas: ${item.tags}` : ''}`
-        : `Comercio: ${item.merchant || '-'} · Método: ${item.method || 'efectivo'} · Prioridad: ${item.priority || 'media'}`;
+    const left = document.createElement('div');
+    left.className = 'item-left';
 
+    const dot = document.createElement('span');
+    dot.className = `cat-dot ${isIncome ? 'income' : (item.category || 'yellow')}`;
+    dot.setAttribute('aria-hidden', 'true');
 
-    leftDiv.append(strong, dateSmall, metaSmall);
+    const info = document.createElement('div');
+    info.className = 'item-info';
 
-    // Right side
-    const rightDiv = document.createElement('div');
-    rightDiv.className = 'item-right';
+    const desc = document.createElement('div');
+    desc.className = 'item-desc';
+    desc.textContent = item.note || (isIncome ? 'Ingreso' : 'Gasto');
 
-    const amountSpan = document.createElement('span');
-    amountSpan.className = isIncome ? 'green' : 'red';
-    const amount = Number(item.amount);
-    amountSpan.textContent = `${isIncome ? '+' : '-'} S/ ${(Number.isFinite(amount) ? amount : 0).toFixed(2)}`;
+    const meta = document.createElement('div');
+    meta.className = 'item-meta';
+    meta.textContent = metaParts.join(' · ');
 
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'item-actions';
+    info.append(desc, meta);
+    left.append(dot, info);
+
+    const right = document.createElement('div');
+    right.className = 'item-right';
+
+    const amt = document.createElement('span');
+    amt.className = `item-amount ${isIncome ? 'income' : 'expense'}`;
+    const n = Number(item.amount);
+    amt.textContent = `${isIncome ? '+' : '−'} S/ ${(Number.isFinite(n) ? n : 0).toFixed(2)}`;
+
+    const actions = document.createElement('div');
+    actions.className = 'item-actions';
 
     const editBtn = document.createElement('button');
     editBtn.className = 'edit-btn';
-    editBtn.dataset.id = item.id;
+    editBtn.dataset.id   = item.id;
     editBtn.dataset.type = isIncome ? 'income' : 'expense';
-    editBtn.textContent = '✏️';
+    editBtn.setAttribute('aria-label', 'Editar');
+    editBtn.textContent  = '✎';
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.dataset.id = item.id;
-    deleteBtn.dataset.type = isIncome ? 'income' : 'expense';
-    deleteBtn.textContent = '🗑️';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.dataset.id   = item.id;
+    delBtn.dataset.type = isIncome ? 'income' : 'expense';
+    delBtn.setAttribute('aria-label', 'Eliminar');
+    delBtn.textContent  = '✕';
 
-    actionsDiv.append(editBtn, deleteBtn);
-    rightDiv.append(amountSpan, actionsDiv);
+    actions.append(editBtn, delBtn);
+    right.append(amt, actions);
 
-    el.append(leftDiv, rightDiv);
+    el.append(left, right);
     return el;
 }
 
-/**
- * Renderiza la lista de transacciones usando DOM API seguro (no innerHTML).
- */
 export function renderTransactionList(listEl, filtered) {
     if (!listEl) return;
-
     listEl.textContent = '';
 
-    if (filtered.length === 0) {
+    if (!filtered.length) {
         const p = document.createElement('p');
         p.className = 'empty';
-        p.textContent = 'No hay movimientos en este período';
+        p.textContent = 'Sin movimientos en este período';
         listEl.appendChild(p);
-    } else {
-        const fragment = document.createDocumentFragment();
-        for (const item of filtered) {
-            fragment.appendChild(createTransactionElement(item));
-        }
-        listEl.appendChild(fragment);
+        return;
     }
+
+    const frag = document.createDocumentFragment();
+    filtered.forEach((item, i) => frag.appendChild(createRow(item, i)));
+    listEl.appendChild(frag);
 }

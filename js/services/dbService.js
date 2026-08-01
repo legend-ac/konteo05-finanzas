@@ -1,7 +1,6 @@
 // js/services/dbService.js — Firestore CRUD operations
 
 import { db, firebase } from '../firebase/config.js';
-import { normalizeNote, normalizeText } from '../ui/helpers.js';
 
 /**
  * Obtiene el perfil de usuario.
@@ -127,23 +126,6 @@ export async function saveExpense(uid, data, editId = null) {
         data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         await colRef.add(data);
     }
-}
-
-/**
- * Duplica un gasto.
- */
-export async function addDuplicateExpense(uid, expenseItem) {
-    const duplicateData = {
-        amount: expenseItem.amount,
-        category: expenseItem.category || 'yellow',
-        note: normalizeNote(`${expenseItem.note || 'Gasto'} (duplicado)`),
-        merchant: normalizeText(expenseItem.merchant || '', 80),
-        method: expenseItem.method || 'efectivo',
-        priority: expenseItem.priority || 'media',
-        date: firebase.firestore.Timestamp.fromDate(new Date()),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    await db.collection('transactions').doc(uid).collection('expenses').add(duplicateData);
 }
 
 /**
