@@ -227,10 +227,8 @@ input,select,textarea,button{font-family:inherit;font-size:inherit;color:inherit
 
     .home-hero {
         grid-template-columns:1fr;
-        min-height:calc(100svh - 65px);
-        gap:0;
-        padding:clamp(74px,14vh,118px) 0 0;
-        border-bottom:0;
+        gap:28px;
+        padding:36px 0 32px;
     }
     .home-copy h1 { max-width:9ch; font-size:clamp(42px,12vw,56px); margin-bottom:20px; }
     .home-intro { font-size:15px; margin-bottom:28px; }
