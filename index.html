@@ -142,6 +142,7 @@
     </div>
 
     <!-- ==================== DASHBOARD ==================== -->
+    <!-- ==================== DASHBOARD ==================== -->
     <div id="dashboard-page" class="page hidden">
 
         <header class="app-header">
@@ -152,16 +153,16 @@
             <div class="header-actions">
                 <span id="user-name"></span>
                 <button id="theme-toggle-btn" class="btn-icon" aria-label="Cambiar tema">&#127769;</button>
-                <button id="profile-btn"      class="btn-text-hd" type="button">Perfil</button>
-                <button id="logout-btn"       class="btn-text-hd btn-logout" type="button">Salir</button>
+                <button id="profile-btn" class="btn-text-hd" type="button">Perfil</button>
+                <button id="logout-btn" class="btn-text-hd btn-logout" type="button">Salir</button>
             </div>
         </header>
 
         <div class="dashboard-shell">
 
-            <!-- TOP: title + period + overview card -->
             <div class="dashboard-top">
 
+                <!-- Title + Period tabs -->
                 <div class="dashboard-title-row">
                     <div class="dashboard-title-left">
                         <p class="dashboard-eyebrow">Control financiero</p>
@@ -175,14 +176,20 @@
                     </div>
                 </div>
 
+                <!-- Custom range panel -->
                 <div id="custom-range-panel" class="custom-range-panel hidden">
-                    <span class="range-label">Desde</span>
-                    <input type="date" id="range-start" aria-label="Fecha inicio">
-                    <span class="range-label">Hasta</span>
-                    <input type="date" id="range-end" aria-label="Fecha fin">
+                    <div class="range-row">
+                        <span class="range-label">Desde</span>
+                        <input type="date" id="range-start" aria-label="Fecha inicio">
+                    </div>
+                    <div class="range-row">
+                        <span class="range-label">Hasta</span>
+                        <input type="date" id="range-end" aria-label="Fecha fin">
+                    </div>
                     <button id="btn-apply-range" class="btn-apply">Aplicar</button>
                 </div>
 
+                <!-- Balance overview (PC: 3-col card | Mobile: stacked in 1 card) -->
                 <div class="dashboard-overview">
                     <div class="balance-hero">
                         <p class="balance-period-label" id="balance-period-label">Hoy</p>
@@ -197,15 +204,9 @@
                         <span>Gastos</span>
                         <strong id="total-expenses">S/ 0.00</strong>
                     </div>
-                    <div class="overview-actions">
-                        <p>Registra un movimiento</p>
-                        <div class="action-buttons-desktop">
-                            <button id="btn-income-d" class="btn-add-action btn-add-income" type="button">+ Ingreso</button>
-                            <button id="btn-expense-d" class="btn-add-action btn-add-expense" type="button">&minus; Gasto</button>
-                        </div>
-                    </div>
                 </div>
 
+                <!-- Metrics -->
                 <div class="metrics-strip" id="metrics-strip">
                     <div class="metric-item"><span class="metric-label">Ahorro</span><span class="metric-value" id="metric-savings">&mdash;</span></div>
                     <div class="metric-item"><span class="metric-label">Runway</span><span class="metric-value" id="metric-runway">&mdash;</span></div>
@@ -214,9 +215,10 @@
 
             </div><!-- /dashboard-top -->
 
-            <!-- GRID: ledger + support -->
+            <!-- MAIN GRID -->
             <div class="dashboard-grid">
 
+                <!-- LEFT: Transactions -->
                 <section class="ledger-card">
                     <div class="ledger-toolbar">
                         <div class="ledger-title">
@@ -225,7 +227,7 @@
                         </div>
                         <div class="filter-bar">
                             <input type="text" id="search-input" placeholder="Buscar movimiento" class="search-input" aria-label="Buscar">
-                            <select id="category-filter" class="category-filter" aria-label="Filtrar categor&iacute;a">
+                            <select id="category-filter" class="category-filter" aria-label="Filtrar">
                                 <option value="all">Todas</option>
                                 <option value="income">Ingresos</option>
                                 <option value="green">Fijo</option>
@@ -255,6 +257,7 @@
                     </footer>
                 </section>
 
+                <!-- RIGHT: Plan + Charts -->
                 <aside class="dashboard-support">
 
                     <div class="plan-section" id="plan-card">
@@ -300,16 +303,13 @@
 
         </div><!-- /dashboard-shell -->
 
+        <!-- Mobile sticky bar -->
         <div class="action-bar-mobile">
             <button id="btn-income"  class="btn-add-action btn-add-income"  type="button">+ Ingreso</button>
             <button id="btn-expense" class="btn-add-action btn-add-expense" type="button">&minus; Gasto</button>
         </div>
 
     </div><!-- /dashboard-page -->
-
-
-</div><!-- /app -->
-
 <!-- ==================== MODALS ==================== -->
 
 <!-- Ingreso -->
