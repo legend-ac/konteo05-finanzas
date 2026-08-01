@@ -660,6 +660,19 @@ document.getElementById('category-filter')?.addEventListener('change', loadData)
 document.getElementById('btn-save-plan')?.addEventListener('click', async () => {
     if (await savePlanConfigFromUi()) loadData();
 });
+// Accordion toggles for plan and charts sections
+['plan-toggle', 'charts-toggle'].forEach(id => {
+    const row = document.getElementById(id);
+    if (!row) return;
+    const section = row.closest('.plan-section, .charts-section-wrap');
+    if (!section) return;
+    row.addEventListener('click', () => section.classList.toggle('open'));
+});
+// Open both by default on desktop
+if (window.innerWidth >= 768) {
+    document.getElementById('plan-card')?.classList.add('open');
+    document.getElementById('charts-card')?.classList.add('open');
+}
 
 // ──────────────────────────────────────────────
 // EXPORT
