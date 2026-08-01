@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 /* ================================================
    DESIGN TOKENS
@@ -764,8 +764,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .export-section { margin: 14px -14px 0; }
     .export-section h3 { padding: 12px 14px 0; }
     .export-row { padding: 0 14px 14px; }
-    .plan-section, 
-    .charts-section-wrap.open 
+    .plan-section { border-radius: 12px; }
     .action-bar-mobile { display: flex; }
     .item-desc { font-size: 13px; }
     .edit-btn, .delete-btn { width: 24px; height: 24px; font-size: 11px; }
