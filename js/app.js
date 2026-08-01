@@ -668,11 +668,8 @@ document.getElementById('btn-save-plan')?.addEventListener('click', async () => 
     if (!section) return;
     row.addEventListener('click', () => section.classList.toggle('open'));
 });
-// Open both by default on desktop
-if (window.innerWidth >= 768) {
-    document.getElementById('plan-card')?.classList.add('open');
-    document.getElementById('charts-card')?.classList.add('open');
-}
+// Open plan section by default
+document.getElementById('plan-card')?.classList.add('open');
 
 // ──────────────────────────────────────────────
 // EXPORT

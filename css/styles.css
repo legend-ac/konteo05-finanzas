@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 /* ================================================
    DESIGN TOKENS
@@ -493,26 +493,16 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 }
 .btn-save-plan:hover { background: #e0b84f; transform: translateY(-1px); }
 
-.charts-section-wrap {
-    border: 1px solid var(--line); border-radius: 14px;
-    background: var(--bg-2); padding: 22px;
-}
-.charts-toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer; user-select: none;
-}
-.charts-toggle-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
-.charts-chevron { font-size: 10px; color: var(--text-3); transition: transform var(--t) var(--ease); }
-.charts-section-wrap.open .charts-chevron { transform: rotate(180deg); }
-.charts-body { display: none; padding-top: 14px; }
-.charts-section-wrap.open .charts-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.chart-card-container {
-    position: relative; height: 160px; padding: 10px;
-    border: 1px solid var(--line); border-radius: 9px;
-    background: var(--bg-3); overflow: hidden;
-}
-.chart-card-container p { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
-canvas { width: 100% !important; }
+
+
+
+
+.charts-section-wrap.open 
+
+.charts-section-wrap.open 
+
+
+
 
 /* Export */
 .export-section { margin: 20px -24px 0; border-top: 1px solid var(--line); }
@@ -732,7 +722,7 @@ canvas { width: 100% !important; }
 @media (max-width: 940px) {
     .dashboard-grid { grid-template-columns: 1fr; }
     .dashboard-support { grid-template-columns: 1fr 1fr; }
-    .charts-section-wrap.open .charts-body { grid-template-columns: 1fr 1fr; }
+    .charts-section-wrap.open 
 }
 
 /* ================================================
@@ -774,8 +764,8 @@ canvas { width: 100% !important; }
     .export-section { margin: 14px -14px 0; }
     .export-section h3 { padding: 12px 14px 0; }
     .export-row { padding: 0 14px 14px; }
-    .plan-section, .charts-section-wrap { border-radius: 12px; }
-    .charts-section-wrap.open .charts-body { grid-template-columns: 1fr; }
+    .plan-section, 
+    .charts-section-wrap.open 
     .action-bar-mobile { display: flex; }
     .item-desc { font-size: 13px; }
     .edit-btn, .delete-btn { width: 24px; height: 24px; font-size: 11px; }
