@@ -1,4 +1,4 @@
-﻿// js/app.js — Main orchestrator for Konteo 05
+// js/app.js — Main orchestrator for Konteo 05
 
 import { auth, db, firebase } from './firebase/config.js';
 import { state, persistUiState }  from './state.js';
@@ -530,10 +530,12 @@ function openExpenseModal() {
     openModal('modal-expense');
 }
 
-document.getElementById('btn-income')?.addEventListener('click', openIncomeModal);
-document.getElementById('btn-expense')?.addEventListener('click', openExpenseModal);
-document.getElementById('btn-income-d')?.addEventListener('click', openIncomeModal);
-document.getElementById('btn-expense-d')?.addEventListener('click', openExpenseModal);
+document.addEventListener('click', e => {
+    const incBtn = e.target.closest('#btn-income, #btn-income-d, .btn-open-income');
+    if (incBtn) { e.preventDefault(); openIncomeModal(); return; }
+    const expBtn = e.target.closest('#btn-expense, #btn-expense-d, .btn-open-expense');
+    if (expBtn) { e.preventDefault(); openExpenseModal(); return; }
+});
 
 // ──────────────────────────────────────────────
 // SAVE INCOME

@@ -192,9 +192,21 @@
                 <!-- Balance overview (PC: 3-col card | Mobile: stacked in 1 card) -->
                 <div class="dashboard-overview">
                     <div class="balance-hero">
-                        <p class="balance-period-label" id="balance-period-label">Hoy</p>
-                        <div id="balance" class="balance-number balance-positive" aria-live="polite">S/ 0.00</div>
-                        <p class="balance-caption">Saldo del per&iacute;odo seleccionado</p>
+                        <div class="balance-hero-content">
+                            <p class="balance-period-label" id="balance-period-label">Hoy</p>
+                            <div id="balance" class="balance-number balance-positive" aria-live="polite">S/ 0.00</div>
+                            <p class="balance-caption">Saldo del per&iacute;odo seleccionado</p>
+                        </div>
+                        <div class="balance-hero-actions">
+                            <button id="btn-income" class="btn-balance-action btn-balance-income btn-open-income" type="button">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>+ Ingreso</span>
+                            </button>
+                            <button id="btn-expense" class="btn-balance-action btn-balance-expense btn-open-expense" type="button">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>&minus; Gasto</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="overview-stat income-stat">
                         <span>Ingresos</span>
@@ -226,17 +238,17 @@
                             <h2>Movimientos <span class="transactions-count" id="tx-count"></span></h2>
                         </div>
                         <div class="filter-bar">
-                            <input type="text" id="search-input" placeholder="Buscar" class="search-input" aria-label="Buscar">
+                            <input type="text" id="search-input" placeholder="Buscar movimiento…" class="search-input" aria-label="Buscar">
                             <select id="category-filter" class="category-filter" aria-label="Filtrar">
-                                <option value="all">Todas</option>
+                                <option value="all">Todas las categor&iacute;as</option>
                                 <option value="income">Ingresos</option>
                                 <option value="green">Fijo</option>
                                 <option value="yellow">Necesario</option>
                                 <option value="red">Antojo</option>
                             </select>
                             <select id="sort-select" aria-label="Ordenar">
-                                <option value="date_desc">Recientes</option>
-                                <option value="date_asc">Antiguos</option>
+                                <option value="date_desc">M&aacute;s recientes</option>
+                                <option value="date_asc">M&aacute;s antiguos</option>
                                 <option value="amount_desc">Mayor monto</option>
                                 <option value="amount_asc">Menor monto</option>
                             </select>
@@ -292,11 +304,6 @@
 
         </div><!-- /dashboard-shell -->
 
-        <!-- FAB: fixed bottom-right on desktop, bottom bar on mobile -->
-        <div class="fab-container">
-            <button id="btn-expense" class="fab-btn fab-expense" type="button">&minus; Gasto</button>
-            <button id="btn-income"  class="fab-btn fab-income"  type="button">+ Ingreso</button>
-        </div>
 
     </div><!-- /dashboard-page -->
 <!-- ==================== MODALS ==================== -->
