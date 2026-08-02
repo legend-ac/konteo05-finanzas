@@ -307,6 +307,29 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .btn-logout { border-color: var(--expense) !important; color: var(--expense) !important; }
 .btn-logout:hover { background: var(--expense) !important; color: #fff !important; }
 
+/* Header CTA buttons — income & expense */
+.btn-hd-income {
+    height: 32px; padding: 0 14px;
+    background: var(--income); color: #0e0d0b;
+    border: none; border-radius: var(--r-sm);
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all var(--t) var(--ease); white-space: nowrap;
+    letter-spacing: -.01em;
+}
+.btn-hd-income:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-hd-expense {
+    height: 32px; padding: 0 14px;
+    background: transparent; color: var(--expense);
+    border: 1px solid var(--expense); border-radius: var(--r-sm);
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all var(--t) var(--ease); white-space: nowrap;
+    letter-spacing: -.01em;
+}
+.btn-hd-expense:hover { background: var(--expense); color: #fff; transform: translateY(-1px); }
+@media (max-width: 680px) {
+    .btn-hd-income, .btn-hd-expense { display: none; }
+}
+
 /* ================================================
    DASHBOARD LAYOUT
    ================================================ */

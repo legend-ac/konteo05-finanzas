@@ -152,6 +152,8 @@
             </div>
             <div class="header-actions">
                 <span id="user-name"></span>
+                <button id="btn-income-d"  class="btn-hd-income"  type="button">+ Ingreso</button>
+                <button id="btn-expense-d" class="btn-hd-expense" type="button">&minus; Gasto</button>
                 <button id="theme-toggle-btn" class="btn-icon" aria-label="Cambiar tema">&#127769;</button>
                 <button id="profile-btn" class="btn-text-hd" type="button">Perfil</button>
                 <button id="logout-btn" class="btn-text-hd btn-logout" type="button">Salir</button>
@@ -225,27 +227,21 @@
                             <p class="ledger-eyebrow">Registro</p>
                             <h2>Movimientos <span class="transactions-count" id="tx-count"></span></h2>
                         </div>
-                        <div class="ledger-toolbar-right">
-                            <div class="filter-bar">
-                                <input type="text" id="search-input" placeholder="Buscar" class="search-input" aria-label="Buscar">
-                                <select id="category-filter" class="category-filter" aria-label="Filtrar">
-                                    <option value="all">Todas</option>
-                                    <option value="income">Ingresos</option>
-                                    <option value="green">Fijo</option>
-                                    <option value="yellow">Necesario</option>
-                                    <option value="red">Antojo</option>
-                                </select>
-                                <select id="sort-select" aria-label="Ordenar">
-                                    <option value="date_desc">Recientes</option>
-                                    <option value="date_asc">Antiguos</option>
-                                    <option value="amount_desc">Mayor monto</option>
-                                    <option value="amount_asc">Menor monto</option>
-                                </select>
-                            </div>
-                            <div class="desktop-actions">
-                                <button id="btn-income-d"  class="btn-add-action btn-add-income"  type="button">+ Ingreso</button>
-                                <button id="btn-expense-d" class="btn-add-action btn-add-expense" type="button">− Gasto</button>
-                            </div>
+                        <div class="filter-bar">
+                            <input type="text" id="search-input" placeholder="Buscar" class="search-input" aria-label="Buscar">
+                            <select id="category-filter" class="category-filter" aria-label="Filtrar">
+                                <option value="all">Todas</option>
+                                <option value="income">Ingresos</option>
+                                <option value="green">Fijo</option>
+                                <option value="yellow">Necesario</option>
+                                <option value="red">Antojo</option>
+                            </select>
+                            <select id="sort-select" aria-label="Ordenar">
+                                <option value="date_desc">Recientes</option>
+                                <option value="date_asc">Antiguos</option>
+                                <option value="amount_desc">Mayor monto</option>
+                                <option value="amount_asc">Menor monto</option>
+                            </select>
                         </div>
                     </div>
                     <div id="list" role="list"></div>
