@@ -837,6 +837,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .export-section h3 { padding: 12px 14px 0; }
     .export-row { padding: 0 14px 14px; }
     .plan-section { border-radius: 12px; }
+    .balance-hero-actions { display: none; }
     .action-bar-mobile { display: flex; }
     .item-desc { font-size: 13px; }
     .edit-btn, .delete-btn { width: 24px; height: 24px; font-size: 11px; }
