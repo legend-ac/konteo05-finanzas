@@ -771,3 +771,21 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 }
 
 @media (max-width: 359px) { .item-actions { display: none; } }
+
+/* Ledger toolbar right: filters + desktop action buttons */
+.ledger-toolbar-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.desktop-actions {
+    display: flex;
+    gap: 6px;
+}
+/* Hide desktop buttons on mobile (mobile uses sticky bar instead) */
+@media (max-width: 680px) {
+    .desktop-actions { display: none; }
+    .ledger-toolbar-right { align-items: flex-start; width: 100%; }
+}
