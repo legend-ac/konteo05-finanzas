@@ -815,3 +815,81 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .desktop-actions { display: none; }
     .ledger-toolbar-right { justify-content: flex-start; width: 100%; }
 }
+
+/* ================================================
+   FAB — FLOATING ACTION BUTTONS
+   Posición fija esquina inferior derecha (PC)
+   Barra inferior en móvil
+   ================================================ */
+
+/* === DESKTOP: FAB fixed bottom-right === */
+.fab-container {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.fab-btn {
+    height: 44px;
+    padding: 0 22px;
+    border-radius: 99px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+    transition: transform 150ms cubic-bezier(.34,1.4,.64,1),
+                box-shadow 150ms ease,
+                filter 150ms ease;
+    white-space: nowrap;
+}
+.fab-btn:hover  { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.55); }
+.fab-btn:active { transform: scale(.97); }
+
+.fab-income {
+    background: var(--income);
+    color: #0e0d0b;
+}
+.fab-income:hover { filter: brightness(1.08); }
+
+.fab-expense {
+    background: transparent;
+    color: var(--expense);
+    border: 2px solid var(--expense) !important;
+    box-shadow: 0 4px 20px rgba(244,63,94,.2);
+}
+.fab-expense:hover { background: var(--expense); color: #fff; }
+
+/* === MOBILE (≤680px): full-width bottom bar === */
+@media (max-width: 680px) {
+    .fab-container {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        flex-direction: row;
+        border-radius: 0;
+        padding: 10px 16px 22px;
+        gap: 10px;
+        background: var(--bg-2);
+        border-top: 1px solid var(--line);
+        box-shadow: 0 -4px 24px rgba(0,0,0,.35);
+        align-items: stretch;
+    }
+    .fab-btn {
+        flex: 1;
+        height: 48px;
+        border-radius: 10px;
+        font-size: 15px;
+        box-shadow: none;
+    }
+    .fab-btn:hover { transform: none; box-shadow: none; }
+    .fab-expense {
+        border: 2px solid var(--expense) !important;
+        box-shadow: none !important;
+    }
+}
