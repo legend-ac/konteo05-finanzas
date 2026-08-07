@@ -13,6 +13,7 @@ import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
 import * as dbService             from './services/dbService.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
+import { initGmailImport }             from './ui/gmailImport.js';
 
 // ──────────────────────────────────────────────
 // THEME
@@ -331,6 +332,12 @@ auth.onAuthStateChanged(user => {
         if (recoveryEl) recoveryEl.value = user.email || '';
 
         loadData();
+
+        // Gmail auto-import feature
+        initGmailImport(user.uid);
+
+        // Refresh dashboard when gmail import completes
+        window.addEventListener('konteo:refresh', () => loadData(), { once: false });
     } else {
         state.currentUser = null;
         showPage('home');
