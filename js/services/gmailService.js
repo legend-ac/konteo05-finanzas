@@ -44,13 +44,26 @@ export function requestGmailToken() {
         tokenClient = window.google.accounts.oauth2.initTokenClient({
             client_id: clientId,
             scope: GMAIL_SCOPE,
-            callback: (response) => {
+            callback: async (response) => {
                 if (response.error) {
                     reject(new Error(`OAuth error: ${response.error}`));
                     return;
                 }
                 accessToken = response.access_token;
                 tokenExpiry = Date.now() + (response.expires_in - 60) * 1000;
+
+                // Obtener email del usuario autenticado
+                try {
+                    const profileRes = await fetch(
+                        'https://gmail.googleapis.com/gmail/v1/users/me/profile',
+                        { headers: { Authorization: `Bearer ${accessToken}` } }
+                    );
+                    if (profileRes.ok) {
+                        const profile = await profileRes.json();
+                        connectedEmail = profile.emailAddress || null;
+                    }
+                } catch { connectedEmail = null; }
+
                 resolve(accessToken);
             },
         });
@@ -59,15 +72,22 @@ export function requestGmailToken() {
     });
 }
 
+let connectedEmail = null;
+
 export function isTokenValid() {
-    return accessToken && Date.now() < tokenExpiry;
+    return !!accessToken && Date.now() < tokenExpiry;
+}
+
+export function getConnectedEmail() {
+    return connectedEmail;
 }
 
 export function revokeGmailToken() {
     if (accessToken) {
         window.google?.accounts?.oauth2?.revoke(accessToken, () => {});
-        accessToken = null;
-        tokenExpiry = 0;
+        accessToken    = null;
+        tokenExpiry    = 0;
+        connectedEmail = null;
     }
 }
 
