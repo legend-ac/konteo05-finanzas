@@ -58,6 +58,16 @@ function updatePeriodLabel() {
     if (el) el.textContent = PERIOD_LABELS[state.currentFilter] || 'Balance';
 }
 
+function updateGreeting(fullName) {
+    const firstName = (fullName || '').split(' ')[0];
+    const hour = new Date().getHours();
+    const saludo = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+    const greeting = document.getElementById('dashboard-greeting');
+    const title    = document.getElementById('dashboard-title');
+    if (greeting) greeting.textContent = `${saludo}, ${firstName} 👋`;
+    if (title)    title.textContent    = 'Lo que importa, primero.';
+}
+
 // ──────────────────────────────────────────────
 // PROFILE
 // ──────────────────────────────────────────────
@@ -80,6 +90,7 @@ async function loadUserProfile() {
         };
         if (state.userProfile.name) {
             document.getElementById('user-name').textContent = state.userProfile.name;
+            updateGreeting(state.userProfile.name);
         }
         const map = {
             'profile-name':             state.userProfile.name,
