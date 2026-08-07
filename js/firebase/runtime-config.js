@@ -12,5 +12,5 @@ window.__KONTEO_FIREBASE_CONFIG__ = window.__KONTEO_FIREBASE_CONFIG__ || {
     measurementId: 'G-NG7DYTW26G',
     // Gmail OAuth Client ID — obtenlo en console.cloud.google.com
     // APIs > Credenciales > Crear ID de cliente OAuth > Aplicación web
-    gmailClientId: 'REPLACE_WITH_YOUR_GMAIL_OAUTH_CLIENT_ID'
+    gmailClientId: '320231487787-fm226uea8oumub95ol4ekbj90sdbk8if.apps.googleusercontent.com'
 };
