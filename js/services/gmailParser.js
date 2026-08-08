@@ -1,28 +1,11 @@
 // js/services/gmailParser.js
-// Parsers de emails de transacciones financieras peruanas
-// Cada parser recibe { sender, subject, body, date } y retorna una transacción o null
-
-/**
- * Estructura de transacción normalizada:
- * {
- *   type:        'income' | 'expense'
- *   amount:      number
- *   description: string
- *   category:    string  (para income: 'otros' | 'sueldo' | etc.)
- *               (para expense: 'yellow' | 'red' | 'green')
- *   source:      string  ('yape' | 'bcp' | 'interbank' | etc.)
- *   date:        Date
- *   rawText:     string  (texto original para auditoría)
- *   gmailId:     string  (ID del email — para deduplicación)
- * }
- */
+// Parsers de emails de movimientos financieros peruanos
+// Cubre: bancos tradicionales, cajas municipales, billeteras digitales y neobancos
 
 // ─────────────────────────────────────────────
-// HELPERS
+// HELPERS COMUNES
 // ─────────────────────────────────────────────
-
 function extractAmount(text) {
-    // Captura patrones como: S/ 150.00 | S/150 | S/. 250.50 | 1,200.00
     const patterns = [
         /S\/\.?\s*([\d,]+\.?\d{0,2})/i,
         /PEN\s*([\d,]+\.?\d{0,2})/i,
@@ -31,8 +14,7 @@ function extractAmount(text) {
     for (const pat of patterns) {
         const m = text.match(pat);
         if (m) {
-            const clean = m[1].replace(/,/g, '');
-            const val = parseFloat(clean);
+            const val = parseFloat(m[1].replace(/,/g, ''));
             if (!isNaN(val) && val > 0) return val;
         }
     }
@@ -44,304 +26,317 @@ function cleanName(raw) {
 }
 
 function todayStr(date) {
-    // Retorna YYYY-MM-DD en hora local
-    const d = date || new Date();
+    const d = date instanceof Date && !isNaN(date) ? date : new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// ─────────────────────────────────────────────
-// PARSERS POR FUENTE
-// ─────────────────────────────────────────────
-
-// YAPE
-function parseYape(ctx) {
-    const { body, subject, date, gmailId } = ctx;
-    const text = `${subject}\n${body}`;
-
-    // Transferencia recibida
-    const received = text.match(/recibiste\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+de\s+([^\n\r.]+)/i);
-    if (received) {
-        const amount = parseFloat(received[1].replace(/,/g, ''));
-        const from = cleanName(received[2]);
-        return {
-            type: 'income', amount, source: 'yape',
-            description: `Yape de ${from}`,
-            category: 'otros',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    // Transferencia enviada
-    const sent = text.match(/enviaste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+a\s+([^\n\r.]+)/i)
-        || text.match(/transferiste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+a\s+([^\n\r.]+)/i);
-    if (sent) {
-        const amount = parseFloat(sent[1].replace(/,/g, ''));
-        const to = cleanName(sent[2]);
-        return {
-            type: 'expense', amount, source: 'yape',
-            description: `Yape a ${to}`,
-            category: 'yellow',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    // Pago en comercio con Yape
-    const payment = text.match(/pagaste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+(?:en|a)\s+([^\n\r.]+)/i);
-    if (payment) {
-        const amount = parseFloat(payment[1].replace(/,/g, ''));
-        const merchant = cleanName(payment[2]);
-        return {
-            type: 'expense', amount, source: 'yape',
-            description: `Yape - ${merchant}`,
-            category: 'yellow',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    // Recarga de saldo
-    const topup = text.match(/recarga\s+de\s+S\/\.?\s*([\d,]+\.?\d{0,2})/i);
-    if (topup) {
-        const amount = parseFloat(topup[1].replace(/,/g, ''));
-        return {
-            type: 'income', amount, source: 'yape',
-            description: 'Recarga Yape',
-            category: 'otros',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    return null;
+function genericExpense(amount, label, source, date, gmailId, text) {
+    return { type: 'expense', amount, source, description: label, category: 'yellow', date: todayStr(date), gmailId, rawText: text.slice(0, 300) };
+}
+function genericIncome(amount, label, source, date, gmailId, text) {
+    return { type: 'income', amount, source, description: label, category: 'otros', date: todayStr(date), gmailId, rawText: text.slice(0, 300) };
 }
 
-// PLIN
-function parsePlin(ctx) {
-    const { body, subject, date, gmailId } = ctx;
-    const text = `${subject}\n${body}`;
-
-    const received = text.match(/recibiste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+de\s+([^\n\r.]+)/i);
-    if (received) {
-        const amount = parseFloat(received[1].replace(/,/g, ''));
-        const from = cleanName(received[2]);
-        return {
-            type: 'income', amount, source: 'plin',
-            description: `Plin de ${from}`,
-            category: 'otros',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    const sent = text.match(/env(?:iaste?|ío de)\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+a\s+([^\n\r.]+)/i);
-    if (sent) {
-        const amount = parseFloat(sent[1].replace(/,/g, ''));
-        const to = cleanName(sent[2]);
-        return {
-            type: 'expense', amount, source: 'plin',
-            description: `Plin a ${to}`,
-            category: 'yellow',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    return null;
-}
-
-// BCP (Banco de Crédito del Perú)
-function parseBCP(ctx) {
-    const { body, subject, date, gmailId } = ctx;
-    const text = `${subject}\n${body}`;
-
-    // Cargo / pago con tarjeta
-    const charge = text.match(/(?:cargo|pago|compra)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})\s+(?:en|a|para)\s+([^\n\r]+)/i);
-    if (charge) {
-        const amount = parseFloat(charge[1].replace(/,/g, ''));
-        const merchant = cleanName(charge[2]).replace(/\..*/,'').trim();
-        return {
-            type: 'expense', amount, source: 'bcp',
-            description: `BCP - ${merchant}`,
-            category: 'yellow',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    // Abono / depósito
-    const credit = text.match(/(?:abono|depósito|deposito|transferencia recibida)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
-    if (credit) {
-        const amount = parseFloat(credit[1].replace(/,/g, ''));
-        // intenta extraer remitente
-        const fromMatch = text.match(/(?:de|proveniente de)\s+([A-ZÁÉÍÓÚ][^\n\r]{2,40})/);
-        const from = fromMatch ? cleanName(fromMatch[1]) : 'Transferencia BCP';
-        return {
-            type: 'income', amount, source: 'bcp',
-            description: `BCP - ${from}`,
-            category: 'otros',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    // Monto genérico en asunto
-    const generic = extractAmount(text);
-    if (generic) {
-        const isExpense = /cargo|pago|retiro|débito|debito/i.test(text);
-        const isIncome = /abono|depósito|deposito|crédito|credito/i.test(text);
-        if (isExpense || isIncome) {
-            return {
-                type: isExpense ? 'expense' : 'income',
-                amount: generic, source: 'bcp',
-                description: `BCP - ${cleanName(subject).slice(0, 60)}`,
-                category: isExpense ? 'yellow' : 'otros',
-                date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-            };
-        }
-    }
-
-    return null;
-}
-
-// INTERBANK
-function parseInterbank(ctx) {
-    const { body, subject, date, gmailId } = ctx;
-    const text = `${subject}\n${body}`;
-
-    const charge = text.match(/(?:cargo|pago|compra)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})\s+(?:en|a|para)\s+([^\n\r]+)/i);
-    if (charge) {
-        const amount = parseFloat(charge[1].replace(/,/g, ''));
-        const merchant = cleanName(charge[2]).replace(/\..*/,'').trim();
-        return {
-            type: 'expense', amount, source: 'interbank',
-            description: `Interbank - ${merchant}`,
-            category: 'yellow',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    const credit = text.match(/(?:abono|depósito|deposito)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
-    if (credit) {
-        const amount = parseFloat(credit[1].replace(/,/g, ''));
-        return {
-            type: 'income', amount, source: 'interbank',
-            description: 'Abono Interbank',
-            category: 'otros',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    return null;
-}
-
-// BBVA
-function parseBBVA(ctx) {
-    const { body, subject, date, gmailId } = ctx;
-    const text = `${subject}\n${body}`;
-
-    const charge = text.match(/(?:cargo|consumo|pago)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
-    if (charge) {
-        const amount = parseFloat(charge[1].replace(/,/g, ''));
-        const merchantMatch = text.match(/(?:en|establecimiento[:\s]+)\s*([A-ZÁÉÍÓÚ\w\s]{3,40})/i);
-        const merchant = merchantMatch ? cleanName(merchantMatch[1]) : 'BBVA';
-        return {
-            type: 'expense', amount, source: 'bbva',
-            description: `BBVA - ${merchant}`,
-            category: 'yellow',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    const credit = text.match(/(?:abono|depósito|deposito|acredita)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
-    if (credit) {
-        const amount = parseFloat(credit[1].replace(/,/g, ''));
-        return {
-            type: 'income', amount, source: 'bbva',
-            description: 'Abono BBVA',
-            category: 'otros',
-            date: todayStr(date), gmailId, rawText: text.slice(0, 300)
-        };
-    }
-
-    return null;
-}
-
-// SCOTIABANK
-function parseScotiabank(ctx) {
-    const { body, subject, date, gmailId } = ctx;
-    const text = `${subject}\n${body}`;
+function detectTypeAndBuild(text, source, label, date, gmailId) {
     const amount = extractAmount(text);
     if (!amount) return null;
-
-    const isExpense = /cargo|pago|débito|debito|consumo/i.test(text);
-    const isIncome = /abono|depósito|deposito|crédito|credito/i.test(text);
-
+    const isExpense = /cargo|pago|compra|débito|debito|retiro|consumo|gasto|enviaste?|transferiste?/i.test(text);
+    const isIncome  = /abono|depósito|deposito|crédito|credito|recibiste?|transferencia recibida|ingreso/i.test(text);
     if (!isExpense && !isIncome) return null;
+    return isExpense
+        ? genericExpense(amount, label, source, date, gmailId, text)
+        : genericIncome(amount, label, source, date, gmailId, text);
+}
 
-    return {
-        type: isExpense ? 'expense' : 'income',
-        amount, source: 'scotiabank',
-        description: `Scotiabank - ${cleanName(subject).slice(0, 50)}`,
-        category: isExpense ? 'yellow' : 'otros',
-        date: todayStr(date), gmailId, rawText: text.slice(0, 300)
+// ─────────────────────────────────────────────
+// YAPE
+// ─────────────────────────────────────────────
+function parseYape({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const received = text.match(/recibiste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+de\s+([^\n\r.]+)/i);
+    if (received) return genericIncome(parseFloat(received[1].replace(/,/g, '')), `Yape de ${cleanName(received[2])}`, 'yape', date, gmailId, text);
+    const sent = text.match(/(?:enviaste?|transferiste?)\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+a\s+([^\n\r.]+)/i);
+    if (sent) return genericExpense(parseFloat(sent[1].replace(/,/g, '')), `Yape a ${cleanName(sent[2])}`, 'yape', date, gmailId, text);
+    const payment = text.match(/pagaste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+(?:en|a)\s+([^\n\r.]+)/i);
+    if (payment) return genericExpense(parseFloat(payment[1].replace(/,/g, '')), `Yape - ${cleanName(payment[2])}`, 'yape', date, gmailId, text);
+    const amount = extractAmount(text);
+    if (amount) return detectTypeAndBuild(text, 'yape', `Yape - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+    return null;
+}
+
+// ─────────────────────────────────────────────
+// PLIN
+// ─────────────────────────────────────────────
+function parsePlin({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const received = text.match(/recibiste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+de\s+([^\n\r.]+)/i);
+    if (received) return genericIncome(parseFloat(received[1].replace(/,/g, '')), `Plin de ${cleanName(received[2])}`, 'plin', date, gmailId, text);
+    const sent = text.match(/env(?:iaste?|ío de)\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+a\s+([^\n\r.]+)/i);
+    if (sent) return genericExpense(parseFloat(sent[1].replace(/,/g, '')), `Plin a ${cleanName(sent[2])}`, 'plin', date, gmailId, text);
+    return detectTypeAndBuild(text, 'plin', `Plin - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// BCP
+// ─────────────────────────────────────────────
+function parseBCP({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const charge = text.match(/(?:cargo|pago|compra)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})\s+(?:en|a)\s+([^\n\r]+)/i);
+    if (charge) return genericExpense(parseFloat(charge[1].replace(/,/g, '')), `BCP - ${cleanName(charge[2]).split('.')[0]}`, 'bcp', date, gmailId, text);
+    const credit = text.match(/(?:abono|depósito|deposito)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
+    if (credit) return genericIncome(parseFloat(credit[1].replace(/,/g, '')), `BCP - Abono`, 'bcp', date, gmailId, text);
+    return detectTypeAndBuild(text, 'bcp', `BCP - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// INTERBANK
+// ─────────────────────────────────────────────
+function parseInterbank({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const charge = text.match(/(?:cargo|pago|compra)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})\s+(?:en|a)\s+([^\n\r]+)/i);
+    if (charge) return genericExpense(parseFloat(charge[1].replace(/,/g, '')), `Interbank - ${cleanName(charge[2]).split('.')[0]}`, 'interbank', date, gmailId, text);
+    const credit = text.match(/(?:abono|depósito|deposito)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
+    if (credit) return genericIncome(parseFloat(credit[1].replace(/,/g, '')), `Interbank - Abono`, 'interbank', date, gmailId, text);
+    return detectTypeAndBuild(text, 'interbank', `Interbank - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// BBVA
+// ─────────────────────────────────────────────
+function parseBBVA({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const charge = text.match(/(?:cargo|consumo|pago)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
+    if (charge) {
+        const merchant = text.match(/(?:en|establecimiento[:\s]+)\s*([A-ZÁÉÍÓÚ\w\s]{3,40})/i);
+        return genericExpense(parseFloat(charge[1].replace(/,/g, '')), `BBVA - ${merchant ? cleanName(merchant[1]) : 'Consumo'}`, 'bbva', date, gmailId, text);
+    }
+    const credit = text.match(/(?:abono|depósito|deposito|acredita)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
+    if (credit) return genericIncome(parseFloat(credit[1].replace(/,/g, '')), `BBVA - Abono`, 'bbva', date, gmailId, text);
+    return detectTypeAndBuild(text, 'bbva', `BBVA - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// SCOTIABANK
+// ─────────────────────────────────────────────
+function parseScotiabank({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'scotiabank', `Scotiabank - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// BANBIF
+// ─────────────────────────────────────────────
+function parseBanBif({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'banbif', `BanBif - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// BANCO PICHINCHA
+// ─────────────────────────────────────────────
+function parsePichincha({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'pichincha', `Pichincha - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// BANCO DE LA NACIÓN
+// ─────────────────────────────────────────────
+function parseNacion({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'nacion', `Banco Nación - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// BANCO FALABELLA
+// ─────────────────────────────────────────────
+function parseFalabella({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const charge = text.match(/(?:cargo|consumo|compra)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
+    if (charge) return genericExpense(parseFloat(charge[1].replace(/,/g, '')), `Falabella - ${cleanName(subject).slice(0, 40)}`, 'falabella', date, gmailId, text);
+    return detectTypeAndBuild(text, 'falabella', `Falabella - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// BANCO RIPLEY
+// ─────────────────────────────────────────────
+function parseRipley({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'ripley', `Ripley - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// FINANCIERA OH!
+// ─────────────────────────────────────────────
+function parseOh({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'oh', `Oh! - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// CAJAS MUNICIPALES (patrón genérico)
+// ─────────────────────────────────────────────
+function makeCajasParser(source, label) {
+    return function ({ body, subject, date, gmailId }) {
+        const text = `${subject}\n${body}`;
+        return detectTypeAndBuild(text, source, `${label} - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
     };
 }
 
 // ─────────────────────────────────────────────
-// ROUTER: elige el parser según el remitente
+// IZIPAY YA (ex-Tunki, Interbank)
+// ─────────────────────────────────────────────
+function parseIzipay({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const received = text.match(/recibiste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+de\s+([^\n\r.]+)/i);
+    if (received) return genericIncome(parseFloat(received[1].replace(/,/g, '')), `IzipayYA de ${cleanName(received[2])}`, 'izipay', date, gmailId, text);
+    return detectTypeAndBuild(text, 'izipay', `IzipayYA - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// BIM (Banco de la Nación)
+// ─────────────────────────────────────────────
+function parseBim({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'bim', `Bim - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// NU (Nubank)
+// ─────────────────────────────────────────────
+function parseNu({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const charge = text.match(/(?:compra|transacción|cargo)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
+    if (charge) return genericExpense(parseFloat(charge[1].replace(/,/g, '')), `Nu - ${cleanName(subject).slice(0, 50)}`, 'nu', date, gmailId, text);
+    return detectTypeAndBuild(text, 'nu', `Nu - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// MERCADO PAGO
+// ─────────────────────────────────────────────
+function parseMercadoPago({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const received = text.match(/recibiste?\s+(?:un pago de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})\s+de\s+([^\n\r.]+)/i);
+    if (received) return genericIncome(parseFloat(received[1].replace(/,/g, '')), `MercadoPago de ${cleanName(received[2])}`, 'mercadopago', date, gmailId, text);
+    const sent = text.match(/pagaste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+(?:en|a)\s+([^\n\r.]+)/i);
+    if (sent) return genericExpense(parseFloat(sent[1].replace(/,/g, '')), `MercadoPago - ${cleanName(sent[2])}`, 'mercadopago', date, gmailId, text);
+    return detectTypeAndBuild(text, 'mercadopago', `MercadoPago - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// WISE
+// ─────────────────────────────────────────────
+function parseWise({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const transfer = text.match(/(?:sent|transferred|received)\s+(?:PEN|S\/\.?)\s*([\d,]+\.?\d{0,2})/i);
+    if (transfer) {
+        const amount = parseFloat(transfer[1].replace(/,/g, ''));
+        const isOut = /sent|transferred/i.test(transfer[0]);
+        return isOut
+            ? genericExpense(amount, `Wise - ${cleanName(subject).slice(0, 50)}`, 'wise', date, gmailId, text)
+            : genericIncome(amount, `Wise - Recibido`, 'wise', date, gmailId, text);
+    }
+    return detectTypeAndBuild(text, 'wise', `Wise - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// PAYONEER
+// ─────────────────────────────────────────────
+function parsePayoneer({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    const received = text.match(/(?:received|recibiste?)\s+(?:\$|USD|PEN|S\/\.?)\s*([\d,]+\.?\d{0,2})/i);
+    if (received) return genericIncome(parseFloat(received[1].replace(/,/g, '')), `Payoneer - ${cleanName(subject).slice(0, 50)}`, 'payoneer', date, gmailId, text);
+    return detectTypeAndBuild(text, 'payoneer', `Payoneer - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// LIGO (BCP Neobanco)
+// ─────────────────────────────────────────────
+function parseLigo({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'ligo', `Ligo - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// MÁXIMO
+// ─────────────────────────────────────────────
+function parseMaximo({ body, subject, date, gmailId }) {
+    const text = `${subject}\n${body}`;
+    return detectTypeAndBuild(text, 'maximo', `Máximo - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+}
+
+// ─────────────────────────────────────────────
+// ROUTER — mapea remitente → parser
 // ─────────────────────────────────────────────
 const PARSER_MAP = [
-    { pattern: /yape\.com\.pe/i,          fn: parseYape },
-    { pattern: /plin\.pe/i,               fn: parsePlin },
-    { pattern: /viabcp\.com/i,            fn: parseBCP },
-    { pattern: /interbank\.com\.pe/i,     fn: parseInterbank },
-    { pattern: /bbva\.pe|bbvacontinental/i, fn: parseBBVA },
-    { pattern: /scotiabank\.com\.pe/i,    fn: parseScotiabank },
+    // Billeteras principales
+    { pattern: /yape\.com\.pe/i,                fn: parseYape },
+    { pattern: /plin\.pe/i,                     fn: parsePlin },
+    { pattern: /izipay|tunki/i,                 fn: parseIzipay },
+    { pattern: /bim\.com\.pe|banco.*nacion.*bim/i, fn: parseBim },
+    { pattern: /mercadopago|mercadolibre/i,      fn: parseMercadoPago },
+    { pattern: /wise\.com/i,                    fn: parseWise },
+    { pattern: /payoneer/i,                     fn: parsePayoneer },
+
+    // Bancos tradicionales
+    { pattern: /viabcp\.com|bcp\.com\.pe/i,     fn: parseBCP },
+    { pattern: /interbank\.com\.pe|ibk@/i,      fn: parseInterbank },
+    { pattern: /bbva\.pe|bbvacontinental/i,     fn: parseBBVA },
+    { pattern: /scotiabank\.com\.pe/i,          fn: parseScotiabank },
+    { pattern: /banbif\.com\.pe/i,              fn: parseBanBif },
+    { pattern: /pichincha\.com\.pe/i,           fn: parsePichincha },
+    { pattern: /bn\.com\.pe|bancodelanacion/i,  fn: parseNacion },
+    { pattern: /falabella\.com\.pe|bancofalabella/i, fn: parseFalabella },
+    { pattern: /ripley\.com\.pe|bancoripley/i,  fn: parseRipley },
+    { pattern: /financieraoh|oh\.com\.pe/i,     fn: parseOh },
+
+    // Neobancos
+    { pattern: /nu\.com\.pe|nubank/i,           fn: parseNu },
+    { pattern: /ligo\.pe/i,                     fn: parseLigo },
+    { pattern: /maximo\.pe|maximoapp/i,         fn: parseMaximo },
+    { pattern: /b89\.pe/i,                      fn: makeCajasParser('b89', 'B89') },
+    { pattern: /kambista/i,                     fn: makeCajasParser('kambista', 'Kambista') },
+    { pattern: /ual[aá]\.com|tyba/i,            fn: makeCajasParser('uala', 'Ualá') },
+
+    // Cajas municipales y rurales
+    { pattern: /cajaarequipa/i,                 fn: makeCajasParser('caja-arequipa', 'Caja Arequipa') },
+    { pattern: /cajahuancayo/i,                 fn: makeCajasParser('caja-huancayo', 'Caja Huancayo') },
+    { pattern: /cajapiura/i,                    fn: makeCajasParser('caja-piura', 'Caja Piura') },
+    { pattern: /cajacusco/i,                    fn: makeCajasParser('caja-cusco', 'Caja Cusco') },
+    { pattern: /cajatrujillo/i,                 fn: makeCajasParser('caja-trujillo', 'Caja Trujillo') },
+    { pattern: /cajasullana/i,                  fn: makeCajasParser('caja-sullana', 'Caja Sullana') },
+    { pattern: /cajatacna/i,                    fn: makeCajasParser('caja-tacna', 'Caja Tacna') },
+    { pattern: /cajamaynas/i,                   fn: makeCajasParser('caja-maynas', 'Caja Maynas') },
+    { pattern: /cmac|crac|caja.*municipal|caja.*rural/i, fn: makeCajasParser('caja', 'Caja Municipal') },
+
+    // Mibanco
+    { pattern: /mibanco\.com\.pe/i,             fn: makeCajasParser('mibanco', 'MiBanco') },
 ];
 
-/**
- * Parsea un mensaje de Gmail y retorna una transacción normalizada o null.
- * @param {object} message   - Mensaje completo de Gmail API
- * @param {string} bodyText  - Cuerpo decodificado del email
- * @param {string} sender    - Dirección del remitente
- * @param {Date}   date      - Fecha del email
- * @param {string} subject   - Asunto del email
- * @returns {object|null}
- */
+// ─────────────────────────────────────────────
+// EXPORTS
+// ─────────────────────────────────────────────
 export function parseEmail({ message, bodyText, sender, date, subject }) {
     const entry = PARSER_MAP.find(p => p.pattern.test(sender));
     if (!entry) return null;
-
     try {
-        return entry.fn({
-            body: bodyText,
-            subject,
-            date,
-            sender,
-            gmailId: message.id,
-        });
+        return entry.fn({ body: bodyText, subject, date, sender, gmailId: message.id });
     } catch (e) {
-        console.warn('[gmailParser] Error parseando email:', message.id, e);
+        console.warn('[gmailParser] Error:', message.id, e);
         return null;
     }
 }
 
-/**
- * Clasifica el array de mensajes crudos de Gmail y retorna transacciones válidas.
- * @param {Array}  rawMessages  - Array de mensajes de Gmail API
- * @param {Function} decodeBody - Función para decodificar el body
- * @param {Function} getSender  - Función para obtener el remitente
- * @param {Function} getDate    - Función para obtener la fecha
- * @param {Function} getSubject - Función para obtener el asunto
- * @param {Set}    existingIds  - gmailIds ya importados (deduplicación)
- * @returns {Array} transacciones normalizadas
- */
 export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, getSubject, existingIds = new Set() }) {
-    const results = [];
-    const seenIds = new Set(existingIds);
+    const results  = [];
+    const seenIds  = new Set(existingIds);
 
     for (const msg of rawMessages) {
-        if (seenIds.has(msg.id)) continue; // ya importado
-
-        const sender  = getSender(msg);
-        const date    = getDate(msg);
-        const subject = getSubject(msg);
+        if (seenIds.has(msg.id)) continue;
+        const sender   = getSender(msg);
+        const date     = getDate(msg);
+        const subject  = getSubject(msg);
         const bodyText = decodeBody(msg);
-
         const tx = parseEmail({ message: msg, bodyText, sender, date, subject });
         if (tx && tx.amount > 0 && tx.amount < 1_000_000) {
             seenIds.add(msg.id);
@@ -349,7 +344,6 @@ export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, ge
         }
     }
 
-    // Ordena por fecha descendente
     results.sort((a, b) => new Date(b.date) - new Date(a.date));
     return results;
 }

@@ -1,4 +1,4 @@
-﻿// js/services/exportService.js - Excel & PDF export with lazy-loaded libs
+// js/services/exportService.js - Excel & PDF export with lazy-loaded libs
 
 import { state } from '../state.js';
 import { showToast } from '../ui/toast.js';
@@ -20,13 +20,13 @@ function loadScript(src) {
 
 async function ensureSheetJS() {
     if (!window.XLSX) {
-        await loadScript('https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js');
+        await loadScript('https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js');
     }
 }
 
 async function ensureJsPDF() {
     if (!window.jspdf) {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        await loadScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
     }
 }
 

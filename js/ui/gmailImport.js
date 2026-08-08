@@ -286,6 +286,11 @@ function closeModal() {
 async function connectAndSearch(daysBack) {
     showState('loading');
     try {
+        document.getElementById('gmail-loading-msg').textContent = 'Iniciando conexión con Google…';
+
+        // Garantizar que Google Identity Services esté cargado antes de pedir el token
+        await initGmailService();
+
         document.getElementById('gmail-loading-msg').textContent = 'Esperando autorización de Google…';
         await requestGmailToken();
 

@@ -114,24 +114,76 @@ async function gmailFetch(path, params = {}) {
 
 // Remitentes conocidos de notificaciones financieras peruanas
 const SENDERS = [
-    // Yape y Plin
+    // ── Billeteras digitales ──
     'from:noreply@yape.com.pe',
     'from:notificaciones@plin.pe',
-    // BCP
+    'from:hola@izipay.pe',
+    'from:notificaciones@tunki.pe',
+    'from:bim@bim.com.pe',
+    'from:noreply@mercadopago.com',
+    'from:notification@mercadolibre.com',
+    'from:noreply@wise.com',
+    'from:hello@wise.com',
+    'from:noreply@payoneer.com',
+    'from:payoneer@payoneer.com',
+    'from:hola@maximo.pe',
+    // ── BCP ──
     'from:notificaciones@notificaciones.viabcp.com',
     'from:alertas@viabcp.com',
-    // Interbank
+    'from:noreply@viabcp.com',
+    'from:bcp@viabcp.com',
+    // ── Ligo (BCP) ──
+    'from:hola@ligo.pe',
+    'from:notificaciones@ligo.pe',
+    // ── Interbank ──
     'from:alertas@interbank.com.pe',
     'from:ibk@interbank.com.pe',
-    // BBVA
+    'from:notificaciones@interbank.com.pe',
+    // ── BBVA ──
     'from:alertas@bbva.pe',
     'from:bbva@bbvacontinental.com',
-    // Scotiabank
+    'from:notificaciones@bbva.pe',
+    // ── Scotiabank ──
     'from:notificaciones@scotiabank.com.pe',
-    // BanBif
+    'from:alertas@scotiabank.com.pe',
+    // ── BanBif ──
     'from:notificaciones@banbif.com.pe',
-    // MiBanco
+    'from:alertas@banbif.com.pe',
+    // ── Banco Pichincha ──
+    'from:notificaciones@pichincha.com.pe',
+    'from:alertas@pichincha.com.pe',
+    // ── Banco de la Nación ──
+    'from:notificaciones@bn.com.pe',
+    'from:alertas@bn.com.pe',
+    // ── Banco Falabella ──
+    'from:notificaciones@bancofalabella.com.pe',
+    'from:transaccional@bancofalabella.com.pe',
+    // ── Banco Ripley ──
+    'from:notificaciones@bancoripley.com.pe',
+    'from:alertas@bancoripley.com.pe',
+    // ── Financiera Oh! ──
+    'from:notificaciones@financieraoh.com.pe',
+    'from:alertas@financieraoh.com.pe',
+    // ── Nu (Nubank) ──
+    'from:no-reply@nu.com.pe',
+    'from:hola@nu.com.pe',
+    // ── Neobancos ──
+    'from:hola@b89.pe',
+    'from:notificaciones@kambista.com',
+    'from:hola@ual.la',
+    // ── Cajas Municipales ──
+    'from:notificaciones@cajaarequipa.com.pe',
+    'from:notificaciones@cajahuancayo.com.pe',
+    'from:notificaciones@cajapiura.com.pe',
+    'from:notificaciones@cajacusco.pe',
+    'from:notificaciones@cajatrujillo.com.pe',
+    'from:notificaciones@cajasullana.com.pe',
+    'from:notificaciones@cajatacna.com.pe',
+    'from:notificaciones@cajamaynas.com.pe',
+    'from:notificaciones@cmac-ica.com.pe',
+    // ── MiBanco ──
     'from:notificaciones@mibanco.com.pe',
+    'from:alertas@mibanco.com.pe',
 ];
 
 /**
