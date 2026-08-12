@@ -20,13 +20,17 @@ function loadScript(src) {
 
 async function ensureSheetJS() {
     if (!window.XLSX) {
-        await loadScript('https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js');
+        // Fallback: intenta cargar desde CDN si el script del head no cargó
+        await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+        if (!window.XLSX) throw new Error('No se pudo cargar la librería de Excel. Revisa tu conexión.');
     }
 }
 
 async function ensureJsPDF() {
     if (!window.jspdf) {
-        await loadScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
+        // Fallback: intenta cargar desde CDN si el script del head no cargó
+        await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+        if (!window.jspdf) throw new Error('No se pudo cargar la librería de PDF. Revisa tu conexión.');
     }
 }
 

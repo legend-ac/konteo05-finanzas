@@ -19,13 +19,31 @@ let tokenExpiry = 0;
 // ─────────────────────────────────────────────
 export function initGmailService() {
     return new Promise((resolve, reject) => {
+        // Ya está listo
         if (window.google?.accounts?.oauth2) { resolve(); return; }
+
+        const waitForGoogle = (attempts) => {
+            if (window.google?.accounts?.oauth2) { resolve(); return; }
+            if (attempts <= 0) {
+                reject(new Error('Google Identity Services no pudo inicializarse. Recarga la página e intenta de nuevo.'));
+                return;
+            }
+            setTimeout(() => waitForGoogle(attempts - 1), 200);
+        };
+
+        // Si el script ya está en el DOM (cargado desde el head), solo esperar
+        const existing = document.querySelector('script[src*="gsi/client"]');
+        if (existing) {
+            // Esperar hasta 5 segundos (25 intentos × 200ms)
+            waitForGoogle(25);
+            return;
+        }
+
+        // Si no está, cargarlo dinámicamente como fallback
         const script = document.createElement('script');
         script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error('No se pudo cargar Google Identity Services'));
+        script.onload = () => waitForGoogle(25);
+        script.onerror = () => reject(new Error('No se pudo cargar Google Identity Services. Verifica tu conexión a internet.'));
         document.head.appendChild(script);
     });
 }
