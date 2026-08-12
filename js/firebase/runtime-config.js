@@ -4,7 +4,7 @@
 
 window.__KONTEO_FIREBASE_CONFIG__ = window.__KONTEO_FIREBASE_CONFIG__ || {
     apiKey: 'AIzaSyAk8GkeImptx01NsSW9KbP7FnCRfv8BW30',
-    authDomain: 'cont-mu.vercel.app',
+    authDomain: 'control-financiero-andy.firebaseapp.com',
     projectId: 'control-financiero-andy',
     storageBucket: 'control-financiero-andy.firebasestorage.app',
     messagingSenderId: '320231487787',
