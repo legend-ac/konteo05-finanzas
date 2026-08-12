@@ -443,33 +443,16 @@ auth.getRedirectResult().then(async result => {
 async function signInWithGoogle(button) {
     if (button?.disabled) return;
     const buttons = [...document.querySelectorAll('[data-google-auth]')];
-    const originalText = button?.querySelector('span')?.textContent || '';
+    const originalText = button?.querySelector('span')?.textContent || 'Continuar con Google';
     buttons.forEach(item => { item.disabled = true; });
-    if (button?.querySelector('span')) button.querySelector('span').textContent = 'Abriendo Google…';
-
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
+    if (button?.querySelector('span')) button.querySelector('span').textContent = 'Redirigiendo a Google…';
 
     try {
-        if (window.matchMedia('(max-width: 700px)').matches) {
-            await auth.signInWithRedirect(provider);
-            return;
-        }
-        const credential = await auth.signInWithPopup(provider);
-        await ensureAuthenticatedUserDocument(credential.user);
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        await auth.signInWithRedirect(provider);
     } catch (error) {
-        if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/popup-blocked' || error?.code === 'auth/cancelled-popup-request') {
-            showToast('Redirigiendo a Google para completar el acceso…', 'info');
-            try {
-                await auth.signInWithRedirect(provider);
-                return;
-            } catch (redirErr) {
-                showToast(authErrorMessage(redirErr), 'error');
-            }
-        } else {
-            showToast(authErrorMessage(error), 'error');
-        }
-    } finally {
+        showToast(authErrorMessage(error), 'error');
         buttons.forEach(item => { item.disabled = false; });
         if (button?.querySelector('span')) button.querySelector('span').textContent = originalText;
     }
