@@ -1,0 +1,3 @@
+# Legacy local OAuth callback. The application uses Google Identity Services
+# directly and has no route or reference to this standalone page.
+oauth-callback.html
