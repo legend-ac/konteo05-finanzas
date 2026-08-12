@@ -74,7 +74,8 @@ function cleanName(raw) {
 
 function todayStr(date) {
     const d = date instanceof Date && !isNaN(date) ? date : new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // Usar UTC para que coincida con getImportedGmailIds en dbService (que también usa UTC)
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
 function genericExpense(amount, label, source, date, gmailId, text) {

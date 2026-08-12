@@ -104,30 +104,56 @@ export async function getTransactions(uid, startTs) {
 
 /**
  * Obtiene todos los IDs de Gmail e identificadores de transacciones previamente guardados en Firestore.
+ * Filtra a los últimos 90 días para evitar consultas masivas y usa UTC para consistencia de fechas.
  */
 export async function getImportedGmailIds(uid) {
-    const [incSnap, expSnap] = await Promise.all([
-        db.collection('transactions').doc(uid).collection('income').get(),
-        db.collection('transactions').doc(uid).collection('expenses').get()
-    ]);
+    // Limitar a 90 días — mismo máximo que fetchTransactionEmails
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffTs = firebase.firestore.Timestamp.fromDate(cutoff);
+
+    let incDocs = [];
+    let expDocs = [];
+    try {
+        const [incSnap, expSnap] = await Promise.all([
+            db.collection('transactions').doc(uid).collection('income')
+              .where('date', '>=', cutoffTs).get(),
+            db.collection('transactions').doc(uid).collection('expenses')
+              .where('date', '>=', cutoffTs).get(),
+        ]);
+        incDocs = incSnap.docs;
+        expDocs = expSnap.docs;
+    } catch (_) {
+        // Fallback sin filtro si el índice no está disponible
+        const [incSnap, expSnap] = await Promise.all([
+            db.collection('transactions').doc(uid).collection('income').get(),
+            db.collection('transactions').doc(uid).collection('expenses').get(),
+        ]);
+        incDocs = incSnap.docs;
+        expDocs = expSnap.docs;
+    }
+
     const gmailIds = new Set();
     const existingTxKeys = new Set();
 
     const processDoc = (doc, type) => {
         const data = doc.data();
         if (data.gmailId) gmailIds.add(data.gmailId);
+        // El docId gmail_<msgId> también contiene el ID de Gmail
         if (doc.id && doc.id.startsWith('gmail_')) {
-            gmailIds.add(doc.id.replace('gmail_', ''));
+            gmailIds.add(doc.id.slice(6)); // 'gmail_'.length === 6
         }
+        // Generar clave de dedup usando UTC para evitar desfase de timezone
         const dateObj = data.date?.toDate ? data.date.toDate() : (data.createdAt?.toDate ? data.createdAt.toDate() : null);
         if (dateObj && data.amount) {
-            const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+            // UTC para coincidir con el parser (que usa la fecha del email, que Gmail reporta en UTC)
+            const dateStr = `${dateObj.getUTCFullYear()}-${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
             existingTxKeys.add(`${type}|${dateStr}|${Number(data.amount).toFixed(2)}`);
         }
     };
 
-    incSnap.docs.forEach(doc => processDoc(doc, 'income'));
-    expSnap.docs.forEach(doc => processDoc(doc, 'expense'));
+    incDocs.forEach(doc => processDoc(doc, 'income'));
+    expDocs.forEach(doc => processDoc(doc, 'expense'));
 
     return { gmailIds, existingTxKeys };
 }
@@ -187,7 +213,7 @@ export async function deleteAllUserData(uid) {
         await batch.commit();
     }
 
-    // Resetear plan y preferencias en el documento del usuario
+    // Resetear SOLO el plan financiero — NO tocar gmailImport para que el usuario no pierda su conexión Gmail
     try {
         await db.collection('plans').doc(uid).delete();
     } catch (_) {}
@@ -195,10 +221,10 @@ export async function deleteAllUserData(uid) {
     await db.collection('users').doc(uid).set({
         monthlyTarget: 0,
         planConfig: { incomeTarget: 0, expenseLimit: 0 },
-        gmailImport: { enabled: false, email: null, ignoredSources: [] },
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 }
+
 
 /**
  * Lee una única transacción.

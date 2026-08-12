@@ -55,7 +55,9 @@ async function disconnectGmail() {
     revokeGmailToken();
     await saveGmailPref({ enabled: false, email: null });
     importedGmailIds.clear();
-    sessionStorage.removeItem('konteo_gmail_imported');
+    // Limpiar AMBAS claves de sessionStorage (actual uid-específica + clave heredada)
+    try { sessionStorage.removeItem(`konteo_gmail_${currentUid}`); } catch {}
+    try { sessionStorage.removeItem('konteo_gmail_imported'); } catch {}
     renderHeaderBadge(null);
 }
 

@@ -277,7 +277,7 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [])
         const batchResults = await Promise.all(batch.map(async ({ label, query }) => {
             const result = await gmailFetch('users/me/messages', {
                 q: query,
-                maxResults: 100,
+                maxResults: 200,
             });
             return { label, result };
         }));
