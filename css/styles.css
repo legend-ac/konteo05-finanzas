@@ -1305,3 +1305,71 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .gmail-category-control { grid-column: 2; grid-row: 2; max-width: 170px; }
     .gmail-tx-card .gmail-tx-amount { grid-column: 2; grid-row: 3; justify-self: start; }
 }
+
+/* ================================================
+   NUEVOS ESTILOS: EXPORTACIÓN VISIBLE Y ZONA DE PELIGRO
+   ================================================ */
+.dashboard-title-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.header-export-row { display: flex; align-items: center; gap: 6px; }
+.btn-export-top {
+    height: 32px; padding: 0 14px;
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 99px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all var(--t) var(--ease);
+    border: 1px solid var(--line-2); background: var(--bg-3);
+    color: var(--text);
+}
+.btn-export-top:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+
+.ledger-title-group { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-bottom: 12px; }
+.ledger-export-quick { display: flex; align-items: center; gap: 6px; }
+.btn-export-mini {
+    height: 28px; padding: 0 10px; border-radius: var(--r-sm);
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid var(--line-2); background: var(--bg-3);
+    color: var(--text); transition: all var(--t) var(--ease);
+}
+.btn-export-mini:hover { transform: translateY(-1px); }
+
+/* Danger Zone in Profile Modal */
+.profile-danger-zone {
+    margin-top: 20px; padding: 16px; border-radius: 12px;
+    background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.25);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.danger-kicker { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #ef4444; }
+.profile-danger-zone h4 { font-size: 14px; font-weight: 700; color: var(--text); margin: 2px 0 4px; }
+.profile-danger-zone p { font-size: 12px; color: var(--text-3); margin: 0; line-height: 1.4; }
+.btn-danger-action {
+    height: 36px; padding: 0 14px; border-radius: var(--r-sm);
+    background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.4);
+    color: #ef4444; font-size: 12px; font-weight: 700; cursor: pointer;
+    white-space: nowrap; flex-shrink: 0; transition: all var(--t) var(--ease);
+}
+.btn-danger-action:hover { background: #ef4444; color: #fff; transform: translateY(-1px); }
+
+/* Danger Delete Confirmation Modal */
+.modal-danger-content { max-width: 480px; text-align: left; }
+.danger-modal-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.danger-modal-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
+.danger-modal-header h3 { font-size: 18px; font-weight: 700; color: #ef4444; margin: 0 0 4px; }
+.danger-modal-sub { font-size: 12px; color: var(--text-3); margin: 0; }
+.danger-modal-warning { font-size: 13px; color: var(--text-2); background: var(--bg-3); border-radius: 8px; padding: 12px; border-left: 3px solid #ef4444; line-height: 1.5; margin-bottom: 16px; }
+.danger-confirm-field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; font-size: 13px; color: var(--text-2); }
+.danger-confirm-field input {
+    height: 42px; padding: 0 14px; border-radius: var(--r-sm);
+    background: var(--bg-3); border: 1px solid var(--line-2);
+    color: var(--text); font-size: 14px; font-weight: 600; outline: none;
+    transition: border-color var(--t) var(--ease);
+}
+.danger-confirm-field input:focus { border-color: #ef4444; }
+.btn-danger-submit {
+    height: 42px; padding: 0 18px; border-radius: var(--r-sm);
+    background: #ef4444; border: none; color: #fff;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all var(--t) var(--ease);
+}
+.btn-danger-submit:hover:not(:disabled) { background: #dc2626; transform: translateY(-1px); }
+.btn-danger-submit:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+

@@ -170,6 +170,37 @@ export async function deleteTransaction(uid, type, id) {
 }
 
 /**
+ * Elimina TODOS los datos de la cuenta de un usuario de forma aislada.
+ */
+export async function deleteAllUserData(uid) {
+    if (!uid) return;
+    const [incSnap, expSnap] = await Promise.all([
+        db.collection('transactions').doc(uid).collection('income').get(),
+        db.collection('transactions').doc(uid).collection('expenses').get()
+    ]);
+
+    // Eliminar documentos en lotes
+    const docsToDelete = [...incSnap.docs, ...expSnap.docs];
+    for (let i = 0; i < docsToDelete.length; i += 400) {
+        const batch = db.batch();
+        docsToDelete.slice(i, i + 400).forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+    }
+
+    // Resetear plan y preferencias en el documento del usuario
+    try {
+        await db.collection('plans').doc(uid).delete();
+    } catch (_) {}
+
+    await db.collection('users').doc(uid).set({
+        monthlyTarget: 0,
+        planConfig: { incomeTarget: 0, expenseLimit: 0 },
+        gmailImport: { enabled: false, email: null, ignoredSources: [] },
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+}
+
+/**
  * Lee una única transacción.
  */
 export async function getTransactionById(uid, type, id) {

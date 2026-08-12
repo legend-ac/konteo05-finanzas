@@ -183,11 +183,23 @@
                         <p class="dashboard-eyebrow" id="dashboard-greeting">Control financiero</p>
                         <h1 id="dashboard-title">Lo que importa, primero.</h1>
                     </div>
-                    <div class="period-bar" role="group" aria-label="Periodo">
-                        <button class="filter active" data-filter="today">Hoy</button>
-                        <button class="filter" data-filter="week">7 d&iacute;as</button>
-                        <button class="filter" data-filter="month">Mes</button>
-                        <button class="filter" data-filter="custom">Rango</button>
+                    <div class="dashboard-title-right">
+                        <div class="period-bar" role="group" aria-label="Periodo">
+                            <button class="filter active" data-filter="today">Hoy</button>
+                            <button class="filter" data-filter="week">7 d&iacute;as</button>
+                            <button class="filter" data-filter="month">Mes</button>
+                            <button class="filter" data-filter="custom">Rango</button>
+                        </div>
+                        <div class="header-export-row" aria-label="Exportar reportes del período">
+                            <button id="btn-export-excel-top" class="btn-export-top btn-export-excel" type="button" title="Descargar reporte Excel del período activo">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+                                <span>Excel</span>
+                            </button>
+                            <button id="btn-export-pdf-top" class="btn-export-top btn-export-pdf" type="button" title="Descargar reporte PDF del período activo">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>
+                                <span>PDF</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -248,9 +260,21 @@
                 <!-- LEFT: Transactions -->
                 <section class="ledger-card">
                     <div class="ledger-toolbar">
-                        <div class="ledger-title">
-                            <p class="ledger-eyebrow">Registro</p>
-                            <h2>Movimientos <span class="transactions-count" id="tx-count"></span></h2>
+                        <div class="ledger-title-group">
+                            <div class="ledger-title">
+                                <p class="ledger-eyebrow">Registro</p>
+                                <h2>Movimientos <span class="transactions-count" id="tx-count"></span></h2>
+                            </div>
+                            <div class="ledger-export-quick">
+                                <button id="btn-export-excel-toolbar" class="btn-export-mini btn-export-excel" type="button" title="Exportar período activo a Excel">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+                                    <span>Excel</span>
+                                </button>
+                                <button id="btn-export-pdf-toolbar" class="btn-export-mini btn-export-pdf" type="button" title="Exportar período activo a PDF">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>
+                                    <span>PDF</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="filter-bar">
                             <input type="text" id="search-input" placeholder="Buscar movimiento…" class="search-input" aria-label="Buscar">
@@ -455,6 +479,14 @@
                 </div>
                 <button type="button" id="btn-gmail-entities" class="cancel">Gestionar entidades</button>
             </section>
+            <section class="profile-danger-zone" aria-labelledby="profile-danger-title">
+                <div>
+                    <span class="danger-kicker">Zona de peligro</span>
+                    <h4 id="profile-danger-title">Limpiar mi cuenta</h4>
+                    <p>Elimina todos tus movimientos, presupuestos e historial de esta cuenta.</p>
+                </div>
+                <button type="button" id="btn-open-delete-data" class="btn-danger-action">Borrar todos mis datos</button>
+            </section>
             <div class="modal-buttons">
                 <button type="button" id="btn-open-recovery" class="cancel">Recuperar contrase&ntilde;a</button>
                 <button type="button" class="cancel" data-modal="modal-profile">Cancelar</button>
@@ -477,6 +509,31 @@
                 <button type="submit">Enviar enlace</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal Confirmar Borrado de Datos -->
+<div id="modal-confirm-delete" class="modal hidden" role="dialog" aria-labelledby="modal-delete-title" aria-modal="true">
+    <div class="modal-content modal-danger-content">
+        <div class="modal-handle"></div>
+        <div class="danger-modal-header">
+            <div class="danger-modal-icon">⚠️</div>
+            <div>
+                <h3 id="modal-delete-title">¿Borrar todos tus datos?</h3>
+                <p class="danger-modal-sub">Esta acción es irreversible y afectará únicamente a esta cuenta.</p>
+            </div>
+        </div>
+        <p class="danger-modal-warning">
+            Se eliminarán permanentemente todos tus <strong>ingresos, gastos, metas financieras e historial de importaciones</strong> registrados en tu cuenta (<strong id="delete-user-email-label"></strong>).
+        </p>
+        <div class="danger-confirm-field">
+            <label for="delete-confirm-input">Escribe <strong>BORRAR</strong> para confirmar:</label>
+            <input type="text" id="delete-confirm-input" placeholder="BORRAR" autocomplete="off">
+        </div>
+        <div class="modal-buttons">
+            <button type="button" class="cancel" id="btn-cancel-delete">Cancelar</button>
+            <button type="button" id="btn-confirm-delete-all" class="btn-danger-submit" disabled>Eliminar datos definitivamente</button>
+        </div>
     </div>
 </div>
 

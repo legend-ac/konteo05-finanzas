@@ -905,8 +905,53 @@ function getExportContext() {
     };
 }
 
-document.getElementById('btn-export-excel')?.addEventListener('click', () => exportToExcel(getExportContext()));
-document.getElementById('btn-export-pdf')?.addEventListener('click',   () => exportToPDF(getExportContext()));
+// Export buttons — Header, Toolbar y sección inferior
+['btn-export-excel', 'btn-export-excel-top', 'btn-export-excel-toolbar'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => exportToExcel(getExportContext()));
+});
+['btn-export-pdf', 'btn-export-pdf-top', 'btn-export-pdf-toolbar'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => exportToPDF(getExportContext()));
+});
+
+// ──────────────────────────────────────────────
+// DELETE ALL USER DATA
+// ──────────────────────────────────────────────
+document.getElementById('btn-open-delete-data')?.addEventListener('click', () => {
+    closeModal('modal-profile');
+    const lbl = document.getElementById('delete-user-email-label');
+    if (lbl) lbl.textContent = state.currentUser?.email || 'tu cuenta';
+    const inp = document.getElementById('delete-confirm-input');
+    if (inp) inp.value = '';
+    const btn = document.getElementById('btn-confirm-delete-all');
+    if (btn) btn.disabled = true;
+    openModal('modal-confirm-delete');
+});
+document.getElementById('btn-cancel-delete')?.addEventListener('click', () => {
+    closeModal('modal-confirm-delete');
+});
+document.getElementById('delete-confirm-input')?.addEventListener('input', e => {
+    const val = (e.target.value || '').trim().toUpperCase();
+    const btn = document.getElementById('btn-confirm-delete-all');
+    if (btn) btn.disabled = val !== 'BORRAR';
+});
+document.getElementById('btn-confirm-delete-all')?.addEventListener('click', async () => {
+    if (!state.currentUser) return;
+    const submitBtn = document.getElementById('btn-confirm-delete-all');
+    const origText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Eliminando...';
+    try {
+        await dbService.deleteAllUserData(state.currentUser.uid);
+        closeModal('modal-confirm-delete');
+        showToast('✅ Todos los datos de tu cuenta fueron eliminados', 'success');
+        await loadData();
+    } catch (err) {
+        showToast('Error al eliminar datos: ' + err.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = origText;
+    }
+});
 
 // ──────────────────────────────────────────────
 // THEME
