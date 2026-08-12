@@ -103,6 +103,36 @@ export async function getTransactions(uid, startTs) {
 }
 
 /**
+ * Obtiene todos los IDs de Gmail e identificadores de transacciones previamente guardados en Firestore.
+ */
+export async function getImportedGmailIds(uid) {
+    const [incSnap, expSnap] = await Promise.all([
+        db.collection('transactions').doc(uid).collection('income').get(),
+        db.collection('transactions').doc(uid).collection('expenses').get()
+    ]);
+    const gmailIds = new Set();
+    const existingTxKeys = new Set();
+
+    const processDoc = (doc, type) => {
+        const data = doc.data();
+        if (data.gmailId) gmailIds.add(data.gmailId);
+        if (doc.id && doc.id.startsWith('gmail_')) {
+            gmailIds.add(doc.id.replace('gmail_', ''));
+        }
+        const dateObj = data.date?.toDate ? data.date.toDate() : (data.createdAt?.toDate ? data.createdAt.toDate() : null);
+        if (dateObj && data.amount) {
+            const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+            existingTxKeys.add(`${type}|${dateStr}|${Number(data.amount).toFixed(2)}`);
+        }
+    };
+
+    incSnap.docs.forEach(doc => processDoc(doc, 'income'));
+    expSnap.docs.forEach(doc => processDoc(doc, 'expense'));
+
+    return { gmailIds, existingTxKeys };
+}
+
+/**
  * Guarda o actualiza un ingreso.
  */
 export async function saveIncome(uid, data, editId = null, requestId = null) {
@@ -111,9 +141,8 @@ export async function saveIncome(uid, data, editId = null, requestId = null) {
         await colRef.doc(editId).update(data);
     } else {
         const payload = { ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-        // The id is generated once by the form. Retrying the same request can update
-        // this document, but can never create a second income document.
-        if (requestId) await colRef.doc(requestId).set(payload);
+        // Si hay requestId (ej: gmail_<id>), se usa .set con merge para evitar documentos duplicados en Firestore
+        if (requestId) await colRef.doc(requestId).set(payload, { merge: true });
         else await colRef.add(payload);
     }
 }
@@ -127,8 +156,7 @@ export async function saveExpense(uid, data, editId = null, requestId = null) {
         await colRef.doc(editId).update(data);
     } else {
         const payload = { ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-        // See saveIncome: deterministic per-form document ids make retries idempotent.
-        if (requestId) await colRef.doc(requestId).set(payload);
+        if (requestId) await colRef.doc(requestId).set(payload, { merge: true });
         else await colRef.add(payload);
     }
 }

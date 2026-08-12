@@ -458,7 +458,7 @@ async function signInWithGoogle(button) {
     // Intento 1: Usar Google Identity Services (GIS) ID Token si está disponible
     if (window.google?.accounts?.id) {
         try {
-            google.accounts.id.initialize({
+            window.google.accounts.id.initialize({
                 client_id: clientId,
                 callback: async (response) => {
                     if (!response?.credential) {
@@ -478,11 +478,11 @@ async function signInWithGoogle(button) {
                 }
             });
             // Solicitar selección de cuenta con One Tap / Popup
-            google.accounts.id.prompt((notification) => {
+            window.google.accounts.id.prompt((notification) => {
                 if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
                     // Fallback a Token Client si One Tap no se muestra
                     if (window.google?.accounts?.oauth2) {
-                        const client = google.accounts.oauth2.initTokenClient({
+                        const client = window.google.accounts.oauth2.initTokenClient({
                             client_id: clientId,
                             scope: 'email profile openid',
                             callback: async (resp) => {

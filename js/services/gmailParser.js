@@ -557,7 +557,7 @@ export function parseEmail({ message, bodyText, sender, date, subject, customEnt
     }
 }
 
-export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, getSubject, existingIds = new Set(), customEntities = [] }) {
+export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, getSubject, existingIds = new Set(), existingTxKeys = new Set(), customEntities = [] }) {
     const results  = [];
     const seenIds  = new Set(existingIds);
 
@@ -569,11 +569,44 @@ export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, ge
         const bodyText = decodeBody(msg);
         const tx = parseEmail({ message: msg, bodyText, sender, date, subject, customEntities });
         if (tx && tx.amount > 0 && tx.amount < 1_000_000) {
+            // Omitir si la transacción ya está registrada en Firestore por fecha, tipo y monto
+            const key = `${tx.type}|${tx.date}|${Number(tx.amount).toFixed(2)}`;
+            if (existingTxKeys.has(key)) {
+                console.info('[gmailParser] Omitiendo transacción ya existente en Firestore:', key);
+                seenIds.add(msg.id);
+                continue;
+            }
             seenIds.add(msg.id);
             results.push(tx);
         }
     }
 
-    results.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return results;
+    // Deduplicar notificaciones redundantes del mismo movimiento físico (ej. cargo de tarjeta de Interbank vs comprobante de Plin, o consumo BCP vs Yape)
+    const deduplicated = [];
+    for (const tx of results) {
+        const isDuplicate = deduplicated.find(existing => {
+            if (existing.date !== tx.date || Math.abs(existing.amount - tx.amount) > 0.001 || existing.type !== tx.type) {
+                return false;
+            }
+            const s1 = existing.source;
+            const s2 = tx.source;
+            return s1 === s2 ||
+                (s1 === 'plin' && s2 === 'interbank') || (s1 === 'interbank' && s2 === 'plin') ||
+                (s1 === 'yape' && s2 === 'bcp') || (s1 === 'bcp' && s2 === 'yape');
+        });
+
+        if (isDuplicate) {
+            // Preferir el recibo con nombre específico (ej. 'Plin a X' o 'Yape a Y') sobre la notificación genérica ('Interbank - Cargo')
+            if ((tx.source === 'plin' || tx.source === 'yape') && (isDuplicate.source === 'interbank' || isDuplicate.source === 'bcp')) {
+                isDuplicate.description = tx.description;
+                isDuplicate.source = tx.source;
+                if (tx.sourceLabel) isDuplicate.sourceLabel = tx.sourceLabel;
+            }
+        } else {
+            deduplicated.push(tx);
+        }
+    }
+
+    deduplicated.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return deduplicated;
 }

@@ -16,7 +16,7 @@ import {
 
 import { parseAllEmails } from '../services/gmailParser.js';
 import { db, firebase }   from '../firebase/config.js';
-import { saveIncome, saveExpense } from '../services/dbService.js';
+import { saveIncome, saveExpense, getImportedGmailIds } from '../services/dbService.js';
 
 // ─────────────────────────────────────────────
 // ESTADO
@@ -554,6 +554,11 @@ async function doSearch(daysBack) {
     try {
         document.getElementById('gmail-loading-msg').textContent = `Buscando emails de los últimos ${daysBack} días…`;
         const customEntities = gmailPreference?.customEntities || [];
+        
+        // Consultar transacciones registradas e IDs de Gmail guardados previamente en Firestore
+        const { gmailIds: dbGmailIds, existingTxKeys } = await getImportedGmailIds(currentUid).catch(() => ({ gmailIds: new Set(), existingTxKeys: new Set() }));
+        const allExistingIds = new Set([...importedGmailIds, ...dbGmailIds]);
+
         const rawMessages = await fetchTransactionEmails(daysBack, customEntities);
 
         document.getElementById('gmail-loading-msg').textContent = `Analizando ${rawMessages.length} email${rawMessages.length !== 1 ? 's' : ''}…`;
@@ -564,7 +569,8 @@ async function doSearch(daysBack) {
             getSender: getEmailSender,
             getDate: getEmailDate,
             getSubject: getEmailSubject,
-            existingIds: importedGmailIds,
+            existingIds: allExistingIds,
+            existingTxKeys,
             customEntities,
         });
 
@@ -644,15 +650,20 @@ async function doImport() {
             const payload = { amount: tx.amount, note: tx.description, date: dateTs, createdAt: now,
                               source: `gmail:${tx.source}`, gmailId: tx.gmailId };
 
+            const docId = `gmail_${tx.gmailId}`;
+
             if (tx.type === 'income') {
-                await saveIncome(currentUid, { ...payload, category: tx.category || 'otros' });
+                await saveIncome(currentUid, { ...payload, category: tx.category || 'otros' }, null, docId);
             } else {
-                await saveExpense(currentUid, { ...payload, category: tx.category || 'yellow', method: 'otro' });
+                await saveExpense(currentUid, { ...payload, category: tx.category || 'yellow', method: 'otro' }, null, docId);
             }
             persistImportedId(tx.gmailId);
             ok++;
         } catch (e) { console.error('[gmailImport] Error al guardar:', e); fail++; }
     }
+
+    // Refrescar el dashboard
+    window.dispatchEvent(new CustomEvent('konteo:refresh'));
 
     const title = document.getElementById('gmail-success-title');
     const msg   = document.getElementById('gmail-success-msg');
