@@ -557,6 +557,15 @@ async function doSearch(daysBack) {
         
         // Consultar transacciones registradas e IDs de Gmail guardados previamente en Firestore
         const { gmailIds: dbGmailIds, existingTxKeys } = await getImportedGmailIds(currentUid).catch(() => ({ gmailIds: new Set(), existingTxKeys: new Set() }));
+
+        // Si Firestore está vacío (usuario limpió su cuenta), limpiar también el caché local de sessionStorage
+        // para evitar falsos positivos que bloquean la reimportación
+        if (dbGmailIds.size === 0 && existingTxKeys.size === 0 && importedGmailIds.size > 0) {
+            console.info('[gmailImport] Firestore vacío — limpiando caché local para permitir reimportación completa');
+            importedGmailIds = new Set();
+            try { sessionStorage.removeItem(`konteo_gmail_${currentUid}`); } catch {}
+        }
+
         const allExistingIds = new Set([...importedGmailIds, ...dbGmailIds]);
 
         const rawMessages = await fetchTransactionEmails(daysBack, customEntities);
@@ -854,6 +863,7 @@ function wireListeners(pref) {
     });
 }
 
+
 // ─────────────────────────────────────────────
 // EXPORT: punto de entrada
 // ─────────────────────────────────────────────
@@ -872,4 +882,17 @@ export async function initGmailImport(uid) {
 
     // Pre-cargar Google Identity Services en background
     initGmailService().catch(() => {});
+}
+
+/**
+ * Limpia el caché local de IDs de Gmail importados (sessionStorage + memoria).
+ * Llamar después de borrar todos los datos del usuario para permitir reimportar sin falsos positivos.
+ */
+export function clearGmailImportCache() {
+    importedGmailIds = new Set();
+    if (currentUid) {
+        try { sessionStorage.removeItem(`konteo_gmail_${currentUid}`); } catch {}
+    }
+    // Limpiar también la clave genérica heredada de versiones anteriores
+    try { sessionStorage.removeItem('konteo_gmail_imported'); } catch {}
 }

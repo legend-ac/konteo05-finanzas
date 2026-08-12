@@ -13,7 +13,7 @@ import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
 import * as dbService             from './services/dbService.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
-import { initGmailImport }             from './ui/gmailImport.js';
+import { initGmailImport, clearGmailImportCache } from './ui/gmailImport.js';
 
 // ──────────────────────────────────────────────
 // THEME
@@ -942,8 +942,10 @@ document.getElementById('btn-confirm-delete-all')?.addEventListener('click', asy
     submitBtn.textContent = 'Eliminando...';
     try {
         await dbService.deleteAllUserData(state.currentUser.uid);
+        // Limpiar el caché local de IDs de Gmail para que el usuario pueda reimportar sin ver "sin movimientos nuevos"
+        clearGmailImportCache();
         closeModal('modal-confirm-delete');
-        showToast('✅ Todos los datos de tu cuenta fueron eliminados', 'success');
+        showToast('✅ Todos los datos eliminados. Ya puedes reimportar tus movimientos desde Gmail.', 'success');
         await loadData();
     } catch (err) {
         showToast('Error al eliminar datos: ' + err.message, 'error');
