@@ -8,8 +8,10 @@
 function extractAmount(text) {
     const patterns = [
         /S\/\.?\s*([\d,]+\.?\d{0,2})/i,
+        /(?<=\s|^|[:(])([\d,]+\.\d{2})(?=\s|$|[^\d])/,  // monto bare sin S/ si está aislado
         /PEN\s*([\d,]+\.?\d{0,2})/i,
         /soles?\s*([\d,]+\.?\d{0,2})/i,
+        /(?:total|importe|monto|cargo|abono|consumo)\s*[:\n]?\s*S?\/?\.?\s*([\d,]+\.?\d{0,2})/i,
     ];
     for (const pat of patterns) {
         const m = text.match(pat);
@@ -124,19 +126,27 @@ function parseCustomEntity(entity, { body, subject, date, gmailId }) {
 // ─────────────────────────────────────────────
 function parseYape({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
+
+    // Recibiste S/X de Nombre
     const received = text.match(/recibiste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+de\s+([^\n\r.]+)/i);
     if (received) return genericIncome(parseFloat(received[1].replace(/,/g, '')), `Yape de ${cleanName(received[2])}`, 'yape', date, gmailId, text);
+
+    // Enviaste/transferiste S/X a Nombre
     const sent = text.match(/(?:enviaste?|transferiste?)\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+a\s+([^\n\r.]+)/i);
     if (sent) return genericExpense(parseFloat(sent[1].replace(/,/g, '')), `Yape a ${cleanName(sent[2])}`, 'yape', date, gmailId, text);
+
+    // Pagaste en X
     const payment = text.match(/pagaste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+(?:en|a)\s+([^\n\r.]+)/i);
     if (payment) return genericExpense(parseFloat(payment[1].replace(/,/g, '')), `Yape - ${cleanName(payment[2])}`, 'yape', date, gmailId, text);
-    // Formato actual de Yape: “¡Acabas de yapear exitosamente!”
-    const yapeo = text.match(/(?:acabas de )?yapear(?:\s+exitosamente)?|monto de yapeo/i);
-    if (yapeo) {
+
+    // Formatos "yapeo exitoso" / "yapeo a traves de" / "se realizó un yapeo"
+    const isYapeo = /(?:acabas de )?yapear(?:\s+exitosamente)?|monto de yapeo|se\s+realiz[oó]\s+un\s+yapeo|yapeo\s+de\s+S/i.test(text);
+    if (isYapeo) {
         const amount = extractAmount(text);
-        const recipient = text.match(/(?:nombre del beneficiario|beneficiario)\s*[:\n]\s*([^\n\r]+)/i);
+        const recipient = text.match(/(?:nombre del beneficiario|beneficiario|destinatario)\s*[:\n]\s*([^\n\r]+)/i);
         if (amount) return genericExpense(amount, `Yape a ${cleanName(recipient?.[1] || 'contacto')}`, 'yape', date, gmailId, text);
     }
+
     const amount = extractAmount(text);
     if (amount) return detectTypeAndBuild(text, 'yape', `Yape - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
     return null;
@@ -147,10 +157,18 @@ function parseYape({ body, subject, date, gmailId }) {
 // ─────────────────────────────────────────────
 function parsePlin({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
+
     const received = text.match(/recibiste?\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+de\s+([^\n\r.]+)/i);
     if (received) return genericIncome(parseFloat(received[1].replace(/,/g, '')), `Plin de ${cleanName(received[2])}`, 'plin', date, gmailId, text);
-    const sent = text.match(/env(?:iaste?|ío de)\s+S\/\.?\s*([\d,]+\.?\d{0,2})\s+a\s+([^\n\r.]+)/i);
-    if (sent) return genericExpense(parseFloat(sent[1].replace(/,/g, '')), `Plin a ${cleanName(sent[2])}`, 'plin', date, gmailId, text);
+
+    // Enviaste/transferiste/pago Plin a X
+    const sent = text.match(/(?:env(?:iaste?|[ií]o\s+(?:de|plin))|transferiste?|pago\s+exitoso)\s+(?:S\/\.?\s*([\d,]+\.?\d{0,2})\s+a\s+)?(?:de\s+)?([^\n\r.]+)/i);
+    const amountSent = extractLabeledAmount(text, ['monto\s+y\s+moneda', 'monto\s+enviado', 'monto', 'importe']) || extractAmount(text);
+    if (amountSent && /enviaste?|env[ií]o|transferiste?|pago\s+(?:exitoso|realizado)|plin\s+enviado/i.test(text)) {
+        const recipient = extractField(text, ['destinatario', 'beneficiario', 'titular\s+de\s+la\s+cuenta\s+destino', 'nombre']);
+        return genericExpense(amountSent, `Plin a ${cleanName(recipient || sent?.[2] || 'contacto')}`, 'plin', date, gmailId, text);
+    }
+
     return detectTypeAndBuild(text, 'plin', `Plin - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
 }
 
@@ -218,21 +236,41 @@ function parseInterbank({ body, subject, date, gmailId }) {
 // ─────────────────────────────────────────────
 function parseBBVA({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
-    const charge = text.match(/(?:cargo|consumo|pago)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
-    if (charge) {
-        const merchant = text.match(/(?:en|establecimiento[:\s]+)\s*([A-ZÁÉÍÓÚ\w\s]{3,40})/i);
-        return genericExpense(parseFloat(charge[1].replace(/,/g, '')), `BBVA - ${merchant ? cleanName(merchant[1]) : 'Consumo'}`, 'bbva', date, gmailId, text);
+
+    // Cargo / consumo — extraer monto con label primero, más preciso
+    const chargeAmt = extractLabeledAmount(text, ['monto\\s+(?:del\\s+)?(?:consumo|cargo|pago)', 'importe', 'monto', 'cargo', 'consumo']) || null;
+    if (chargeAmt && /cargo|consumo|pago|compra/i.test(text)) {
+        const merchantMatch = text.match(/(?:en\s+el\s+establecimiento|establecimiento|comercio|tienda)\s*[:\s]+([A-ZÁÉÍÓÚ\w][A-ZÁÉÍÓÚ\w\s&.-]{2,40})/i);
+        const merchant = merchantMatch ? cleanName(merchantMatch[1]).trim() : '';
+        const isGeneric = !merchant || /l[ií]nea|p[aá]gina|web|internet|banca|canal|online/i.test(merchant);
+        const label = isGeneric ? 'BBVA - Consumo' : `BBVA - ${displayName(merchant)}`;
+        return genericExpense(chargeAmt, label, 'bbva', date, gmailId, text);
     }
-    const credit = text.match(/(?:abono|depósito|deposito|acredita)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
-    if (credit) return genericIncome(parseFloat(credit[1].replace(/,/g, '')), `BBVA - Abono`, 'bbva', date, gmailId, text);
+
+    const chargeSimple = text.match(/(?:cargo|consumo|pago)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
+    if (chargeSimple) {
+        return genericExpense(parseFloat(chargeSimple[1].replace(/,/g, '')), 'BBVA - Consumo', 'bbva', date, gmailId, text);
+    }
+
+    const credit = text.match(/(?:abono|dep[oó]sito|deposito|acredita|recibiste?)\s+(?:de\s+)?S\/\.?\s*([\d,]+\.?\d{0,2})/i);
+    if (credit) return genericIncome(parseFloat(credit[1].replace(/,/g, '')), 'BBVA - Abono', 'bbva', date, gmailId, text);
+
     return detectTypeAndBuild(text, 'bbva', `BBVA - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
 }
+
 
 // ─────────────────────────────────────────────
 // SCOTIABANK
 // ─────────────────────────────────────────────
 function parseScotiabank({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
+    const amount = extractLabeledAmount(text, ['monto', 'importe', 'total', 'cargo', 'consumo', 'abono']) || extractAmount(text);
+    if (!amount) return detectTypeAndBuild(text, 'scotiabank', `Scotiabank - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
+    const isCharge = /cargo|pago|compra|consumo|d[eé]bito|retiro/i.test(text);
+    const isCredit = /abono|dep[oó]sito|cr[eé]dito|acredita/i.test(text);
+    const merchant = extractField(text, ['establecimiento', 'comercio', 'empresa']);
+    if (isCharge) return genericExpense(amount, `Scotiabank - ${displayName(merchant || 'Consumo')}`, 'scotiabank', date, gmailId, text);
+    if (isCredit) return genericIncome(amount, 'Scotiabank - Abono', 'scotiabank', date, gmailId, text);
     return detectTypeAndBuild(text, 'scotiabank', `Scotiabank - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
 }
 
@@ -446,17 +484,19 @@ function parseMaximo({ body, subject, date, gmailId }) {
 // ─────────────────────────────────────────────
 function parseMiBanco({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
-    const amount = extractAmount(text);
+    const amount = extractLabeledAmount(text, ['monto\s+(?:enviado|operaci.n|y\s+moneda)?', 'importe', 'total']) || extractAmount(text);
     if (!amount) return null;
 
-    const recipient = text.match(/(?:titular de la cuenta destino|destinatario)\s*[:\n]\s*([^\n\r]+)/i);
-    if (/transferencia.*exitosa|enviar a contacto|monto enviado|pago/i.test(text)) {
-        return genericExpense(amount, `MiBanco - ${cleanName(recipient?.[1] || 'Transferencia')}`, 'mibanco', date, gmailId, text);
+    const recipient = text.match(/(?:titular\s+de\s+la\s+cuenta\s+destino|destinatario|beneficiario)\s*[:\n]\s*([^\n\r]+)/i);
+    const recipientName = cleanName(recipient?.[1] || 'Transferencia');
+
+    if (/transferencia.*exitosa|enviar\s+a\s+contacto|monto\s+enviado|pago.*realizado|operaci.n\s+exitosa/i.test(text)) {
+        return genericExpense(amount, `MiBanco - ${recipientName}`, 'mibanco', date, gmailId, text);
     }
-    if (/abono|dep[oó]sito|monto recibido|recibiste/i.test(text)) {
+    if (/abono|dep[oó]sito|monto\s+recibido|recibiste|ingreso/i.test(text)) {
         return genericIncome(amount, 'MiBanco - Abono', 'mibanco', date, gmailId, text);
     }
-    return null;
+    return detectTypeAndBuild(text, 'mibanco', `MiBanco - ${cleanName(subject).slice(0, 50)}`, date, gmailId);
 }
 
 // ─────────────────────────────────────────────
@@ -581,23 +621,40 @@ export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, ge
         }
     }
 
-    // Deduplicar notificaciones redundantes del mismo movimiento físico (ej. cargo de tarjeta de Interbank vs comprobante de Plin, o consumo BCP vs Yape)
+    // Deduplicar notificaciones redundantes del mismo movimiento físico
+    // Ejemplo: cargo de Interbank + comprobante de Plin/Yape del mismo monto
+    const CROSS_PAIRS = [
+        // billetera → banco emisor (prefer billetera = tiene nombre del destinatario)
+        ['plin',        'interbank'],
+        ['plin',        'bcp'],
+        ['plin',        'bbva'],
+        ['plin',        'scotiabank'],
+        ['yape',        'bcp'],
+        ['yape',        'interbank'],
+        ['yape',        'bbva'],
+        ['yape',        'mibanco'],
+        ['yape',        'nacion'],
+        ['yape',        'scotiabank'],
+        ['mercadopago', 'bcp'],
+        ['izipay',      'interbank'],
+    ];
+    const isCrossDuplicate = (s1, s2) => CROSS_PAIRS.some(([w, b]) => (s1 === w && s2 === b) || (s1 === b && s2 === w));
+
     const deduplicated = [];
     for (const tx of results) {
         const isDuplicate = deduplicated.find(existing => {
-            if (existing.date !== tx.date || Math.abs(existing.amount - tx.amount) > 0.001 || existing.type !== tx.type) {
-                return false;
-            }
-            const s1 = existing.source;
-            const s2 = tx.source;
-            return s1 === s2 ||
-                (s1 === 'plin' && s2 === 'interbank') || (s1 === 'interbank' && s2 === 'plin') ||
-                (s1 === 'yape' && s2 === 'bcp') || (s1 === 'bcp' && s2 === 'yape');
+            if (existing.date !== tx.date) return false;
+            if (Math.abs(existing.amount - tx.amount) > 0.01) return false;  // tolerancia de 1 centavo
+            if (existing.type !== tx.type) return false;
+            return existing.source === tx.source || isCrossDuplicate(existing.source, tx.source);
         });
 
         if (isDuplicate) {
-            // Preferir el recibo con nombre específico (ej. 'Plin a X' o 'Yape a Y') sobre la notificación genérica ('Interbank - Cargo')
-            if ((tx.source === 'plin' || tx.source === 'yape') && (isDuplicate.source === 'interbank' || isDuplicate.source === 'bcp')) {
+            // Preferir el recibo con nombre específico (ej. 'Plin a X' o 'Yape a Y') sobre la notificación genérica del banco
+            const wallets = ['plin', 'yape', 'mercadopago', 'izipay'];
+            const txIsWallet = wallets.includes(tx.source);
+            const existingIsBank = !wallets.includes(isDuplicate.source);
+            if (txIsWallet && existingIsBank) {
                 isDuplicate.description = tx.description;
                 isDuplicate.source = tx.source;
                 if (tx.sourceLabel) isDuplicate.sourceLabel = tx.sourceLabel;
