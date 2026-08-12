@@ -444,17 +444,89 @@ async function signInWithGoogle(button) {
     if (button?.disabled) return;
     const buttons = [...document.querySelectorAll('[data-google-auth]')];
     const originalText = button?.querySelector('span')?.textContent || 'Continuar con Google';
-    buttons.forEach(item => { item.disabled = true; });
-    if (button?.querySelector('span')) button.querySelector('span').textContent = 'Redirigiendo a Google…';
 
-    try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        await auth.signInWithRedirect(provider);
-    } catch (error) {
-        showToast(authErrorMessage(error), 'error');
+    const resetButton = () => {
         buttons.forEach(item => { item.disabled = false; });
         if (button?.querySelector('span')) button.querySelector('span').textContent = originalText;
+    };
+
+    buttons.forEach(item => { item.disabled = true; });
+    if (button?.querySelector('span')) button.querySelector('span').textContent = 'Abriendo Google…';
+
+    const clientId = window.__KONTEO_FIREBASE_CONFIG__?.gmailClientId || '320231487787-fm226uea8oumub95ol4ekbj90sdbk8if.apps.googleusercontent.com';
+
+    // Intento 1: Usar Google Identity Services (GIS) Token Client si está cargado
+    if (window.google?.accounts?.oauth2) {
+        try {
+            const client = google.accounts.oauth2.initTokenClient({
+                client_id: clientId,
+                scope: 'email profile openid',
+                callback: async (response) => {
+                    if (response.error) {
+                        showToast('Autenticación cancelada o fallida.', 'info');
+                        resetButton();
+                        return;
+                    }
+                    try {
+                        const credential = firebase.auth.GoogleAuthProvider.credential(null, response.access_token);
+                        const authResult = await auth.signInWithCredential(credential);
+                        await ensureAuthenticatedUserDocument(authResult.user);
+                        showToast('¡Bienvenido! Sesión iniciada con Google', 'success');
+                    } catch (err) {
+                        showToast('Error al iniciar sesión con Firebase: ' + err.message, 'error');
+                    } finally {
+                        resetButton();
+                    }
+                }
+            });
+            client.requestAccessToken();
+            return;
+        } catch (gisErr) {
+            console.warn('GIS TokenClient falló, usando método secundario:', gisErr);
+        }
+    }
+
+    // Intento 2: Usar Popup directo con oauth-callback.html
+    try {
+        const redirectUri = encodeURIComponent(window.location.origin + '/oauth-callback.html');
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=email%20profile%20openid&prompt=select_account`;
+        
+        const popup = window.open(authUrl, 'google_auth_popup', 'width=500,height=600');
+
+        if (!popup) {
+            // Popup bloqueado, usar redirección directa de Firebase
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: 'select_account' });
+            await auth.signInWithRedirect(provider);
+            return;
+        }
+
+        const handleMessage = async (event) => {
+            if (event.origin !== window.location.origin) return;
+            const { type, token, error } = event.data || {};
+            if (type === 'konteo-gmail-oauth') {
+                window.removeEventListener('message', handleMessage);
+                if (token) {
+                    try {
+                        const credential = firebase.auth.GoogleAuthProvider.credential(null, token);
+                        const authResult = await auth.signInWithCredential(credential);
+                        await ensureAuthenticatedUserDocument(authResult.user);
+                        showToast('¡Bienvenido! Sesión iniciada con Google', 'success');
+                    } catch (err) {
+                        showToast('Error al iniciar sesión: ' + err.message, 'error');
+                    }
+                } else if (error) {
+                    showToast('Error en OAuth: ' + error, 'error');
+                }
+                resetButton();
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+
+    } catch (error) {
+        showToast(authErrorMessage(error), 'error');
+        resetButton();
     }
 }
 
