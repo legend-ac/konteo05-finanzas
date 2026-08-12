@@ -692,25 +692,18 @@ document.getElementById('btn-save-plan')?.addEventListener('click', async () => 
 document.getElementById('plan-card')?.classList.add('open');
 
 // ──────────────────────────────────────────────
-// EXPORT
+// EXPORT — usa el período activo del dashboard
 // ──────────────────────────────────────────────
-function syncExportPeriodUi() {
-    document.querySelectorAll('.export-period-btn').forEach(btn => {
-        const active = btn.dataset.period === state.exportPeriod;
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-pressed', String(active));
-    });
+function getExportContext() {
+    return {
+        filter:    state.currentFilter    || 'week',
+        startDate: state.customRangeStart || '',
+        endDate:   state.customRangeEnd   || '',
+    };
 }
-syncExportPeriodUi();
-document.querySelectorAll('.export-period-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        state.exportPeriod = btn.dataset.period || 'semanal';
-        persistUiState();
-        syncExportPeriodUi();
-    });
-});
-document.getElementById('btn-export-excel')?.addEventListener('click', () => exportToExcel(state.exportPeriod));
-document.getElementById('btn-export-pdf')?.addEventListener('click',   () => exportToPDF(state.exportPeriod));
+
+document.getElementById('btn-export-excel')?.addEventListener('click', () => exportToExcel(getExportContext()));
+document.getElementById('btn-export-pdf')?.addEventListener('click',   () => exportToPDF(getExportContext()));
 
 // ──────────────────────────────────────────────
 // THEME

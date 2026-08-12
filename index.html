@@ -261,12 +261,19 @@
                     </div>
                     <div id="list" role="list"></div>
                     <div class="export-section">
-                        <h3>Exportar</h3>
+                        <div class="export-section-header">
+                            <h3>Exportar</h3>
+                            <span class="export-period-hint" id="export-period-hint" title="El reporte incluye los movimientos del período activo">📅 Período activo</span>
+                        </div>
                         <div class="export-row">
-                            <button id="export-period-week"  class="export-period-btn active" data-period="semanal"  aria-pressed="true">Semana</button>
-                            <button id="export-period-month" class="export-period-btn"        data-period="mensual" aria-pressed="false">Mes</button>
-                            <button id="btn-export-excel" class="btn-export">Excel</button>
-                            <button id="btn-export-pdf"   class="btn-export">PDF</button>
+                            <button id="btn-export-excel" class="btn-export btn-export-excel">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+                                Excel
+                            </button>
+                            <button id="btn-export-pdf" class="btn-export btn-export-pdf">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>
+                                PDF
+                            </button>
                         </div>
                     </div>
                     <footer class="app-footer">
