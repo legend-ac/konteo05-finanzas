@@ -105,26 +105,31 @@ export async function getTransactions(uid, startTs) {
 /**
  * Guarda o actualiza un ingreso.
  */
-export async function saveIncome(uid, data, editId = null) {
+export async function saveIncome(uid, data, editId = null, requestId = null) {
     const colRef = db.collection('transactions').doc(uid).collection('income');
     if (editId) {
         await colRef.doc(editId).update(data);
     } else {
-        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        await colRef.add(data);
+        const payload = { ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+        // The id is generated once by the form. Retrying the same request can update
+        // this document, but can never create a second income document.
+        if (requestId) await colRef.doc(requestId).set(payload);
+        else await colRef.add(payload);
     }
 }
 
 /**
  * Guarda o actualiza un gasto.
  */
-export async function saveExpense(uid, data, editId = null) {
+export async function saveExpense(uid, data, editId = null, requestId = null) {
     const colRef = db.collection('transactions').doc(uid).collection('expenses');
     if (editId) {
         await colRef.doc(editId).update(data);
     } else {
-        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        await colRef.add(data);
+        const payload = { ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+        // See saveIncome: deterministic per-form document ids make retries idempotent.
+        if (requestId) await colRef.doc(requestId).set(payload);
+        else await colRef.add(payload);
     }
 }
 

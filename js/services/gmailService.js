@@ -26,11 +26,9 @@ export function initGmailService() {
             if (window.google?.accounts?.oauth2) { resolve(); return; }
             if (attempts <= 0) {
                 reject(new Error(
-                    'No se pudo conectar con Google.\n' +
-                    'Posibles causas:\n' +
-                    '• Extensión de bloqueo de anuncios activa (desactívala para este sitio)\n' +
-                    '• Sin conexión a internet\n' +
-                    '• Firewall corporativo bloqueando accounts.google.com'
+                    'Google no pudo abrir la autorización.\n' +
+                    'Actualiza la página y vuelve a intentarlo. Si continúa, revisa que ' +
+                    'accounts.google.com no esté bloqueado en tu red o navegador.'
                 ));
                 return;
             }
@@ -40,15 +38,16 @@ export function initGmailService() {
         // Si el script ya está en el DOM (cargado desde el head), solo esperar
         const existing = document.querySelector('script[src*="gsi/client"]');
         if (existing) {
-            // Esperar hasta 15 segundos (75 intentos × 200ms)
-            waitForGoogle(75);
+            // El script se carga desde el <head>. No esperamos de más si una
+            // política del navegador o una extensión lo bloquea.
+            waitForGoogle(40);
             return;
         }
 
         // Si no está, cargarlo dinámicamente como fallback
         const script = document.createElement('script');
         script.src = 'https://accounts.google.com/gsi/client';
-        script.onload = () => waitForGoogle(75);
+        script.onload = () => waitForGoogle(40);
         script.onerror = () => reject(new Error(
             'No se pudo cargar Google Identity Services.\n' +
             'Verifica tu conexión a internet o desactiva extensiones de bloqueo.'
@@ -68,34 +67,38 @@ export function requestGmailToken() {
             return;
         }
 
-        tokenClient = window.google.accounts.oauth2.initTokenClient({
-            client_id: clientId,
-            scope: GMAIL_SCOPE,
-            callback: async (response) => {
-                if (response.error) {
-                    reject(new Error(`OAuth error: ${response.error}`));
-                    return;
-                }
-                accessToken = response.access_token;
-                tokenExpiry = Date.now() + (response.expires_in - 60) * 1000;
-
-                // Obtener email del usuario autenticado
-                try {
-                    const profileRes = await fetch(
-                        'https://gmail.googleapis.com/gmail/v1/users/me/profile',
-                        { headers: { Authorization: `Bearer ${accessToken}` } }
-                    );
-                    if (profileRes.ok) {
-                        const profile = await profileRes.json();
-                        connectedEmail = profile.emailAddress || null;
+        if (window.google?.accounts?.oauth2) {
+            tokenClient = window.google.accounts.oauth2.initTokenClient({
+                client_id: clientId,
+                scope: GMAIL_SCOPE,
+                callback: async (response) => {
+                    if (response.error) {
+                        reject(new Error(`OAuth error: ${response.error}`));
+                        return;
                     }
-                } catch { connectedEmail = null; }
-
-                resolve(accessToken);
-            },
-        });
-
-        tokenClient.requestAccessToken({ prompt: '' });
+                    accessToken = response.access_token;
+                    tokenExpiry = Date.now() + (response.expires_in - 60) * 1000;
+                    // Obtener email del usuario autenticado
+                    try {
+                        const profileRes = await fetch(
+                            'https://gmail.googleapis.com/gmail/v1/users/me/profile',
+                            { headers: { Authorization: `Bearer ${accessToken}` } }
+                        );
+                        if (profileRes.ok) {
+                            const profile = await profileRes.json();
+                            connectedEmail = profile.emailAddress || null;
+                        }
+                    } catch { connectedEmail = null; }
+                    resolve(accessToken);
+                },
+            });
+            // La conexión empieza por una acción explícita del usuario.
+            // Pedir consentimiento evita que el primer acceso falle sin abrir
+            // el selector de cuenta cuando todavía no existe un permiso previo.
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+        } else {
+            reject(new Error('Google Identity Services no está disponible. Actualiza la página y vuelve a intentarlo.'));
+        }
     });
 }
 
@@ -143,6 +146,7 @@ async function gmailFetch(path, params = {}) {
 const SENDERS = [
     // ── Billeteras digitales ──
     'from:noreply@yape.com.pe',
+    'from:notificaciones@yape.pe',
     'from:notificaciones@plin.pe',
     'from:hola@izipay.pe',
     'from:notificaciones@tunki.pe',
@@ -159,6 +163,7 @@ const SENDERS = [
     'from:alertas@viabcp.com',
     'from:noreply@viabcp.com',
     'from:bcp@viabcp.com',
+    'from:notificaciones@notificacionesbcp.com.pe',
     // ── Ligo (BCP) ──
     'from:hola@ligo.pe',
     'from:notificaciones@ligo.pe',
@@ -166,6 +171,8 @@ const SENDERS = [
     'from:alertas@interbank.com.pe',
     'from:ibk@interbank.com.pe',
     'from:notificaciones@interbank.com.pe',
+    'from:servicioalcliente@interbank.com.pe',
+    'from:ib14680.interbank.com',
     // ── BBVA ──
     'from:alertas@bbva.pe',
     'from:bbva@bbvacontinental.com',
@@ -182,6 +189,8 @@ const SENDERS = [
     // ── Banco de la Nación ──
     'from:notificaciones@bn.com.pe',
     'from:alertas@bn.com.pe',
+    'from:comunicaciones_BN@bn.com.pe',
+    'from:BancaMovil_BN@bn.com.pe',
     // ── Banco Falabella ──
     'from:notificaciones@bancofalabella.com.pe',
     'from:transaccional@bancofalabella.com.pe',
@@ -211,6 +220,13 @@ const SENDERS = [
     // ── MiBanco ──
     'from:notificaciones@mibanco.com.pe',
     'from:alertas@mibanco.com.pe',
+    'from:mibanco_digital@mibanco.com.pe',
+    // ── SIP / Agora ──
+    'from:no-reply@operaciones.agora.pe',
+    'from:operaciones.agora.pe',
+    // ── Pagos y activos digitales (se muestran para revisión si no son PEN) ──
+    'from:do-not-reply@directmail.binance.com',
+    'from:no-reply@pagoefectivo.pe',
 ];
 
 /**
@@ -218,18 +234,63 @@ const SENDERS = [
  * @param {number} daysBack - Cuántos días hacia atrás buscar (máx. 90)
  * @returns {Promise<Array>} Lista de mensajes parseados
  */
-export async function fetchTransactionEmails(daysBack = 30) {
-    const afterDate = Math.floor((Date.now() - daysBack * 86400000) / 1000);
-    const senderQuery = SENDERS.join(' OR ');
-    const query = `(${senderQuery}) after:${afterDate}`;
+function getCustomSenders(customEntities) {
+    if (!Array.isArray(customEntities)) return [];
+    return customEntities
+        .filter(entity => entity?.active !== false)
+        .map(entity => String(entity.sender || '').trim().toLowerCase())
+        .filter(sender => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sender))
+        .map(sender => `from:${sender}`);
+}
 
-    // Buscar IDs de mensajes
-    const searchResult = await gmailFetch('users/me/messages', {
-        q: query,
-        maxResults: 100,
-    });
+function chunk(items, size) {
+    return Array.from({ length: Math.ceil(items.length / size) }, (_, index) => (
+        items.slice(index * size, index * size + size)
+    ));
+}
 
-    const messages = searchResult.messages || [];
+function labelledQuery(label, query) {
+    return { label, query };
+}
+
+export async function fetchTransactionEmails(daysBack = 30, customEntities = []) {
+    const safeDays = Math.max(1, Math.min(90, Number.parseInt(daysBack, 10) || 30));
+    const senders = [...new Set([...SENDERS, ...getCustomSenders(customEntities)])];
+    // Gmail puede devolver resultados incompletos cuando una consulta OR contiene
+    // demasiados remitentes. Buscamos grupos pequeños y unimos los IDs.
+    const groupedQueries = chunk(senders, 8).map((group, index) => (
+        labelledQuery(`grupo-${index + 1}`, `(${group.join(' OR ')}) newer_than:${safeDays}d`)
+    ));
+    // Estas fuentes suelen emitir desde subdominios variables o agrupar correos
+    // en conversaciones. Las consultas directas evitan que queden fuera del OR.
+    const priorityQueries = [
+        labelledQuery('sip', `from:no-reply@operaciones.agora.pe newer_than:${safeDays}d`),
+        labelledQuery('sip-dominio', `from:operaciones.agora.pe newer_than:${safeDays}d`),
+        labelledQuery('plin-interbank', `from:servicioalcliente@interbank.com.pe newer_than:${safeDays}d`),
+        labelledQuery('plin-interbank-subdominio', `from:ib14680.interbank.com newer_than:${safeDays}d`),
+        labelledQuery('asunto-sip', `subject:"Realizaste una operación" newer_than:${safeDays}d`),
+        labelledQuery('asunto-plin', `subject:"Constancia de Pago Plin" newer_than:${safeDays}d`),
+    ];
+    const queries = [...groupedQueries, ...priorityQueries];
+    const results = [];
+    for (const batch of chunk(queries, 4)) {
+        const batchResults = await Promise.all(batch.map(async ({ label, query }) => {
+            const result = await gmailFetch('users/me/messages', {
+                q: query,
+                maxResults: 100,
+            });
+            return { label, result };
+        }));
+        console.info('[gmailImport] Resultados de búsqueda', batchResults.map(({ label, result }) => ({
+            fuente: label,
+            encontrados: (result.messages || []).length,
+        })));
+        results.push(...batchResults.map(({ result }) => result));
+    }
+
+    const messages = [...new Map(
+        results.flatMap(result => result.messages || []).map(message => [message.id, message])
+    ).values()];
     if (messages.length === 0) return [];
 
     // Obtener contenido de cada mensaje en paralelo (lotes de 10)

@@ -304,9 +304,34 @@ async function editItem(id, type) {
 // ──────────────────────────────────────────────
 const todayStr = todayString();
 
+async function ensureAuthenticatedUserDocument(user) {
+    if (!user) return;
+    try {
+        const ref = db.collection('users').doc(user.uid);
+        const existing = await ref.get();
+        if (existing.exists) return;
+
+        await ref.set({
+            name: user.displayName || '',
+            email: user.email || '',
+            photoURL: user.photoURL || '',
+            authProvider: user.providerData?.[0]?.providerId || 'password',
+            currency: 'PEN',
+            monthlyTarget: 0,
+            bio: '',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    } catch (error) {
+        // Authentication must still work when a first profile write is rejected.
+        console.warn('No se pudo crear el perfil inicial:', error);
+    }
+}
+
 auth.onAuthStateChanged(user => {
     if (user) {
         state.currentUser = user;
+        ensureAuthenticatedUserDocument(user);
         showPage('dashboard');
         document.getElementById('user-name').textContent = user.displayName || '';
 
@@ -394,6 +419,45 @@ document.getElementById('register-form').onsubmit = async e => {
         if (btn) { btn.disabled = false; btn.textContent = orig; }
     }
 };
+
+function authErrorMessage(error) {
+    const code = error?.code || '';
+    if (code === 'auth/popup-closed-by-user') return 'Se cerró la ventana de Google antes de terminar.';
+    if (code === 'auth/popup-blocked') return 'El navegador bloqueó la ventana de Google. Permite las ventanas emergentes e inténtalo de nuevo.';
+    if (code === 'auth/account-exists-with-different-credential') return 'Ya existe una cuenta con ese correo usando otro método de acceso.';
+    if (code === 'auth/operation-not-allowed') return 'Google aún no está habilitado como proveedor de acceso en Firebase.';
+    return `No se pudo iniciar con Google: ${error?.message || 'inténtalo de nuevo.'}`;
+}
+
+async function signInWithGoogle(button) {
+    if (button?.disabled) return;
+    const buttons = [...document.querySelectorAll('[data-google-auth]')];
+    const originalText = button?.querySelector('span')?.textContent || '';
+    buttons.forEach(item => { item.disabled = true; });
+    if (button?.querySelector('span')) button.querySelector('span').textContent = 'Abriendo Google…';
+
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        // Redirect avoids unreliable popup handling in mobile browsers. The auth
+        // observer above restores the session and profile after the return.
+        if (window.matchMedia('(max-width: 700px)').matches) {
+            await auth.signInWithRedirect(provider);
+            return;
+        }
+        const credential = await auth.signInWithPopup(provider);
+        await ensureAuthenticatedUserDocument(credential.user);
+    } catch (error) {
+        showToast(authErrorMessage(error), 'error');
+    } finally {
+        buttons.forEach(item => { item.disabled = false; });
+        if (button?.querySelector('span')) button.querySelector('span').textContent = originalText;
+    }
+}
+
+document.querySelectorAll('[data-google-auth]').forEach(button => {
+    button.addEventListener('click', () => signInWithGoogle(button));
+});
 
 document.getElementById('logout-btn').onclick = async () => {
     if (confirm('¿Cerrar sesión?')) {
@@ -524,6 +588,7 @@ document.getElementById('sort-select')?.addEventListener('change', e => {
 // OPEN MODALS
 // ──────────────────────────────────────────────
 function openIncomeModal() {
+    resetTransactionFormState(document.getElementById('form-income'));
     document.getElementById('income-date').value  = todayStr;
     document.getElementById('income-edit-id').value = '';
     const src = document.getElementById('income-source');
@@ -536,6 +601,7 @@ function openIncomeModal() {
 }
 
 function openExpenseModal() {
+    resetTransactionFormState(document.getElementById('form-expense'));
     document.getElementById('expense-date').value  = todayStr;
     document.getElementById('expense-edit-id').value = '';
     const mth = document.getElementById('expense-method');
@@ -558,8 +624,36 @@ document.addEventListener('click', e => {
 // ──────────────────────────────────────────────
 // SAVE INCOME
 // ──────────────────────────────────────────────
+function createSubmissionKey() {
+    return window.crypto?.randomUUID?.()
+        || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function resetTransactionFormState(form) {
+    if (!form) return;
+    form.dataset.submissionKey = createSubmissionKey();
+    setTransactionFormSaving(form, false);
+}
+
+function setTransactionFormSaving(form, isSaving) {
+    if (!form) return;
+    const modal = form.closest('.modal');
+    form.classList.toggle('is-saving', isSaving);
+    form.setAttribute('aria-busy', String(isSaving));
+    form.querySelector('.transaction-saving-overlay')?.setAttribute('aria-hidden', String(!isSaving));
+    if (modal) modal.dataset.saving = String(isSaving);
+
+    Array.from(form.elements).forEach(control => { control.disabled = isSaving; });
+}
+
+function isTransactionFormSaving(form) {
+    return form?.dataset.saving === 'true' || form?.classList.contains('is-saving');
+}
+
 document.getElementById('form-income').onsubmit = async e => {
     e.preventDefault();
+    const form = e.currentTarget;
+    if (isTransactionFormSaving(form)) return;
     let amount = parseFloat(document.getElementById('income-amount').value);
     if (isNaN(amount) || amount <= 0 || amount > 999_999_999) {
         showToast('Monto inválido', 'error'); return;
@@ -580,16 +674,20 @@ document.getElementById('form-income').onsubmit = async e => {
     if (date > todayEnd) { showToast('No puedes registrar fechas futuras', 'error'); return; }
     if (!state.isOnline)  { showToast('Sin conexión', 'error'); return; }
 
+    setTransactionFormSaving(form, true);
     try {
         const data = { amount, date: firebase.firestore.Timestamp.fromDate(date), note, source };
-        await dbService.saveIncome(state.currentUser.uid, data, editId || null);
+        await dbService.saveIncome(state.currentUser.uid, data, editId || null, form.dataset.submissionKey || null);
         showToast(editId ? 'Ingreso actualizado' : 'Ingreso guardado', 'success');
+        setTransactionFormSaving(form, false);
         closeModal('modal-income');
-        e.target.reset();
+        form.reset();
         document.getElementById('income-edit-id').value = '';
         loadData();
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
+    } finally {
+        setTransactionFormSaving(form, false);
     }
 };
 
@@ -598,6 +696,8 @@ document.getElementById('form-income').onsubmit = async e => {
 // ──────────────────────────────────────────────
 document.getElementById('form-expense').onsubmit = async e => {
     e.preventDefault();
+    const form = e.currentTarget;
+    if (isTransactionFormSaving(form)) return;
     let amount = parseFloat(document.getElementById('expense-amount').value);
     if (isNaN(amount) || amount <= 0 || amount > 999_999_999) {
         showToast('Monto inválido', 'error'); return;
@@ -620,16 +720,20 @@ document.getElementById('form-expense').onsubmit = async e => {
     if (date > todayEnd) { showToast('No puedes registrar fechas futuras', 'error'); return; }
     if (!state.isOnline)  { showToast('Sin conexión', 'error'); return; }
 
+    setTransactionFormSaving(form, true);
     try {
         const data = { amount, date: firebase.firestore.Timestamp.fromDate(date), category, note, method };
-        await dbService.saveExpense(state.currentUser.uid, data, editId || null);
+        await dbService.saveExpense(state.currentUser.uid, data, editId || null, form.dataset.submissionKey || null);
         showToast(editId ? 'Gasto actualizado' : 'Gasto guardado', 'success');
+        setTransactionFormSaving(form, false);
         closeModal('modal-expense');
-        e.target.reset();
+        form.reset();
         document.getElementById('expense-edit-id').value = '';
         loadData();
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
+    } finally {
+        setTransactionFormSaving(form, false);
     }
 };
 

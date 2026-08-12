@@ -114,6 +114,11 @@
                     <input type="password" id="password" placeholder="Contrase&ntilde;a" required autocomplete="current-password">
                     <button type="submit">Iniciar sesi&oacute;n</button>
                 </form>
+                <div class="auth-divider" aria-hidden="true"><span>o</span></div>
+                <button class="google-auth-button" type="button" data-google-auth>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.79-.07-1.54-.2-2.27H12v4.29h5.23a4.47 4.47 0 0 1-1.94 2.93v2.78h3.59c2.1-1.94 3.31-4.8 3.31-7.73Z"/><path fill="#34A853" d="M12 21.75c2.62 0 4.82-.87 6.43-2.35l-3.59-2.78c-1 .67-2.28 1.07-3.84 1.07-2.95 0-5.45-1.99-6.34-4.66H.95v2.87A9.72 9.72 0 0 0 12 21.75Z"/><path fill="#FBBC05" d="M5.66 13.03A5.84 5.84 0 0 1 5.31 12c0-.36.06-.71.17-1.03V8.1H1.77A9.75 9.75 0 0 0 .75 12c0 1.4.34 2.72 1.02 3.9l3.89-2.87Z"/><path fill="#EA4335" d="M12 6.31c1.67 0 3.17.57 4.35 1.68l3.26-3.26C16.81 2.11 14.61.25 12 .25A9.72 9.72 0 0 0 1.77 8.1l3.89 2.87C6.55 8.3 9.05 6.31 12 6.31Z"/></svg>
+                    <span>Continuar con Google</span>
+                </button>
                 <p class="auth-switch"><a href="#" id="back-home-from-login">&larr; Volver</a></p>
                 <p class="auth-switch"><a href="#" id="forgot-password-link">Olvid&eacute; mi contrase&ntilde;a</a></p>
                 <p class="auth-switch">&iquest;Sin cuenta? <a href="#" id="show-register">Crear cuenta</a></p>
@@ -136,6 +141,11 @@
                     <input type="password" id="reg-password" placeholder="Contrase&ntilde;a (m&iacute;n. 6 car.)" minlength="6" required autocomplete="new-password">
                     <button type="submit">Crear cuenta</button>
                 </form>
+                <div class="auth-divider" aria-hidden="true"><span>o</span></div>
+                <button class="google-auth-button" type="button" data-google-auth>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.79-.07-1.54-.2-2.27H12v4.29h5.23a4.47 4.47 0 0 1-1.94 2.93v2.78h3.59c2.1-1.94 3.31-4.8 3.31-7.73Z"/><path fill="#34A853" d="M12 21.75c2.62 0 4.82-.87 6.43-2.35l-3.59-2.78c-1 .67-2.28 1.07-3.84 1.07-2.95 0-5.45-1.99-6.34-4.66H.95v2.87A9.72 9.72 0 0 0 12 21.75Z"/><path fill="#FBBC05" d="M5.66 13.03A5.84 5.84 0 0 1 5.31 12c0-.36.06-.71.17-1.03V8.1H1.77A9.75 9.75 0 0 0 .75 12c0 1.4.34 2.72 1.02 3.9l3.89-2.87Z"/><path fill="#EA4335" d="M12 6.31c1.67 0 3.17.57 4.35 1.68l3.26-3.26C16.81 2.11 14.61.25 12 .25A9.72 9.72 0 0 0 1.77 8.1l3.89 2.87C6.55 8.3 9.05 6.31 12 6.31Z"/></svg>
+                    <span>Registrarme con Google</span>
+                </button>
                 <p class="auth-switch"><a href="#" id="back-home-from-register">&larr; Volver</a></p>
                 <p class="auth-switch">&iquest;Ya tienes cuenta? <a href="#" id="show-login">Iniciar sesi&oacute;n</a></p>
             </div>
@@ -329,6 +339,16 @@
         <div class="modal-handle"></div>
         <h3 id="modal-income-title">Nuevo Ingreso</h3>
         <form id="form-income">
+            <div class="transaction-saving-overlay" aria-live="polite" aria-hidden="true">
+                <div class="saving-scene saving-scene-income" aria-hidden="true">
+                    <span class="saving-coin coin-one">S/</span>
+                    <span class="saving-coin coin-two">S/</span>
+                    <span class="saving-person"><i class="saving-head"></i><i class="saving-body"></i><i class="saving-arm arm-left"></i><i class="saving-arm arm-right"></i></span>
+                    <span class="saving-wallet"><i></i></span>
+                </div>
+                <strong class="transaction-saving-title">Guardando tu ingreso</strong>
+                <p>Estamos registrándolo una sola vez.</p>
+            </div>
             <input type="hidden" id="income-edit-id">
             <div class="amount-input-wrap">
                 <span class="amount-currency">S/</span>
@@ -362,6 +382,16 @@
         <div class="modal-handle"></div>
         <h3 id="modal-expense-title">Nuevo Gasto</h3>
         <form id="form-expense">
+            <div class="transaction-saving-overlay" aria-live="polite" aria-hidden="true">
+                <div class="saving-scene saving-scene-expense" aria-hidden="true">
+                    <span class="saving-coin coin-one">S/</span>
+                    <span class="saving-coin coin-two">S/</span>
+                    <span class="saving-person"><i class="saving-head"></i><i class="saving-body"></i><i class="saving-arm arm-left"></i><i class="saving-arm arm-right"></i></span>
+                    <span class="saving-wallet"><i></i></span>
+                </div>
+                <strong class="transaction-saving-title">Guardando tu gasto</strong>
+                <p>Estamos registrándolo una sola vez.</p>
+            </div>
             <input type="hidden" id="expense-edit-id">
             <div class="amount-input-wrap">
                 <span class="amount-currency">S/</span>
@@ -417,6 +447,14 @@
             <input type="tel"    id="profile-emergency-contact" placeholder="Contacto de emergencia"    maxlength="20">
             <textarea            id="profile-bio"              placeholder="Sobre m&iacute; (opcional)"         maxlength="240"></textarea>
             <p class="account-meta">Completitud: <strong id="profile-completion">0%</strong></p>
+            <section class="profile-gmail-settings" aria-labelledby="profile-gmail-title">
+                <div>
+                    <span class="profile-section-kicker">Importaci&oacute;n Gmail</span>
+                    <h4 id="profile-gmail-title">Entidades y reglas</h4>
+                    <p>Agrega remitentes oficiales, define si son ingresos o gastos y activa solo los que deseas revisar.</p>
+                </div>
+                <button type="button" id="btn-gmail-entities" class="cancel">Gestionar entidades</button>
+            </section>
             <div class="modal-buttons">
                 <button type="button" id="btn-open-recovery" class="cancel">Recuperar contrase&ntilde;a</button>
                 <button type="button" class="cancel" data-modal="modal-profile">Cancelar</button>

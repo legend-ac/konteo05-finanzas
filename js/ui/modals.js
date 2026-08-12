@@ -21,6 +21,10 @@ export function closeModal(id, hideModal = true) {
     const modal = document.getElementById(id);
     if (!modal) return;
 
+    // A financial movement must not be dismissed halfway through a save. The
+    // submission itself is also idempotent, so a network retry cannot duplicate it.
+    if (modal.dataset.saving === 'true') return;
+
     const handlers = modalHandlers.get(id);
     if (handlers) {
         document.removeEventListener('keydown', handlers.escHandler);
