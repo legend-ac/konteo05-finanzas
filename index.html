@@ -168,7 +168,10 @@
                     <span>Auto-importar</span>
                 </button>
                 <button id="theme-toggle-btn" class="btn-icon" aria-label="Cambiar tema">&#127769;</button>
-                <button id="profile-btn" class="btn-text-hd" type="button">Perfil</button>
+                <button id="profile-btn" class="btn-text-hd" type="button" aria-label="Perfil">
+                    <svg class="profile-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    <span class="profile-btn-label">Perfil</span>
+                </button>
                 <button id="logout-btn" class="btn-text-hd btn-logout" type="button">Salir</button>
             </div>
         </header>
@@ -190,16 +193,7 @@
                             <button class="filter" data-filter="month">Mes</button>
                             <button class="filter" data-filter="custom">Rango</button>
                         </div>
-                        <div class="header-export-row" aria-label="Exportar reportes del período">
-                            <button id="btn-export-excel-top" class="btn-export-top btn-export-excel" type="button" title="Descargar reporte Excel del período activo">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-                                <span>Excel</span>
-                            </button>
-                            <button id="btn-export-pdf-top" class="btn-export-top btn-export-pdf" type="button" title="Descargar reporte PDF del período activo">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>
-                                <span>PDF</span>
-                            </button>
-                        </div>
+
                     </div>
                 </div>
 
@@ -294,22 +288,7 @@
                         </div>
                     </div>
                     <div id="list" role="list"></div>
-                    <div class="export-section">
-                        <div class="export-section-header">
-                            <h3>Exportar</h3>
-                            <span class="export-period-hint" id="export-period-hint" title="El reporte incluye los movimientos del período activo">📅 Período activo</span>
-                        </div>
-                        <div class="export-row">
-                            <button id="btn-export-excel" class="btn-export btn-export-excel">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-                                Excel
-                            </button>
-                            <button id="btn-export-pdf" class="btn-export btn-export-pdf">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>
-                                PDF
-                            </button>
-                        </div>
-                    </div>
+
                     <footer class="app-footer">
                         <p><a href="/privacy.html">Privacidad</a> &middot; <a href="/terms.html">T&eacute;rminos</a> &middot; Konteo 05 &copy; 2026</p>
                     </footer>

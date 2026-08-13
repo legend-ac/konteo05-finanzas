@@ -905,13 +905,9 @@ function getExportContext() {
     };
 }
 
-// Export buttons — Header, Toolbar y sección inferior
-['btn-export-excel', 'btn-export-excel-top', 'btn-export-excel-toolbar'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', () => exportToExcel(getExportContext()));
-});
-['btn-export-pdf', 'btn-export-pdf-top', 'btn-export-pdf-toolbar'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', () => exportToPDF(getExportContext()));
-});
+// Export buttons — Toolbar (único set de botones de exportación)
+document.getElementById('btn-export-excel-toolbar')?.addEventListener('click', () => exportToExcel(getExportContext()));
+document.getElementById('btn-export-pdf-toolbar')?.addEventListener('click', () => exportToPDF(getExportContext()));
 
 // ──────────────────────────────────────────────
 // DELETE ALL USER DATA
