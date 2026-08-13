@@ -918,52 +918,142 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 
 /* ================================================
    RESPONSIVE — MOBILE (≤680px)
+   Premium compact layout — every pixel earns its place
    ================================================ */
 @media (max-width: 680px) {
-    #dashboard-page > header { padding: 0 16px; }
+
+    /* ── Header: slim 40px bar ── */
+    #dashboard-page > header {
+        height: 40px;
+        padding: 0 12px;
+    }
+    #dashboard-page > header h2 { font-size: 13px; }
+    #dashboard-page > header .header-sub { display: none; }
+    .header-brand { gap: 8px; }
+    .brand-icon { width: 26px; height: 26px; font-size: 12px; border-radius: 6px; }
+    .header-actions { gap: 4px; }
     #user-name { display: none; }
     #profile-btn .profile-btn-label { display: none; }
-    #profile-btn { padding: 0 8px; min-width: 32px; justify-content: center; }
+    #profile-btn { padding: 0; width: 30px; min-width: 30px; height: 30px; justify-content: center; border: none; background: transparent; }
+    .btn-icon { width: 30px; height: 30px; font-size: 13px; }
+    .btn-text-hd { height: 30px; padding: 0 10px; font-size: 11px; }
+    .btn-logout { font-size: 11px; padding: 0 10px; }
 
-    .dashboard-shell { padding: 0 14px 110px; }
-    .dashboard-top { padding: 18px 0 0; }
+    /* ── Shell: tight padding ── */
+    .dashboard-shell { padding: 0 12px 90px; }
+    .dashboard-top { padding: 14px 0 0; }
 
-    .dashboard-title-row { flex-direction: column; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
-    .dashboard-title-left h1 { font-size: clamp(26px, 8vw, 34px); }
+    /* ── Title: compact greeting + title ── */
+    .dashboard-title-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    .dashboard-eyebrow { font-size: 9px; margin-bottom: 2px; letter-spacing: .1em; }
+    .dashboard-title-left h1 {
+        font-size: clamp(20px, 6vw, 26px);
+        letter-spacing: -.03em;
+    }
 
-    /* Tabs: full-width equal pills */
-    .period-bar { width: 100%; gap: 6px; }
-    .filter { flex: 1; height: 42px; font-size: 13px; font-weight: 600; border-radius: 10px; border: 1px solid var(--line); text-align: center; padding: 0 4px; }
-    .filter.active { background: var(--gold); color: #0e0d0b; border-color: var(--gold); }
+    /* ── Period tabs: slim, no thick borders ── */
+    .dashboard-title-right { width: 100%; }
+    .period-bar { width: 100%; gap: 4px; }
+    .filter {
+        flex: 1;
+        height: 34px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        text-align: center;
+        padding: 0 2px;
+    }
+    .filter.active {
+        background: var(--gold);
+        color: #0e0d0b;
+        border-color: var(--gold);
+    }
 
-    /* Balance card: balance full-width top, stats 2-col below */
-    .dashboard-overview { grid-template-columns: 1fr 1fr; border-radius: 12px; margin-top: 14px; }
-    .balance-hero { grid-column: 1 / -1; padding: 22px 20px 18px; border-bottom: 1px solid var(--line); }
-    .balance-number { font-size: clamp(38px, 11vw, 52px); }
-    .overview-stat { padding: 16px 20px; }
-    .income-stat  { border-left: 0; }
+    /* ── Balance card: compact ── */
+    .dashboard-overview {
+        grid-template-columns: 1fr 1fr;
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+    .balance-hero {
+        grid-column: 1 / -1;
+        padding: 14px 16px 12px;
+        border-bottom: 1px solid var(--line);
+        gap: 4px;
+    }
+    .balance-period-label { font-size: 9px; margin-bottom: 2px; letter-spacing: .1em; }
+    .balance-number { font-size: clamp(28px, 9vw, 38px); }
+    .balance-caption { font-size: 11px; margin-top: 2px; }
+    .overview-stat {
+        padding: 10px 14px;
+    }
+    .overview-stat > span { font-size: 9px; margin-bottom: 4px; }
+    .overview-stat strong { font-size: 15px; }
+    .income-stat { border-left: 0; }
     .expense-stat { border-left: 1px solid var(--line); }
-    .overview-stat strong { font-size: 17px; }
+    .balance-hero-actions { display: none; }
 
-    .metrics-strip { border-radius: 10px; margin-top: 10px; }
-    .dashboard-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 14px; }
+    /* ── Metrics strip: tighter ── */
+    .metrics-strip { border-radius: 8px; margin-top: 8px; }
+    .metric-item { padding: 8px 6px; gap: 2px; }
+    .metric-label { font-size: 9px; }
+    .metric-value { font-size: 12px; }
+
+    /* ── Grid: single column ── */
+    .dashboard-grid { grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
     .dashboard-support { grid-template-columns: 1fr; }
 
-    .ledger-card { padding: 16px 14px 0; border-radius: 12px; }
-    .filter-bar { width: 100%; }
-    .search-input { flex: 1; width: auto; height: 40px; font-size: 13px; }
-    .category-filter, #sort-select { height: 40px; flex: 1; font-size: 12px; }
-    .ledger-title-group { gap: 8px; }
+    /* ── Ledger: clean & compact ── */
+    .ledger-card { padding: 12px 12px 0; border-radius: 10px; }
+    .ledger-toolbar { gap: 8px; padding-bottom: 12px; }
+    .ledger-eyebrow { font-size: 9px; margin-bottom: 2px; }
+    .ledger-toolbar h2 { font-size: 15px; }
+    .ledger-title-group { gap: 6px; }
     .ledger-export-quick { gap: 4px; }
+    .btn-export-mini { height: 26px; padding: 0 8px; font-size: 10px; }
+    .btn-export-mini svg { width: 12px; height: 12px; }
 
-    .plan-section { border-radius: 12px; }
-    .balance-hero-actions { display: none; }
-    .action-bar-mobile { display: flex; }
+    /* ── Filter bar: compact controls ── */
+    .filter-bar { width: 100%; gap: 4px; }
+    .search-input { flex: 1; width: auto; height: 34px; font-size: 12px; padding: 0 10px; }
+    .category-filter, #sort-select { height: 34px; flex: 1; font-size: 11px; padding: 0 6px; }
+
+    /* ── Transaction items: tighter ── */
     .item-desc { font-size: 13px; }
-    .edit-btn, .delete-btn { width: 24px; height: 24px; font-size: 11px; }
+    .item-meta { font-size: 10px; }
+    .item-amount { font-size: 13px; }
+    .edit-btn, .delete-btn { width: 22px; height: 22px; font-size: 10px; }
+
+    /* ── Plan section ── */
+    .plan-section { border-radius: 10px; padding: 16px 14px 14px; }
+    .plan-h2 { font-size: 15px; }
+
+    /* ── Mobile action bar: refined ── */
+    .action-bar-mobile {
+        display: flex;
+        padding: 8px 12px 18px;
+        gap: 8px;
+        box-shadow: 0 -2px 20px rgba(0,0,0,.4);
+    }
+    .action-bar-mobile .btn-add-action { flex: 1; height: 44px; font-size: 14px; border-radius: 10px; }
+
+    /* ── Footer ── */
+    .app-footer { padding: 10px 0 6px; }
+    .app-footer p { font-size: 10px; }
 }
 
-@media (max-width: 359px) { .item-actions { display: none !important; } }
+/* ── Extra small screens ── */
+@media (max-width: 359px) {
+    .item-actions { display: none !important; }
+    .dashboard-title-left h1 { font-size: 18px; }
+    .balance-number { font-size: 26px; }
+}
 
 /* ================================================
    GMAIL IMPORT — RESULTS
