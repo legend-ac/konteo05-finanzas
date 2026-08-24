@@ -1,20 +1,15 @@
 // js/ui/render.js — Compact ledger rows, income source visible, no meta noise
 
+import { formatBusinessDate, transactionBusinessDate } from './helpers.js';
+
 const CAT_LABEL = { green: 'Fijo', yellow: 'Necesario', red: 'Antojo' };
 const SOURCE_LABEL = {
     salario: 'Salario', freelance: 'Freelance',
     negocio: 'Negocio', otros: null
 };
-const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-
-function shortDate(d) {
-    return `${d.getDate()} ${MONTHS[d.getMonth()]}. ${d.getFullYear()}`;
-}
-
 function createRow(item, index) {
     const isIncome = item.type === 'income';
-    const rawDate  = item?.date?.toDate?.() || new Date(0);
-    const dateStr  = shortDate(rawDate);
+    const dateStr  = formatBusinessDate(transactionBusinessDate(item));
 
     let metaParts = [dateStr];
     if (isIncome) {
@@ -28,6 +23,10 @@ function createRow(item, index) {
     const el = document.createElement('div');
     el.className = 'item';
     el.setAttribute('role', 'listitem');
+    el.dataset.id = item.id;
+    el.dataset.type = isIncome ? 'income' : 'expense';
+    el.tabIndex = 0;
+    el.setAttribute('aria-label', `Ver detalle de ${item.note || (isIncome ? 'ingreso' : 'gasto')}`);
     el.style.animationDelay = `${Math.min(index * 25, 250)}ms`;
 
     const left = document.createElement('div');
@@ -62,6 +61,13 @@ function createRow(item, index) {
     const actions = document.createElement('div');
     actions.className = 'item-actions';
 
+    const detailBtn = document.createElement('button');
+    detailBtn.className = 'detail-btn';
+    detailBtn.dataset.id = item.id;
+    detailBtn.dataset.type = isIncome ? 'income' : 'expense';
+    detailBtn.setAttribute('aria-label', 'Ver detalle');
+    detailBtn.textContent = 'i';
+
     const editBtn = document.createElement('button');
     editBtn.className = 'edit-btn';
     editBtn.dataset.id   = item.id;
@@ -76,7 +82,7 @@ function createRow(item, index) {
     delBtn.setAttribute('aria-label', 'Eliminar');
     delBtn.textContent  = '✕';
 
-    actions.append(editBtn, delBtn);
+    actions.append(detailBtn, editBtn, delBtn);
     right.append(amt, actions);
 
     el.append(left, right);

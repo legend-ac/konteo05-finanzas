@@ -279,6 +279,13 @@
                                 <option value="yellow">Necesario</option>
                                 <option value="red">Antojo</option>
                             </select>
+                            <select id="status-filter" class="category-filter" aria-label="Filtrar por estado">
+                                <option value="all">Todos los estados</option>
+                                <option value="completed">Completados</option>
+                                <option value="pending">Pendientes</option>
+                                <option value="cancelled">Cancelados</option>
+                                <option value="voided">Anulados</option>
+                            </select>
                             <select id="sort-select" aria-label="Ordenar">
                                 <option value="date_desc">M&aacute;s recientes</option>
                                 <option value="date_asc">M&aacute;s antiguos</option>
@@ -370,6 +377,7 @@
                 <option value="negocio">Negocio</option>
                 <option value="otros">Otros</option>
             </select>
+            <input type="text" id="income-counterparty" placeholder="Cliente o contraparte (opcional)" maxlength="100">
             <input type="text" id="income-note" placeholder="Nota (opcional)" maxlength="100">
             <div class="modal-buttons">
                 <button type="button" class="cancel" data-modal="modal-income">Cancelar</button>
@@ -412,6 +420,7 @@
                 <label><span class="cat-label-dot yellow"></span>Necesario<input type="radio" name="category" value="yellow"></label>
                 <label><span class="cat-label-dot red"></span>Antojo<input type="radio" name="category" value="red"></label>
             </div>
+            <input type="text" id="expense-counterparty" placeholder="Proveedor o contraparte (opcional)" maxlength="100">
             <input type="text" id="expense-note" placeholder="Nota (opcional)" maxlength="100">
             <select id="expense-method">
                 <option value="efectivo">Efectivo</option>
@@ -425,6 +434,27 @@
                 <button type="submit">Guardar gasto</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Detalle y trazabilidad del movimiento -->
+<div id="modal-movement-detail" class="modal hidden" role="dialog" aria-labelledby="movement-detail-title" aria-modal="true">
+    <div class="modal-content movement-detail-modal">
+        <div class="modal-handle"></div>
+        <div class="movement-detail-heading">
+            <div>
+                <span id="movement-detail-kicker" class="movement-detail-kicker">Movimiento</span>
+                <h3 id="movement-detail-title">Detalle del movimiento</h3>
+            </div>
+            <button id="movement-detail-close" class="movement-detail-close" type="button" aria-label="Cerrar detalle">×</button>
+        </div>
+        <div class="movement-detail-amount" id="movement-detail-amount">S/ 0.00</div>
+        <div id="movement-detail-fields" class="movement-detail-fields"></div>
+        <section class="movement-audit" aria-labelledby="movement-audit-title">
+            <h4 id="movement-audit-title">Trazabilidad</h4>
+            <p>Historial permanente de esta operación.</p>
+            <div id="movement-audit-list" class="movement-audit-list"></div>
+        </section>
     </div>
 </div>
 

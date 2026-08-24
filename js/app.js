@@ -4,7 +4,9 @@ import { auth, db, firebase } from './firebase/config.js';
 import { state, persistUiState }  from './state.js';
 import {
     showPage, fmt, normalizeText, normalizeNote,
-    todayString, sortTransactions, calculateProfileCompletion, toggleCustomRangePanel
+    todayString, sortTransactions, calculateProfileCompletion, toggleCustomRangePanel,
+    startOfBusinessDate, endOfBusinessDate, businessDateToDate, businessDateString, transactionBusinessDate,
+    formatBusinessDate, formatBusinessDateTime, BUSINESS_TIME_ZONE
 } from './ui/helpers.js';
 import { showToast }           from './ui/toast.js';
 import { openModal, closeModal }  from './ui/modals.js';
@@ -156,26 +158,27 @@ async function loadData() {
     if (!state.currentUser) return;
 
     const myToken = ++state.currentLoadToken;
-    const now     = new Date();
-
     let startDate, endDate = null;
+    const today = todayString();
 
     if (state.currentFilter === 'today') {
-        startDate = new Date();
-        startDate.setHours(0, 0, 0, 0);
+        startDate = startOfBusinessDate(today);
+        endDate = endOfBusinessDate(today);
     } else if (state.currentFilter === 'week') {
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() - 6);
-        startDate.setHours(0, 0, 0, 0);
+        const weekStart = new Date(startOfBusinessDate(today));
+        weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+        startDate = weekStart;
+        endDate = endOfBusinessDate(today);
     } else if (state.currentFilter === 'custom') {
         if (!state.customRangeStart || !state.customRangeEnd) {
             showToast('Selecciona un rango de fechas', 'error');
             return;
         }
-        startDate = new Date(`${state.customRangeStart}T00:00:00`);
-        endDate   = new Date(`${state.customRangeEnd}T23:59:59`);
+        startDate = startOfBusinessDate(state.customRangeStart);
+        endDate   = endOfBusinessDate(state.customRangeEnd);
     } else {
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = startOfBusinessDate(`${today.slice(0, 7)}-01`);
+        endDate = endOfBusinessDate(today);
     }
 
     const startTs = firebase.firestore.Timestamp.fromDate(startDate);
@@ -187,11 +190,11 @@ async function loadData() {
 
         if (myToken !== state.currentLoadToken) return;
 
+        const periodStart = businessDateString(startDate);
+        const periodEnd = businessDateString(endDate);
         const withinPeriod = item => {
-            const d = item.date?.toDate?.() || item.createdAt?.toDate?.() || new Date(0);
-            if (d < startDate) return false;
-            if (endDate && d > endDate) return false;
-            return true;
+            const date = transactionBusinessDate(item);
+            return !!date && date >= periodStart && (!periodEnd || date <= periodEnd);
         };
 
         const incomeItems  = rawIncome.filter(withinPeriod);
@@ -214,16 +217,22 @@ async function loadData() {
 
         const searchTerm     = document.getElementById('search-input')?.value.toLowerCase() || '';
         const categoryFilter = document.getElementById('category-filter')?.value || 'all';
+        const statusFilter   = document.getElementById('status-filter')?.value || 'all';
 
         const filtered = allItems.filter(item => {
             const matchSearch = !searchTerm ||
                 (item.note || '').toLowerCase().includes(searchTerm) ||
+                (item.counterparty || '').toLowerCase().includes(searchTerm) ||
+                (item.reference || '').toLowerCase().includes(searchTerm) ||
+                (item.actorEmail || '').toLowerCase().includes(searchTerm) ||
+                (item.status || 'completed').toLowerCase().includes(searchTerm) ||
                 String(item.amount || '').includes(searchTerm);
             if (!matchSearch) return false;
 
-            if (categoryFilter === 'all')    return true;
-            if (categoryFilter === 'income') return item.type === 'income';
-            return item.category === categoryFilter;
+            const matchesCategory = categoryFilter === 'all' ||
+                (categoryFilter === 'income' ? item.type === 'income' : item.category === categoryFilter);
+            const matchesStatus = statusFilter === 'all' || (item.status || 'completed') === statusFilter;
+            return matchesCategory && matchesStatus;
         });
 
         const countEl = document.getElementById('tx-count');
@@ -272,13 +281,13 @@ async function editItem(id, type) {
         const data = await dbService.getTransactionById(state.currentUser.uid, type, id);
         if (!data) { showToast('Registro no encontrado', 'error'); return; }
 
-        const dateObj = data.date?.toDate?.() || data.createdAt?.toDate?.() || new Date();
-        const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+        const dateStr = transactionBusinessDate(data) || todayString();
 
         if (type === 'income') {
             document.getElementById('income-amount').value = data.amount;
             document.getElementById('income-date').value   = dateStr;
             document.getElementById('income-note').value   = data.note || '';
+            document.getElementById('income-counterparty').value = data.counterparty || '';
             const src = document.getElementById('income-source');
             if (src) src.value = data.source || 'otros';
             document.getElementById('income-edit-id').value = id;
@@ -287,6 +296,7 @@ async function editItem(id, type) {
             document.getElementById('expense-amount').value = data.amount;
             document.getElementById('expense-date').value   = dateStr;
             document.getElementById('expense-note').value   = data.note || '';
+            document.getElementById('expense-counterparty').value = data.counterparty || '';
             const mth = document.getElementById('expense-method');
             if (mth) mth.value = data.method || 'efectivo';
             const radio = document.querySelector(`input[name="category"][value="${data.category}"]`);
@@ -298,6 +308,7 @@ async function editItem(id, type) {
         showToast('Error: ' + err.message, 'error');
     }
 }
+
 
 // ──────────────────────────────────────────────
 // AUTH STATE
@@ -688,12 +699,16 @@ document.getElementById('sort-select')?.addEventListener('change', e => {
 // ──────────────────────────────────────────────
 function openIncomeModal() {
     resetTransactionFormState(document.getElementById('form-income'));
-    document.getElementById('income-date').value  = todayStr;
+    const today = todayString();
+    document.getElementById('income-date').value  = today;
+    document.getElementById('income-date').max = today;
     document.getElementById('income-edit-id').value = '';
     const src = document.getElementById('income-source');
     if (src) src.value = 'salario';
     const note = document.getElementById('income-note');
     if (note) note.value = '';
+    const counterparty = document.getElementById('income-counterparty');
+    if (counterparty) counterparty.value = '';
     const amt = document.getElementById('income-amount');
     if (amt) amt.value = '';
     openModal('modal-income');
@@ -701,12 +716,16 @@ function openIncomeModal() {
 
 function openExpenseModal() {
     resetTransactionFormState(document.getElementById('form-expense'));
-    document.getElementById('expense-date').value  = todayStr;
+    const today = todayString();
+    document.getElementById('expense-date').value  = today;
+    document.getElementById('expense-date').max = today;
     document.getElementById('expense-edit-id').value = '';
     const mth = document.getElementById('expense-method');
     if (mth) mth.value = 'efectivo';
     const note = document.getElementById('expense-note');
     if (note) note.value = '';
+    const counterparty = document.getElementById('expense-counterparty');
+    if (counterparty) counterparty.value = '';
     const amt = document.getElementById('expense-amount');
     if (amt) amt.value = '';
     document.querySelectorAll('input[name="category"]').forEach(r => { r.checked = false; });
@@ -749,6 +768,14 @@ function isTransactionFormSaving(form) {
     return form?.dataset.saving === 'true' || form?.classList.contains('is-saving');
 }
 
+function transactionActorData() {
+    return {
+        actorUid: state.currentUser?.uid || '',
+        actorEmail: state.currentUser?.email || '',
+        occurredAt: firebase.firestore.Timestamp.fromDate(new Date())
+    };
+}
+
 document.getElementById('form-income').onsubmit = async e => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -762,20 +789,22 @@ document.getElementById('form-income').onsubmit = async e => {
     const dateStr = document.getElementById('income-date').value;
     const note    = normalizeNote(document.getElementById('income-note').value);
     const source  = document.getElementById('income-source')?.value || 'otros';
+    const counterparty = normalizeText(document.getElementById('income-counterparty')?.value || '', 100);
     const editId  = document.getElementById('income-edit-id').value;
 
     if (!dateStr) { showToast('Selecciona una fecha', 'error'); return; }
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
+    const date = businessDateToDate(dateStr);
     if (isNaN(date.getTime())) { showToast('Fecha inválida', 'error'); return; }
 
-    const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    if (date > todayEnd) { showToast('No puedes registrar fechas futuras', 'error'); return; }
+    if (dateStr > todayString()) { showToast('No puedes registrar fechas futuras', 'error'); return; }
     if (!state.isOnline)  { showToast('Sin conexión', 'error'); return; }
 
     setTransactionFormSaving(form, true);
     try {
-        const data = { amount, date: firebase.firestore.Timestamp.fromDate(date), note, source };
+        const data = {
+            amount, date: firebase.firestore.Timestamp.fromDate(date), operationDate: dateStr,
+            note, source, counterparty, ...transactionActorData()
+        };
         await dbService.saveIncome(state.currentUser.uid, data, editId || null, form.dataset.submissionKey || null);
         showToast(editId ? 'Ingreso actualizado' : 'Ingreso guardado', 'success');
         setTransactionFormSaving(form, false);
@@ -807,21 +836,23 @@ document.getElementById('form-expense').onsubmit = async e => {
     const category = document.querySelector('input[name="category"]:checked')?.value;
     const note     = normalizeNote(document.getElementById('expense-note').value);
     const method   = document.getElementById('expense-method')?.value || 'efectivo';
+    const counterparty = normalizeText(document.getElementById('expense-counterparty')?.value || '', 100);
     const editId   = document.getElementById('expense-edit-id').value;
 
     if (!category) { showToast('Selecciona una categoría', 'error'); return; }
     if (!dateStr)  { showToast('Selecciona una fecha', 'error'); return; }
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
+    const date = businessDateToDate(dateStr);
     if (isNaN(date.getTime())) { showToast('Fecha inválida', 'error'); return; }
 
-    const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    if (date > todayEnd) { showToast('No puedes registrar fechas futuras', 'error'); return; }
+    if (dateStr > todayString()) { showToast('No puedes registrar fechas futuras', 'error'); return; }
     if (!state.isOnline)  { showToast('Sin conexión', 'error'); return; }
 
     setTransactionFormSaving(form, true);
     try {
-        const data = { amount, date: firebase.firestore.Timestamp.fromDate(date), category, note, method };
+        const data = {
+            amount, date: firebase.firestore.Timestamp.fromDate(date), operationDate: dateStr,
+            category, note, method, counterparty, ...transactionActorData()
+        };
         await dbService.saveExpense(state.currentUser.uid, data, editId || null, form.dataset.submissionKey || null);
         showToast(editId ? 'Gasto actualizado' : 'Gasto guardado', 'success');
         setTransactionFormSaving(form, false);
@@ -836,18 +867,98 @@ document.getElementById('form-expense').onsubmit = async e => {
     }
 };
 
+function appendMovementDetailField(container, label, value) {
+    const row = document.createElement('div');
+    row.className = 'movement-detail-field';
+    const key = document.createElement('span');
+    key.textContent = label;
+    const val = document.createElement('strong');
+    val.textContent = value || '—';
+    row.append(key, val);
+    container.appendChild(row);
+}
+
+async function showMovementDetail(id, type) {
+    try {
+        const data = await dbService.getTransactionById(state.currentUser.uid, type, id);
+        if (!data) { showToast('El movimiento ya no está disponible', 'error'); return; }
+
+        const modal = document.getElementById('modal-movement-detail');
+        const fields = document.getElementById('movement-detail-fields');
+        const auditList = document.getElementById('movement-audit-list');
+        const isIncome = type === 'income';
+        const categoryNames = { green: 'Fijo', yellow: 'Necesario', red: 'Antojo' };
+        const typeLabel = isIncome ? 'Ingreso' : 'Gasto';
+
+        document.getElementById('movement-detail-kicker').textContent = `${typeLabel} · ${data.status === 'completed' ? 'Completado' : (data.status || 'Registrado')}`;
+        document.getElementById('movement-detail-title').textContent = data.note || typeLabel;
+        const amount = document.getElementById('movement-detail-amount');
+        amount.textContent = `${isIncome ? '+' : '−'} S/ ${fmt(Number(data.amount) || 0)}`;
+        amount.className = `movement-detail-amount ${isIncome ? 'is-income' : 'is-expense'}`;
+        fields.textContent = '';
+        appendMovementDetailField(fields, 'Fecha de operación', formatBusinessDate(transactionBusinessDate(data)));
+        appendMovementDetailField(fields, `Hora registrada (${BUSINESS_TIME_ZONE})`, formatBusinessDateTime(data.occurredAt || data.createdAt));
+        appendMovementDetailField(fields, 'Tipo', data.operationType || typeLabel);
+        appendMovementDetailField(fields, isIncome ? 'Origen' : 'Categoría', isIncome ? (data.source || 'Otros') : (categoryNames[data.category] || data.category));
+        appendMovementDetailField(fields, isIncome ? 'Cliente / contraparte' : 'Proveedor / contraparte', data.counterparty);
+        appendMovementDetailField(fields, 'Método', data.method || (isIncome ? 'Registro manual' : '—'));
+        appendMovementDetailField(fields, 'Referencia', data.reference || id);
+        appendMovementDetailField(fields, 'Registrado por', data.actorEmail || data.actorUid || state.currentUser.email);
+        appendMovementDetailField(fields, 'Estado', data.status === 'completed' ? 'Completada' : (data.status || 'Registrada'));
+
+        auditList.textContent = '';
+        const events = await dbService.getTransactionAudit(state.currentUser.uid, id);
+        if (!events.length) {
+            const legacy = document.createElement('p');
+            legacy.className = 'movement-audit-empty';
+            legacy.textContent = 'Este registro fue creado antes de que se activara la trazabilidad detallada.';
+            auditList.appendChild(legacy);
+        } else {
+            const eventLabels = { created: 'Creado', updated: 'Actualizado', deleted: 'Eliminado' };
+            events.forEach(event => {
+                const row = document.createElement('div');
+                row.className = 'movement-audit-event';
+                const title = document.createElement('strong');
+                title.textContent = eventLabels[event.eventType] || 'Registrado';
+                const meta = document.createElement('span');
+                meta.textContent = `${formatBusinessDateTime(event.recordedAt || event.occurredAt)} · ${event.actorEmail || event.actorUid || 'Sistema'}`;
+                row.append(title, meta);
+                auditList.appendChild(row);
+            });
+        }
+        openModal(modal.id);
+    } catch (err) {
+        console.error('detail error:', err);
+        showToast('No se pudo cargar el detalle: ' + err.message, 'error');
+    }
+}
+
 // ──────────────────────────────────────────────
 // EVENT DELEGATION
 // ──────────────────────────────────────────────
 const listEl = document.getElementById('list');
 if (listEl) {
     listEl.addEventListener('click', e => {
+        const detail = e.target.closest('.detail-btn');
         const edit = e.target.closest('.edit-btn');
         const del  = e.target.closest('.delete-btn');
-        if (edit) editItem(edit.dataset.id, edit.dataset.type);
-        if (del)  deleteItem(del.dataset.id, del.dataset.type);
+        if (detail) { showMovementDetail(detail.dataset.id, detail.dataset.type); return; }
+        if (edit) { editItem(edit.dataset.id, edit.dataset.type); return; }
+        if (del) { deleteItem(del.dataset.id, del.dataset.type); return; }
+        const row = e.target.closest('.item[data-id]');
+        if (row) showMovementDetail(row.dataset.id, row.dataset.type);
+    });
+    listEl.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('button')) return;
+        const row = e.target.closest('.item[data-id]');
+        if (!row) return;
+        e.preventDefault();
+        showMovementDetail(row.dataset.id, row.dataset.type);
     });
 }
+
+document.getElementById('movement-detail-close')?.addEventListener('click', () => closeModal('modal-movement-detail'));
 
 document.addEventListener('click', e => {
     const cancelBtn = e.target.closest('.cancel[data-modal]');
@@ -876,6 +987,7 @@ document.getElementById('search-input')?.addEventListener('input', () => {
     searchTimeout = setTimeout(loadData, 280);
 });
 document.getElementById('category-filter')?.addEventListener('change', loadData);
+document.getElementById('status-filter')?.addEventListener('change', loadData);
 
 // ──────────────────────────────────────────────
 // PLAN

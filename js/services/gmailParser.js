@@ -2,6 +2,8 @@
 // Parsers de emails de movimientos financieros peruanos
 // Cubre: bancos tradicionales, cajas municipales, billeteras digitales y neobancos
 
+import { businessDateString } from '../ui/helpers.js';
+
 // ─────────────────────────────────────────────
 // HELPERS COMUNES
 // ─────────────────────────────────────────────
@@ -74,8 +76,7 @@ function cleanName(raw) {
 
 function todayStr(date) {
     const d = date instanceof Date && !isNaN(date) ? date : new Date();
-    // Usar UTC para que coincida con getImportedGmailIds en dbService (que también usa UTC)
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    return businessDateString(d);
 }
 
 function genericExpense(amount, label, source, date, gmailId, text) {
@@ -610,6 +611,11 @@ export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, ge
         const bodyText = decodeBody(msg);
         const tx = parseEmail({ message: msg, bodyText, sender, date, subject, customEntities });
         if (tx && tx.amount > 0 && tx.amount < 1_000_000) {
+            // Keep the original message instant for the movement audit. `date`
+            // remains the business calendar date used by filters and reports.
+            if (date instanceof Date && !Number.isNaN(date.getTime())) {
+                tx.occurredAt = date;
+            }
             // Omitir si la transacción ya está registrada en Firestore por fecha, tipo y monto
             const key = `${tx.type}|${tx.date}|${Number(tx.amount).toFixed(2)}`;
             if (existingTxKeys.has(key)) {
@@ -665,6 +671,6 @@ export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, ge
         }
     }
 
-    deduplicated.sort((a, b) => new Date(b.date) - new Date(a.date));
+    deduplicated.sort((a, b) => b.date.localeCompare(a.date));
     return deduplicated;
 }

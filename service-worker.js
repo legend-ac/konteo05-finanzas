@@ -1,5 +1,5 @@
 // Service Worker - Konteo 05
-const CACHE_NAME = 'konteo05-v5.0.7';
+const CACHE_NAME = 'konteo05-v5.1.0';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -11,12 +11,15 @@ const APP_SHELL = [
   '/js/firebase/config.js',
   '/js/services/dbService.js',
   '/js/services/exportService.js',
+  '/js/services/gmailService.js',
+  '/js/services/gmailParser.js',
   '/js/ui/helpers.js',
   '/js/ui/toast.js',
   '/js/ui/modals.js',
   '/js/ui/render.js',
   '/js/ui/charts.js',
   '/js/ui/insights.js',
+  '/js/ui/gmailImport.js',
   '/images/og-konteo-05.png',
   '/images/hero.jpg',
   '/icons/icon-192x192.png',

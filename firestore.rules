@@ -27,6 +27,27 @@ service cloud.firestore {
         (request.resource.data[field] is string && request.resource.data[field].size() <= maxSize);
     }
 
+    function isValidOptionalTimestamp(field) {
+      return !(field in request.resource.data) || request.resource.data[field] is timestamp;
+    }
+
+    function isValidOperationMetadata() {
+      return (!('operationDate' in request.resource.data) || (
+          request.resource.data.operationDate is string &&
+          request.resource.data.operationDate.size() == 10
+        )) &&
+        isValidOptionalTimestamp('occurredAt') &&
+        isValidOptionalTimestamp('createdAt') &&
+        isValidOptionalTimestamp('updatedAt') &&
+        isValidOptionalText('reference', 100) &&
+        isValidOptionalText('operationType', 30) &&
+        isValidOptionalText('status', 20) &&
+        isValidOptionalText('counterparty', 100) &&
+        isValidOptionalText('actorUid', 128) &&
+        isValidOptionalText('actorEmail', 120) &&
+        (!('status' in request.resource.data) || request.resource.data.status in ['completed', 'pending', 'cancelled', 'voided']);
+    }
+
     function hasRequiredIncomeFields() {
       return request.resource.data.keys().hasAll(['amount', 'date']);
     }
@@ -79,7 +100,8 @@ service cloud.firestore {
         isValidOptionalNote() &&
         isValidOptionalText('source', 40) &&
         isValidOptionalText('account', 40) &&
-        isValidOptionalText('tags', 100);
+        isValidOptionalText('tags', 100) &&
+        isValidOperationMetadata();
     }
 
     function isValidExpenseData() {
@@ -91,7 +113,8 @@ service cloud.firestore {
         isValidOptionalText('merchant', 80) &&
         isValidOptionalText('method', 40) &&
         isValidOptionalText('priority', 20) &&
-        (!('priority' in request.resource.data) || request.resource.data.priority in ['alta', 'media', 'baja']);
+        (!('priority' in request.resource.data) || request.resource.data.priority in ['alta', 'media', 'baja']) &&
+        isValidOperationMetadata();
     }
 
     function isValidBudgetData() {
@@ -128,6 +151,20 @@ service cloud.firestore {
     match /plans/{userId} {
       allow read, delete: if isOwner(userId);
       allow create, update: if isOwner(userId) && isValidPlanData();
+    }
+
+    // An audit event can be created alongside a movement but never changed or
+    // removed from the client. The original movement may be edited/deleted;
+    // this append-only record preserves who did it and when.
+    match /users/{userId}/auditLogs/{logId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+        request.resource.data.keys().hasAll(['eventType', 'movementId', 'operationType', 'recordedAt']) &&
+        request.resource.data.eventType in ['created', 'updated', 'deleted'] &&
+        request.resource.data.movementId is string &&
+        request.resource.data.operationType is string &&
+        request.resource.data.recordedAt is timestamp;
+      allow update, delete: if false;
     }
   }
 }

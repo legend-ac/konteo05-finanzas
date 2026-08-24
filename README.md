@@ -11,6 +11,8 @@ Aplicación Web Progresiva (PWA) moderna para el control financiero personal. Pe
 
 ### 📊 Gestión Financiera
 - **Registro de Movimientos**: Agrega, edita y elimina ingresos y gastos en tiempo real con actualización instantánea de balance.
+- **Fecha consistente**: La zona oficial es `America/Lima` (UTC-5). La fecha de negocio se mantiene igual en filtro, listado, detalle y exportaciones, mientras los instantes se guardan en UTC.
+- **Trazabilidad por operación**: Cada alta, edición o eliminación deja un evento inmutable de auditoría y cada movimiento tiene una vista de detalle con referencia, estado, contraparte, método y usuario.
 - **Categorización Intuitiva**:
   - 🟢 **Fijo**: Gastos recurrentes obligatorios (alquiler, servicios, suscripciones).
   - 🟡 **Necesario**: Gastos esenciales variables (comida, transporte, salud).
@@ -38,6 +40,10 @@ Aplicación Web Progresiva (PWA) moderna para el control financiero personal. Pe
 ### 📱 Experiencia de Usuario y PWA
 - **Modo Oscuro / Claro**: Detección del tema del sistema y conmutador manual guardado en preferencia local.
 - **PWA Instalable**: Service Worker configurado con estrategia de almacenamiento en caché para carga ultra rápida e instalación como app nativa en móvil y escritorio.
+
+### 🕓 Zona horaria y auditoría
+
+Konteo opera oficialmente en **America/Lima (UTC-5)**. Cada movimiento nuevo guarda `operationDate` (fecha de negocio `YYYY-MM-DD`), `occurredAt` (instante UTC), marcas de creación/actualización, referencia única, estado, contraparte y usuario ejecutor. La bitácora se guarda en `users/{uid}/auditLogs` y las reglas de Firestore permiten crear y leer estos eventos al dueño, pero no modificarlos ni eliminarlos desde el cliente.
 
 ---
 

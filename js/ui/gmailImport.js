@@ -17,6 +17,7 @@ import {
 import { parseAllEmails } from '../services/gmailParser.js';
 import { db, firebase }   from '../firebase/config.js';
 import { saveIncome, saveExpense, getImportedGmailIds } from '../services/dbService.js';
+import { businessDateToDate } from './helpers.js';
 
 // ─────────────────────────────────────────────
 // ESTADO
@@ -656,10 +657,17 @@ async function doImport() {
 
     for (const tx of toImport) {
         try {
-            const now     = firebase.firestore.Timestamp.fromDate(new Date());
-            const dateTs  = firebase.firestore.Timestamp.fromDate(new Date(`${tx.date}T12:00:00`));
-            const payload = { amount: tx.amount, note: tx.description, date: dateTs, createdAt: now,
-                              source: `gmail:${tx.source}`, gmailId: tx.gmailId };
+            const occurredAtDate = tx.occurredAt instanceof Date && !Number.isNaN(tx.occurredAt.getTime())
+                ? tx.occurredAt
+                : new Date();
+            const occurredAt = firebase.firestore.Timestamp.fromDate(occurredAtDate);
+            const dateTs  = firebase.firestore.Timestamp.fromDate(businessDateToDate(tx.date));
+            const payload = {
+                amount: tx.amount, note: tx.description, date: dateTs, operationDate: tx.date,
+                occurredAt, actorUid: currentUid, status: 'completed',
+                source: `gmail:${tx.source}`, gmailId: tx.gmailId,
+                counterparty: tx.description
+            };
 
             const docId = `gmail_${tx.gmailId}`;
 

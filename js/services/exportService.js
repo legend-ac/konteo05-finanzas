@@ -4,6 +4,10 @@
 import { state } from '../state.js';
 import { showToast } from '../ui/toast.js';
 import { getAllTransactionsOrdered } from './dbService.js';
+import {
+    BUSINESS_TIME_ZONE, businessDateString, businessDateToDate,
+    formatBusinessDate, formatBusinessDateTime, transactionBusinessDate
+} from '../ui/helpers.js';
 
 // ─────────────────────────────────────────────
 // CDN FALLBACK (las libs ya están en el <head>)
@@ -37,7 +41,7 @@ async function ensureJsPDF() {
 // FILTRO POR PERÍODO — soporta todos los modos
 // ─────────────────────────────────────────────
 function txDate(item) {
-    return item?.date?.toDate?.() || item?.createdAt?.toDate?.() || new Date(0);
+    return item?.occurredAt?.toDate?.() || item?.date?.toDate?.() || item?.createdAt?.toDate?.() || new Date(0);
 }
 
 function safeNum(value) {
@@ -49,29 +53,20 @@ function safeNum(value) {
  * filter: 'today' | 'week' | 'month' | 'custom'
  * startDate / endDate: strings 'YYYY-MM-DD' (solo para 'custom')
  */
-function inPeriod(date, filter, startDate, endDate) {
-    const now = new Date();
+function inPeriod(item, filter, startDate, endDate) {
+    const today = businessDateString();
+    const txDateString = transactionBusinessDate(item);
     switch (filter) {
-        case 'today': {
-            const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-            const e = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-            return date >= s && date <= e;
-        }
+        case 'today': return txDateString === today;
         case 'week': {
-            const s = new Date(now);
-            s.setDate(s.getDate() - 6);
-            s.setHours(0, 0, 0, 0);
-            return date >= s;
+            const first = businessDateToDate(today);
+            first.setUTCDate(first.getUTCDate() - 6);
+            return txDateString >= businessDateString(first) && txDateString <= today;
         }
-        case 'month': {
-            const s = new Date(now.getFullYear(), now.getMonth(), 1);
-            return date >= s;
-        }
+        case 'month': return txDateString >= `${today.slice(0, 7)}-01` && txDateString <= today;
         case 'custom': {
             if (!startDate || !endDate) return true;
-            const s = new Date(`${startDate}T00:00:00`);
-            const e = new Date(`${endDate}T23:59:59`);
-            return date >= s && date <= e;
+            return txDateString >= startDate && txDateString <= endDate;
         }
         default:
             return true; // sin filtro: todo
@@ -100,7 +95,7 @@ function getFileLabel(filter, startDate, endDate) {
 
 async function getFilteredData(uid, filter, startDate, endDate) {
     const txs = await getAllTransactionsOrdered(uid);
-    const selected = txs.filter(t => inPeriod(txDate(t), filter, startDate, endDate));
+    const selected = txs.filter(t => inPeriod(t, filter, startDate, endDate));
     return {
         all:      selected,
         income:   selected.filter(t => t.type === 'income'),
@@ -123,7 +118,7 @@ function createSummarySheet(data, periodLabel, email) {
     return [
         [`KONTEO 05 — REPORTE FINANCIERO`],
         ['Período:', periodLabel],
-        ['Generado:', new Date().toLocaleString('es-PE')],
+        ['Generado:', formatBusinessDateTime(new Date())],
         ['Usuario:', email],
         [],
         ['RESUMEN'],
@@ -146,22 +141,25 @@ function createSummarySheet(data, periodLabel, email) {
 }
 
 function createIncomeSheet(income) {
-    const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
     const rows = income
-        .map(item => { const d = txDate(item); return { ts: d.getTime(), row: [d.toLocaleDateString('es-PE'), safeNum(item.amount).toFixed(2), item.note || '-', days[d.getDay()]] }; })
+        .map(item => { const d = txDate(item); const operationDate = transactionBusinessDate(item); return { ts: d.getTime(), row: [formatBusinessDate(operationDate, { day: '2-digit', month: '2-digit', year: 'numeric' }), formatBusinessDateTime(item.occurredAt || item.createdAt), safeNum(item.amount).toFixed(2), item.source || '-', item.counterparty || '-', item.reference || '-', item.status || 'completed', item.note || '-', weekday(operationDate)] }; })
         .sort((a, b) => b.ts - a.ts)
         .map(x => x.row);
-    return [['INGRESOS'], [], ['Fecha','Monto','Nota','Día'], ...rows, [], ['TOTAL', income.reduce((s, i) => s + safeNum(i.amount), 0).toFixed(2)]];
+    return [['INGRESOS'], [], ['Fecha','Hora registrada','Monto','Origen','Contraparte','Referencia','Estado','Nota','Día'], ...rows, [], ['TOTAL', '', income.reduce((s, i) => s + safeNum(i.amount), 0).toFixed(2)]];
 }
 
 function createExpenseSheet(expenses) {
     const catNames = { green:'Fijo', yellow:'Necesario', red:'Antojo' };
-    const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
     const rows = expenses
-        .map(item => { const d = txDate(item); return { ts: d.getTime(), row: [d.toLocaleDateString('es-PE'), safeNum(item.amount).toFixed(2), catNames[item.category] || item.category, item.note || '-', days[d.getDay()]] }; })
+        .map(item => { const d = txDate(item); const operationDate = transactionBusinessDate(item); return { ts: d.getTime(), row: [formatBusinessDate(operationDate, { day: '2-digit', month: '2-digit', year: 'numeric' }), formatBusinessDateTime(item.occurredAt || item.createdAt), safeNum(item.amount).toFixed(2), catNames[item.category] || item.category, item.method || '-', item.counterparty || '-', item.reference || '-', item.status || 'completed', item.note || '-', weekday(operationDate)] }; })
         .sort((a, b) => b.ts - a.ts)
         .map(x => x.row);
-    return [['GASTOS'], [], ['Fecha','Monto','Categoría','Nota','Día'], ...rows, [], ['TOTAL', expenses.reduce((s, e) => s + safeNum(e.amount), 0).toFixed(2)]];
+    return [['GASTOS'], [], ['Fecha','Hora registrada','Monto','Categoría','Método','Contraparte','Referencia','Estado','Nota','Día'], ...rows, [], ['TOTAL', '', expenses.reduce((s, e) => s + safeNum(e.amount), 0).toFixed(2)]];
+}
+
+function weekday(operationDate) {
+    return new Intl.DateTimeFormat('es-PE', { weekday: 'short', timeZone: BUSINESS_TIME_ZONE })
+        .format(businessDateToDate(operationDate));
 }
 
 function createCategorySheet(expenses) {
@@ -216,7 +214,7 @@ export async function exportToExcel({ filter, startDate, endDate } = {}) {
         ws4['!cols'] = [{ wch: 30 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(wb, ws4, 'Análisis');
 
-        XLSX.writeFile(wb, `Konteo05_${fileLabel}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        XLSX.writeFile(wb, `Konteo05_${fileLabel}_${businessDateString()}.xlsx`);
         showToast(`✅ Excel descargado — ${periodLabel}`, 'success');
     } catch (err) {
         showToast('Error Excel: ' + err.message, 'error');
@@ -256,7 +254,7 @@ export async function exportToPDF({ filter, startDate, endDate } = {}) {
         doc.setFontSize(11);
         doc.setTextColor(100);
         doc.text(`Período: ${periodLabel}`, 105, 26, { align: 'center' });
-        doc.text(`Generado: ${new Date().toLocaleDateString('es-PE')}`, 105, 32, { align: 'center' });
+        doc.text(`Generado: ${formatBusinessDate(new Date())}`, 105, 32, { align: 'center' });
         doc.text(`Usuario: ${state.currentUser.email}`, 105, 38, { align: 'center' });
 
         // ── Línea separadora ──
@@ -320,7 +318,6 @@ export async function exportToPDF({ filter, startDate, endDate } = {}) {
                     doc.addPage();
                     yPos = 20;
                 }
-                const d    = txDate(t);
                 const tipo = t.type === 'income' ? 'Ingreso' : 'Gasto';
                 const cat  = t.type === 'income' ? (t.category || 'otros') : (catMark[t.category] || t.category || '-');
                 const nota = (t.note || 'Sin nota').slice(0, 38);
@@ -328,7 +325,7 @@ export async function exportToPDF({ filter, startDate, endDate } = {}) {
                 if (t.type === 'income') doc.setTextColor(34, 197, 94);
                 else doc.setTextColor(239, 68, 68);
 
-                doc.text(d.toLocaleDateString('es-PE'), 15,  yPos);
+                doc.text(formatBusinessDate(transactionBusinessDate(t), { day: '2-digit', month: '2-digit', year: 'numeric' }), 15, yPos);
                 doc.text(tipo,                          50,  yPos);
                 doc.setTextColor(40, 40, 40);
                 doc.text(nota,                          78,  yPos);
@@ -352,7 +349,7 @@ export async function exportToPDF({ filter, startDate, endDate } = {}) {
             doc.text('Konteo 05 © 2026', 15, 291);
         }
 
-        doc.save(`Konteo05_${fileLabel}_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Konteo05_${fileLabel}_${businessDateString()}.pdf`);
         showToast(`✅ PDF generado — ${periodLabel}`, 'success');
     } catch (err) {
         showToast('Error PDF: ' + err.message, 'error');

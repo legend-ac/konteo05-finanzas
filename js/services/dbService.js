@@ -1,6 +1,7 @@
 // js/services/dbService.js — Firestore CRUD operations
 
 import { db, firebase } from '../firebase/config.js';
+import { businessDateString, transactionBusinessDate } from '../ui/helpers.js';
 
 /**
  * Obtiene el perfil de usuario.
@@ -104,7 +105,8 @@ export async function getTransactions(uid, startTs) {
 
 /**
  * Obtiene todos los IDs de Gmail e identificadores de transacciones previamente guardados en Firestore.
- * Filtra a los últimos 90 días para evitar consultas masivas y usa UTC para consistencia de fechas.
+ * Filtra a los últimos 90 días para evitar consultas masivas y compara usando
+ * el día operativo oficial de Konteo (America/Lima).
  */
 export async function getImportedGmailIds(uid) {
     // Limitar a 90 días — mismo máximo que fetchTransactionEmails
@@ -143,11 +145,8 @@ export async function getImportedGmailIds(uid) {
         if (doc.id && doc.id.startsWith('gmail_')) {
             gmailIds.add(doc.id.slice(6)); // 'gmail_'.length === 6
         }
-        // Generar clave de dedup usando UTC para evitar desfase de timezone
-        const dateObj = data.date?.toDate ? data.date.toDate() : (data.createdAt?.toDate ? data.createdAt.toDate() : null);
-        if (dateObj && data.amount) {
-            // UTC para coincidir con el parser (que usa la fecha del email, que Gmail reporta en UTC)
-            const dateStr = `${dateObj.getUTCFullYear()}-${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
+        const dateStr = transactionBusinessDate(data);
+        if (dateStr && data.amount) {
             existingTxKeys.add(`${type}|${dateStr}|${Number(data.amount).toFixed(2)}`);
         }
     };
@@ -161,30 +160,82 @@ export async function getImportedGmailIds(uid) {
 /**
  * Guarda o actualiza un ingreso.
  */
-export async function saveIncome(uid, data, editId = null, requestId = null) {
-    const colRef = db.collection('transactions').doc(uid).collection('income');
-    if (editId) {
-        await colRef.doc(editId).update(data);
+function cleanObject(value) {
+    return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined));
+}
+
+function auditSnapshot(payload) {
+    const snapshot = { ...payload };
+    delete snapshot.createdAt;
+    delete snapshot.updatedAt;
+    return snapshot;
+}
+
+function auditRef(uid) {
+    return db.collection('users').doc(uid).collection('auditLogs');
+}
+
+async function saveTransaction(uid, type, data, editId = null, requestId = null) {
+    const collection = type === 'income' ? 'income' : 'expenses';
+    const txRef = db.collection('transactions').doc(uid).collection(collection)
+        .doc(editId || requestId || db.collection('_ids').doc().id);
+    const current = await txRef.get();
+
+    // A repeated click/network retry must be a no-op, never an extra movement
+    // nor a second audit event.
+    if (!editId && current.exists) return txRef.id;
+
+    const operationDate = data.operationDate || businessDateString(data.date?.toDate?.() || new Date());
+    const reference = data.reference || `${type === 'income' ? 'ING' : 'GAS'}-${txRef.id}`;
+    const base = cleanObject({
+        ...data,
+        operationDate,
+        reference,
+        operationType: data.operationType || type,
+        status: data.status || 'completed',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const batch = db.batch();
+
+    if (current.exists) {
+        // occurredAt describes the original operation, not the time someone
+        // corrected a note/category later. Updates are tracked by updatedAt.
+        delete base.occurredAt;
+        batch.update(txRef, base);
+        const eventRef = auditRef(uid).doc(`update_${txRef.id}_${Date.now()}`);
+        batch.set(eventRef, cleanObject({
+            eventType: 'updated', movementId: txRef.id, operationType: type,
+            operationDate, reference, actorUid: data.actorUid || uid,
+            recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            before: auditSnapshot(current.data()), after: auditSnapshot(base)
+        }));
     } else {
-        const payload = { ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-        // Si hay requestId (ej: gmail_<id>), se usa .set con merge para evitar documentos duplicados en Firestore
-        if (requestId) await colRef.doc(requestId).set(payload, { merge: true });
-        else await colRef.add(payload);
+        const created = { ...base, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+        batch.set(txRef, created);
+        batch.set(auditRef(uid).doc(`create_${txRef.id}`), cleanObject({
+            eventType: 'created', movementId: txRef.id, operationType: type,
+            operationDate, reference, actorUid: data.actorUid || uid,
+            actorEmail: data.actorEmail || '',
+            occurredAt: data.occurredAt || firebase.firestore.Timestamp.fromDate(new Date()),
+            recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            snapshot: auditSnapshot(created)
+        }));
     }
+
+    await batch.commit();
+    return txRef.id;
+}
+
+/** Guarda o actualiza un ingreso con trazabilidad inmutable. */
+export async function saveIncome(uid, data, editId = null, requestId = null) {
+    return saveTransaction(uid, 'income', data, editId, requestId);
 }
 
 /**
  * Guarda o actualiza un gasto.
  */
 export async function saveExpense(uid, data, editId = null, requestId = null) {
-    const colRef = db.collection('transactions').doc(uid).collection('expenses');
-    if (editId) {
-        await colRef.doc(editId).update(data);
-    } else {
-        const payload = { ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-        if (requestId) await colRef.doc(requestId).set(payload, { merge: true });
-        else await colRef.add(payload);
-    }
+    return saveTransaction(uid, 'expense', data, editId, requestId);
 }
 
 /**
@@ -192,7 +243,19 @@ export async function saveExpense(uid, data, editId = null, requestId = null) {
  */
 export async function deleteTransaction(uid, type, id) {
     const collection = type === 'income' ? 'income' : 'expenses';
-    await db.collection('transactions').doc(uid).collection(collection).doc(id).delete();
+    const txRef = db.collection('transactions').doc(uid).collection(collection).doc(id);
+    const current = await txRef.get();
+    if (!current.exists) return;
+    const batch = db.batch();
+    batch.set(auditRef(uid).doc(`delete_${id}_${Date.now()}`), {
+        eventType: 'deleted', movementId: id, operationType: type,
+        operationDate: transactionBusinessDate(current.data()),
+        reference: current.data().reference || `${type}-${id}`,
+        actorUid: uid, recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        snapshot: auditSnapshot(current.data())
+    });
+    batch.delete(txRef);
+    await batch.commit();
 }
 
 /**
@@ -235,6 +298,18 @@ export async function getTransactionById(uid, type, id) {
     return doc.exists ? doc.data() : null;
 }
 
+/** Historial inmutable asociado a un movimiento, para la vista de auditoría. */
+export async function getTransactionAudit(uid, movementId) {
+    const snapshot = await auditRef(uid).where('movementId', '==', movementId).get();
+    return snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => {
+            const ams = a.recordedAt?.toDate?.()?.getTime?.() || 0;
+            const bms = b.recordedAt?.toDate?.()?.getTime?.() || 0;
+            return bms - ams;
+        });
+}
+
 /**
  * Obtiene todas las transacciones ordenadas por fecha (para exportación).
  */
@@ -246,7 +321,7 @@ export async function getAllTransactionsOrdered(uid) {
     const txs = [];
     incSnap.docs.forEach(doc => txs.push({ id: doc.id, type: 'income', ...doc.data() }));
     expSnap.docs.forEach(doc => txs.push({ id: doc.id, type: 'expense', ...doc.data() }));
-    const toMs = (item) => item.date?.toDate?.()?.getTime?.() || item.createdAt?.toDate?.()?.getTime?.() || 0;
+    const toMs = (item) => item.occurredAt?.toDate?.()?.getTime?.() || item.date?.toDate?.()?.getTime?.() || item.createdAt?.toDate?.()?.getTime?.() || 0;
     txs.sort((a, b) => toMs(b) - toMs(a));
     return txs;
 }
