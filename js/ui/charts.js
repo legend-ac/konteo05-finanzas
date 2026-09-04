@@ -200,15 +200,24 @@ function updateInsight({ totalIncome, totalExpenses, categoryTotals, expenseLimi
 }
 
 export function renderCharts({ incomeItems = [], expenseItems = [], totalIncome = 0, totalExpenses = 0, expenseLimit = 0 } = {}) {
-    if (typeof Chart === 'undefined') return;
-
     const categoryTotals = { green: 0, yellow: 0, red: 0 };
     expenseItems.forEach(item => {
         if (Object.hasOwn(categoryTotals, item.category)) categoryTotals[item.category] += amount(item.amount);
     });
 
+    // Empty visualizations should not reserve a large, unexplained column in
+    // the dashboard. The analysis card keeps its useful summary and expands
+    // into charts only when the selected period has data to explain.
+    const insights = document.querySelector('.insights-section');
+    const hasCashflow = incomeItems.length > 0 || expenseItems.length > 0;
+    const hasCategories = Object.values(categoryTotals).some(value => value > 0);
+    insights?.classList.toggle('has-cashflow-data', hasCashflow);
+    insights?.classList.toggle('has-category-data', hasCategories);
+
+    updateInsight({ totalIncome, totalExpenses, categoryTotals, expenseLimit });
+    if (typeof Chart === 'undefined') return;
+
     const colors = chartColors();
     renderCashflow(incomeItems, expenseItems, colors);
     renderCategories(categoryTotals, colors);
-    updateInsight({ totalIncome, totalExpenses, categoryTotals, expenseLimit });
 }
