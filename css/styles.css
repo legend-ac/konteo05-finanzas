@@ -71,6 +71,19 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 #app { min-height: 100vh; display: flex; flex-direction: column; }
 .page { min-height: 100vh; }
 
+/* Authentication bootstrap — only visible while Firebase restores a saved session. */
+.auth-loading-content {
+    display: flex; align-items: center; gap: 11px;
+    font-size: 13px; letter-spacing: -.01em;
+}
+.auth-loading-mark {
+    width: 32px; height: 32px; display: grid; place-items: center;
+    border-radius: 9px; background: var(--gold); color: #17140e;
+    font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 700;
+}
+.auth-loading-content strong { display: block; color: var(--text); font-size: 14px; }
+.auth-loading-content span:last-child { display: block; margin-top: 2px; color: var(--text-3); font-size: 11px; }
+
 /* ================================================
    HOME PAGE
    ================================================ */
@@ -666,6 +679,32 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 }
 .btn-save-plan:hover { background: #e0b84f; transform: translateY(-1px); }
 
+/* Decision support — charts earn their space by explaining the active period. */
+.insights-section {
+    border: 1px solid var(--line); border-radius: 14px;
+    background: var(--bg-2); padding: 22px;
+}
+.insights-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.insights-h2 { font-size: 18px; font-weight: 650; letter-spacing: -.03em; margin: 0; color: var(--text); }
+.insight-summary {
+    margin: 10px 0 2px; color: var(--text-2); font-size: 12px; line-height: 1.5;
+}
+.chart-block { padding-top: 18px; margin-top: 18px; border-top: 1px solid var(--line); }
+.chart-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.chart-heading h3 { font-size: 13px; font-weight: 650; letter-spacing: -.01em; color: var(--text); }
+.chart-heading span { color: var(--text-3); font-size: 10px; text-align: right; }
+.chart-canvas-wrap { height: 190px; position: relative; }
+.chart-canvas-wrap-category { height: 215px; }
+.chart-canvas-wrap canvas { width: 100% !important; height: 100% !important; }
+.chart-empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    padding: 20px; color: var(--text-3); font-size: 12px; text-align: center;
+}
+
+@media (min-width: 941px) {
+    .dashboard-support { position: sticky; top: 82px; }
+}
+
 
 
 
@@ -944,7 +983,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
    ================================================ */
 @media (max-width: 940px) {
     .dashboard-grid { grid-template-columns: 1fr; }
-    .dashboard-support { grid-template-columns: 1fr 1fr; }
+    .dashboard-support { grid-template-columns: repeat(2, minmax(0, 1fr)); order: -1; }
 }
 
 /* ================================================
@@ -1038,7 +1077,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 
     /* ── Grid: single column ── */
     .dashboard-grid { grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
-    .dashboard-support { grid-template-columns: 1fr; }
+    .dashboard-support { grid-template-columns: 1fr; order: -1; }
 
     /* ── Ledger: clean & compact ── */
     .ledger-card { padding: 12px 12px 0; border-radius: 10px; }
@@ -1052,8 +1091,9 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 
     /* ── Filter bar: compact controls ── */
     .filter-bar { width: 100%; gap: 4px; }
-    .search-input { flex: 1; width: auto; height: 34px; font-size: 12px; padding: 0 10px; }
-    .category-filter, #status-filter, #sort-select { height: 34px; flex: 1; font-size: 11px; padding: 0 6px; }
+    .search-input { flex: 0 0 100%; width: 100%; height: 34px; font-size: 12px; padding: 0 10px; }
+    .category-filter, #status-filter { height: 34px; flex: 1 1 calc(50% - 2px); font-size: 11px; padding: 0 6px; }
+    #sort-select { height: 34px; flex: 1 1 100%; font-size: 11px; padding: 0 6px; }
 
     /* ── Transaction items: tighter ── */
     .item-desc { font-size: 13px; }
@@ -1064,6 +1104,12 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     /* ── Plan section ── */
     .plan-section { border-radius: 10px; padding: 16px 14px 14px; }
     .plan-h2 { font-size: 15px; }
+    .insights-section { border-radius: 10px; padding: 16px 14px; }
+    .insights-h2 { font-size: 16px; }
+    .insight-summary { margin-top: 8px; }
+    .chart-block { padding-top: 14px; margin-top: 14px; }
+    .chart-canvas-wrap { height: 180px; }
+    .chart-canvas-wrap-category { height: 200px; }
 
     /* ── Mobile action bar: refined ── */
     .action-bar-mobile {

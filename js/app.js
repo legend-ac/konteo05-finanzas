@@ -38,6 +38,9 @@ function toggleTheme() {
     const next    = current === 'dark' ? 'light' : 'dark';
     localStorage.setItem('konteo.theme', next);
     applyTheme(next);
+    // Chart.js resolves colors on render, so redraw the current dashboard after
+    // a theme change instead of leaving stale canvas colors behind.
+    window.dispatchEvent(new CustomEvent('konteo:refresh'));
 }
 
 // ──────────────────────────────────────────────
@@ -59,6 +62,25 @@ const PERIOD_LABELS = {
 function updatePeriodLabel() {
     const el = document.getElementById('balance-period-label');
     if (el) el.textContent = PERIOD_LABELS[state.currentFilter] || 'Balance';
+}
+
+function updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, startDate, endDate }) {
+    const setMetric = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+    const elapsedDays = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1);
+    const savingsRate = totalIncome > 0 ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100) : null;
+    const categoryTotals = { green: 0, yellow: 0, red: 0 };
+    expenseItems.forEach(item => {
+        if (Object.hasOwn(categoryTotals, item.category)) categoryTotals[item.category] += Number(item.amount) || 0;
+    });
+    const top = Object.entries(categoryTotals).sort(([, a], [, b]) => b - a)[0];
+    const categoryLabels = { green: 'Fijo', yellow: 'Necesario', red: 'Antojo' };
+
+    setMetric('metric-savings', savingsRate === null ? '—' : `${savingsRate}%`);
+    setMetric('metric-daily-spend', totalExpenses > 0 ? `S/ ${fmt(totalExpenses / elapsedDays)}` : '—');
+    setMetric('metric-top-category', top?.[1] > 0 ? categoryLabels[top[0]] : '—');
 }
 
 function updateGreeting(fullName) {
@@ -212,6 +234,7 @@ async function loadData() {
         document.getElementById('total-income')  .textContent = `S/ ${fmt(totalIncome)}`;
         document.getElementById('total-expenses') .textContent = `S/ ${fmt(totalExpenses)}`;
         updatePeriodLabel();
+        updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, startDate, endDate });
 
         const allItems = sortTransactions([...incomeItems, ...expenseItems], state.currentSort);
 
@@ -245,7 +268,13 @@ async function loadData() {
         updateStrategyPanel({ totalExpenses });
 
         renderTransactionList(document.getElementById('list'), filtered);
-        renderCharts(totalIncome, totalExpenses, expenseItems);
+        renderCharts({
+            incomeItems,
+            expenseItems,
+            totalIncome,
+            totalExpenses,
+            expenseLimit: state.planConfig.expenseLimit
+        });
 
         const plan = await planPromise;
         if (myToken !== state.currentLoadToken) return;
@@ -254,6 +283,13 @@ async function loadData() {
             state.planConfig.expenseLimit  = Number(plan.expenseLimit  || 0);
             loadPlanConfigToUi();
             updateStrategyPanel({ totalExpenses });
+            renderCharts({
+                incomeItems,
+                expenseItems,
+                totalIncome,
+                totalExpenses,
+                expenseLimit: state.planConfig.expenseLimit
+            });
         }
 
     } catch (err) {
@@ -340,6 +376,9 @@ async function ensureAuthenticatedUserDocument(user) {
 }
 
 auth.onAuthStateChanged(user => {
+    // Firebase restores persisted auth asynchronously. Wait for its answer
+    // before revealing the app so a signed-in user never sees the landing page.
+    document.body.classList.remove('auth-pending');
     if (user) {
         state.currentUser = user;
         ensureAuthenticatedUserDocument(user);

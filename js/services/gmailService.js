@@ -92,10 +92,11 @@ export function requestGmailToken() {
                     resolve(accessToken);
                 },
             });
-            // La conexión empieza por una acción explícita del usuario.
-            // Pedir consentimiento evita que el primer acceso falle sin abrir
-            // el selector de cuenta cuando todavía no existe un permiso previo.
-            tokenClient.requestAccessToken({ prompt: 'consent' });
+            // La conexión empieza por una acción explícita del usuario. No
+            // forzar `prompt: 'consent'`: Google conserva el consentimiento
+            // por usuario y Client ID. Así las conexiones posteriores reutilizan
+            // el permiso ya concedido y no repiten el diálogo.
+            tokenClient.requestAccessToken();
         } else {
             reject(new Error('Google Identity Services no está disponible. Actualiza la página y vuelve a intentarlo.'));
         }

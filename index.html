@@ -32,6 +32,21 @@
     <link rel="preconnect" href="https://www.googleapis.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Run before the stylesheet loads: authenticated users must never see
+           the public home while Firebase restores their saved session. */
+        body.auth-pending #app,
+        body.auth-pending #toast-container { visibility: hidden; }
+        #auth-loading { display: none; }
+        body.auth-pending #auth-loading {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0d0c0a;
+            color: #f4f0e8;
+        }
+    </style>
 
     <!-- Export libraries loaded in head to avoid runtime CDN failures -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -39,7 +54,17 @@
     <!-- Google Identity Services for Gmail OAuth -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body>
+<body class="auth-pending">
+
+<div id="auth-loading" role="status" aria-live="polite" aria-label="Abriendo tu espacio financiero">
+    <div class="auth-loading-content">
+        <span class="auth-loading-mark" aria-hidden="true">K</span>
+        <div>
+            <strong>Konteo 05</strong>
+            <span>Abriendo tu espacio&hellip;</span>
+        </div>
+    </div>
+</div>
 
 <div id="toast-container"></div>
 
@@ -241,9 +266,9 @@
 
                 <!-- Metrics -->
                 <div class="metrics-strip" id="metrics-strip">
-                    <div class="metric-item"><span class="metric-label">Ahorro</span><span class="metric-value" id="metric-savings">&mdash;</span></div>
-                    <div class="metric-item"><span class="metric-label">Runway</span><span class="metric-value" id="metric-runway">&mdash;</span></div>
-                    <div class="metric-item"><span class="metric-label">Score</span><span class="metric-value" id="metric-score">&mdash;</span></div>
+                    <div class="metric-item"><span class="metric-label">Tasa de ahorro</span><span class="metric-value" id="metric-savings">&mdash;</span></div>
+                    <div class="metric-item"><span class="metric-label">Gasto diario</span><span class="metric-value" id="metric-daily-spend">&mdash;</span></div>
+                    <div class="metric-item"><span class="metric-label">Mayor gasto</span><span class="metric-value" id="metric-top-category">&mdash;</span></div>
                 </div>
 
             </div><!-- /dashboard-top -->
@@ -303,6 +328,36 @@
 
                 <!-- RIGHT: Plan + Charts -->
                 <aside class="dashboard-support">
+
+                    <section class="insights-section" aria-labelledby="insights-title">
+                        <div class="insights-heading">
+                            <div>
+                                <p class="plan-eyebrow">An&aacute;lisis</p>
+                                <h2 class="insights-h2" id="insights-title">Tu ritmo financiero</h2>
+                            </div>
+                        </div>
+                        <p class="insight-summary" id="insight-summary" aria-live="polite">Registra movimientos para ver tendencias &uacute;tiles.</p>
+
+                        <div class="chart-block">
+                            <div class="chart-heading">
+                                <h3>Flujo del per&iacute;odo</h3>
+                                <span>Ingresos y gastos por d&iacute;a</span>
+                            </div>
+                            <div class="chart-canvas-wrap">
+                                <canvas id="cashflowChart" role="img" aria-label="Ingresos y gastos por día"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-block">
+                            <div class="chart-heading">
+                                <h3>En qu&eacute; gastas</h3>
+                                <span>Distribuci&oacute;n de gastos</span>
+                            </div>
+                            <div class="chart-canvas-wrap chart-canvas-wrap-category">
+                                <canvas id="categoryChart" role="img" aria-label="Distribución de gastos por categoría"></canvas>
+                            </div>
+                        </div>
+                    </section>
 
                     <div class="plan-section" id="plan-card">
                         <p class="plan-eyebrow">Presupuesto</p>
