@@ -94,9 +94,29 @@ export function renderTransactionList(listEl, filtered) {
     listEl.textContent = '';
 
     if (!filtered.length) {
-        const p = document.createElement('p');
-        p.className = 'empty';
-        p.textContent = 'Sin movimientos en este período';
+        const p = document.createElement('section');
+        p.className = 'empty empty-state';
+        p.textContent = '';
+        const icon = document.createElement('span');
+        icon.className = 'empty-state-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '+';
+        const title = document.createElement('h3');
+        title.textContent = 'Empieza con tu primer movimiento';
+        const copy = document.createElement('p');
+        copy.textContent = 'Registra un ingreso o gasto para convertir este panel en tu historial financiero.';
+        const actions = document.createElement('div');
+        actions.className = 'empty-state-actions';
+        const income = document.createElement('button');
+        income.type = 'button';
+        income.className = 'empty-state-action empty-state-income btn-open-income';
+        income.textContent = '+ Registrar ingreso';
+        const expense = document.createElement('button');
+        expense.type = 'button';
+        expense.className = 'empty-state-action empty-state-expense btn-open-expense';
+        expense.textContent = '− Registrar gasto';
+        actions.append(income, expense);
+        p.append(icon, title, copy, actions);
         listEl.appendChild(p);
         return;
     }

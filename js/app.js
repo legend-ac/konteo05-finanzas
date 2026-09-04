@@ -65,6 +65,11 @@ function updatePeriodLabel() {
 }
 
 function updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, startDate, endDate }) {
+    // A metric with no data is visual noise. Keep the compact strip for
+    // periods that actually have information to compare.
+    document.getElementById('dashboard-page')?.classList.toggle(
+        'has-financial-data', totalIncome > 0 || totalExpenses > 0
+    );
     const setMetric = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;

@@ -1810,3 +1810,81 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     }
 }
 
+/* Dashboard V3 — one compact financial workspace, without decorative voids.
+   The transaction ledger is the primary task; the budget is adjacent context. */
+.dashboard-shell { max-width: 1240px; }
+.dashboard-top { padding-top: 30px; }
+.dashboard-title-row { align-items: center; margin-bottom: 18px; }
+.dashboard-title-left h1 { max-width: none; font-size: clamp(30px, 3vw, 40px); line-height: 1.05; }
+.dashboard-title-right { margin-left: auto; }
+.period-bar { box-shadow: none; }
+
+.dashboard-overview { grid-template-columns: minmax(0, 1.42fr) repeat(2, minmax(190px, .78fr)); gap: 12px; }
+.balance-hero, .overview-stat { min-height: 160px; border-radius: 18px; }
+.balance-hero { padding: 22px 24px; }
+.overview-stat { justify-content: center; align-items: flex-start; padding: 22px; }
+.overview-stat > span { margin-bottom: 8px; }
+.balance-hero-actions { margin-top: 10px; }
+.btn-balance-action { height: 38px; }
+.metrics-strip { margin-top: 12px; }
+#dashboard-page:not(.has-financial-data) .metrics-strip { display: none; }
+
+.dashboard-grid { grid-template-columns: minmax(0, 1.52fr) minmax(320px, .88fr); gap: 16px; margin-top: 16px; }
+.ledger-card { padding: 22px 24px 0; }
+.dashboard-support { gap: 16px; }
+.plan-section, .insights-section { padding: 22px; }
+.plan-input-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.plan-input-row .plan-input-wrap { min-width: 0; }
+
+#list, #list:has(> .empty) { min-height: 0; }
+.empty-state {
+    min-height: 238px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 10px;
+    padding: 30px 20px;
+    text-align: center;
+}
+.empty-state-icon {
+    width: 38px; height: 38px; display: grid; place-items: center;
+    border: 1px solid color-mix(in srgb, var(--gold) 54%, var(--line));
+    border-radius: 13px; background: var(--gold-faint); color: var(--gold);
+    font-size: 25px; font-weight: 500; line-height: 1;
+}
+.empty-state h3 { margin: 2px 0 0; color: var(--text); font-size: 16px; letter-spacing: -.02em; }
+.empty-state p { max-width: 42ch; margin: 0; color: var(--text-3); font-size: 12px; line-height: 1.55; }
+.empty-state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.empty-state-action {
+    height: 36px; padding: 0 12px; border-radius: 10px;
+    border: 1px solid var(--line-2); background: var(--bg-3); color: var(--text);
+    font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.empty-state-income { border-color: rgba(34,197,94,.45); color: var(--income); }
+.empty-state-income:hover { background: rgba(34,197,94,.10); }
+.empty-state-expense { border-color: rgba(244,63,94,.4); color: var(--expense); }
+.empty-state-expense:hover { background: rgba(244,63,94,.10); }
+
+@media (max-width: 940px) {
+    .dashboard-title-left h1 { font-size: clamp(29px, 4.6vw, 38px); }
+    .dashboard-overview { grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(150px, .8fr)); }
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .dashboard-support { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+    .dashboard-top { padding-top: 20px; }
+    .dashboard-title-row { align-items: flex-start; margin-bottom: 14px; }
+    .dashboard-title-left h1 { max-width: 12ch; font-size: clamp(27px, 8vw, 34px); }
+    .dashboard-title-right { width: 100%; margin-left: 0; }
+    .dashboard-overview { grid-template-columns: 1fr 1fr; gap: 9px; }
+    .balance-hero { min-height: 184px; padding: 20px; }
+    .overview-stat { min-height: 102px; padding: 16px; }
+    .overview-stat strong { font-size: 17px; }
+    .dashboard-support { grid-template-columns: 1fr; }
+    .plan-input-row { grid-template-columns: 1fr; gap: 10px; }
+    .empty-state { min-height: 220px; padding-inline: 14px; }
+    .empty-state-actions { width: 100%; }
+    .empty-state-action { flex: 1; min-width: 0; padding-inline: 8px; }
+}
+
