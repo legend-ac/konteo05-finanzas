@@ -3,6 +3,43 @@
 import { db, firebase } from '../firebase/config.js';
 import { businessDateString, transactionBusinessDate } from '../ui/helpers.js';
 
+const planCache = new Map();
+const transactionSchemaMode = new Map();
+const PLAN_CACHE_TTL_MS = 60_000;
+
+function transactionSchemaStorageKey(uid) {
+    return `konteo.transaction-schema.${uid}`;
+}
+
+function getTransactionSchemaMode(uid) {
+    if (transactionSchemaMode.has(uid)) return transactionSchemaMode.get(uid);
+    try {
+        const mode = localStorage.getItem(transactionSchemaStorageKey(uid));
+        if (mode === 'modern' || mode === 'legacy') {
+            transactionSchemaMode.set(uid, mode);
+            return mode;
+        }
+    } catch (_) { }
+    return null;
+}
+
+function setTransactionSchemaMode(uid, mode) {
+    transactionSchemaMode.set(uid, mode);
+    try { localStorage.setItem(transactionSchemaStorageKey(uid), mode); } catch (_) { }
+}
+
+function uniqueDocs(docs) {
+    const map = new Map();
+    docs.forEach(doc => map.set(doc.id, doc));
+    return [...map.values()];
+}
+
+function periodQuery(reference, field, startTs, endTs) {
+    let query = reference.where(field, '>=', startTs);
+    if (endTs) query = query.where(field, '<=', endTs);
+    return query;
+}
+
 /**
  * Obtiene el perfil de usuario.
  */
@@ -23,19 +60,28 @@ export async function saveUserProfile(uid, profileData) {
  * Carga el plan financiero.
  */
 export async function getPlan(uid) {
+    const cached = planCache.get(uid);
+    if (cached && Date.now() - cached.savedAt < PLAN_CACHE_TTL_MS) return cached.value;
+
     try {
         const doc = await db.collection('plans').doc(uid).get();
-        if (doc.exists) return doc.data();
+        if (doc.exists) {
+            const value = doc.data();
+            planCache.set(uid, { value, savedAt: Date.now() });
+            return value;
+        }
     } catch (_) { }
 
     // Fallback for environments where /plans rules are not deployed yet.
     const userDoc = await db.collection('users').doc(uid).get();
     const userData = userDoc.exists ? userDoc.data() : {};
     const planConfig = userData.planConfig || {};
-    return {
+    const value = {
         incomeTarget: Number(planConfig.incomeTarget || 0),
         expenseLimit: Number(planConfig.expenseLimit || 0)
     };
+    planCache.set(uid, { value, savedAt: Date.now() });
+    return value;
 }
 
 /**
@@ -59,48 +105,66 @@ export async function savePlan(uid, planData) {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
     }
+    planCache.set(uid, { value: { ...planData }, savedAt: Date.now() });
 }
 
 /**
  * Obtiene transacciones desde una fecha de inicio.
  */
-export async function getTransactions(uid, startTs) {
+export async function getTransactions(uid, startTs, endTs = null) {
     const incomeRef = db.collection('transactions').doc(uid).collection('income');
     const expenseRef = db.collection('transactions').doc(uid).collection('expenses');
 
-    let incomeDocs = [];
-    let expenseDocs = [];
-
     try {
-        // Query by `date` for current schema and by `createdAt` for legacy docs.
-        const [incomeByDate, incomeByCreatedAt, expenseByDate, expenseByCreatedAt] = await Promise.all([
-            incomeRef.where('date', '>=', startTs).get(),
-            incomeRef.where('createdAt', '>=', startTs).get(),
-            expenseRef.where('date', '>=', startTs).get(),
-            expenseRef.where('createdAt', '>=', startTs).get()
+        // All current records have `date`. This is two reads instead of four
+        // after the one-time legacy check, and custom periods are bounded on
+        // the server instead of downloading newer transactions to discard.
+        const [incomeByDate, expenseByDate] = await Promise.all([
+            periodQuery(incomeRef, 'date', startTs, endTs).get(),
+            periodQuery(expenseRef, 'date', startTs, endTs).get()
         ]);
-        incomeDocs = [...incomeByDate.docs, ...incomeByCreatedAt.docs];
-        expenseDocs = [...expenseByDate.docs, ...expenseByCreatedAt.docs];
+
+        const schemaMode = getTransactionSchemaMode(uid);
+        if (schemaMode === 'modern') {
+            return {
+                incomeItems: incomeByDate.docs.map(doc => ({ id: doc.id, type: 'income', ...doc.data() })),
+                expenseItems: expenseByDate.docs.map(doc => ({ id: doc.id, type: 'expense', ...doc.data() }))
+            };
+        }
+
+        // Compatibility check only once per user. The first scan covers the
+        // account history, so selecting an old custom period later cannot hide
+        // an old record that only has `createdAt`.
+        const scanWholeHistory = schemaMode === null;
+        const legacyStartTs = scanWholeHistory
+            ? firebase.firestore.Timestamp.fromDate(new Date('2000-01-01T00:00:00.000Z'))
+            : startTs;
+        const legacyEndTs = scanWholeHistory ? null : endTs;
+        const [incomeByCreatedAt, expenseByCreatedAt] = await Promise.all([
+            periodQuery(incomeRef, 'createdAt', legacyStartTs, legacyEndTs).get(),
+            periodQuery(expenseRef, 'createdAt', legacyStartTs, legacyEndTs).get()
+        ]);
+        const incomeDocs = uniqueDocs([...incomeByDate.docs, ...incomeByCreatedAt.docs]);
+        const expenseDocs = uniqueDocs([...expenseByDate.docs, ...expenseByCreatedAt.docs]);
+        const hasLegacyOnlyDocs = [...incomeDocs, ...expenseDocs]
+            .some(doc => !doc.data().date && doc.data().createdAt);
+        setTransactionSchemaMode(uid, hasLegacyOnlyDocs ? 'legacy' : 'modern');
+
+        return {
+            incomeItems: incomeDocs.map(doc => ({ id: doc.id, type: 'income', ...doc.data() })),
+            expenseItems: expenseDocs.map(doc => ({ id: doc.id, type: 'expense', ...doc.data() }))
+        };
     } catch (_) {
         // Safe fallback if indexed queries are not available yet.
         const [incomeSnap, expenseSnap] = await Promise.all([
             incomeRef.get(),
             expenseRef.get()
         ]);
-        incomeDocs = incomeSnap.docs;
-        expenseDocs = expenseSnap.docs;
+        return {
+            incomeItems: incomeSnap.docs.map(doc => ({ id: doc.id, type: 'income', ...doc.data() })),
+            expenseItems: expenseSnap.docs.map(doc => ({ id: doc.id, type: 'expense', ...doc.data() }))
+        };
     }
-
-    const uniqueById = (docs) => {
-        const map = new Map();
-        docs.forEach((doc) => map.set(doc.id, doc));
-        return [...map.values()];
-    };
-
-    return {
-        incomeItems: uniqueById(incomeDocs).map(doc => ({ id: doc.id, type: 'income', ...doc.data() })),
-        expenseItems: uniqueById(expenseDocs).map(doc => ({ id: doc.id, type: 'expense', ...doc.data() }))
-    };
 }
 
 /**
@@ -286,6 +350,7 @@ export async function deleteAllUserData(uid) {
         planConfig: { incomeTarget: 0, expenseLimit: 0 },
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
+    planCache.delete(uid);
 }
 
 
@@ -300,7 +365,20 @@ export async function getTransactionById(uid, type, id) {
 
 /** Historial inmutable asociado a un movimiento, para la vista de auditoría. */
 export async function getTransactionAudit(uid, movementId) {
-    const snapshot = await auditRef(uid).where('movementId', '==', movementId).get();
+    let snapshot;
+    try {
+        // Server-side order and cap: opening one movement never downloads an
+        // unbounded audit history as the account grows.
+        snapshot = await auditRef(uid)
+            .where('movementId', '==', movementId)
+            .orderBy('recordedAt', 'desc')
+            .limit(50)
+            .get();
+    } catch (_) {
+        // Existing projects can continue working while Firestore builds the
+        // composite index declared below.
+        snapshot = await auditRef(uid).where('movementId', '==', movementId).get();
+    }
     return snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .sort((a, b) => {

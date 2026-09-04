@@ -88,6 +88,43 @@ function updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, star
     setMetric('metric-top-category', top?.[1] > 0 ? categoryLabels[top[0]] : '—');
 }
 
+function renderTransactionLedger(incomeItems, expenseItems) {
+    const allItems = sortTransactions([...incomeItems, ...expenseItems], state.currentSort);
+    const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
+    const categoryFilter = document.getElementById('category-filter')?.value || 'all';
+    const statusFilter = document.getElementById('status-filter')?.value || 'all';
+    const filtered = allItems.filter(item => {
+        const matchSearch = !searchTerm ||
+            (item.note || '').toLowerCase().includes(searchTerm) ||
+            (item.counterparty || '').toLowerCase().includes(searchTerm) ||
+            (item.reference || '').toLowerCase().includes(searchTerm) ||
+            (item.actorEmail || '').toLowerCase().includes(searchTerm) ||
+            (item.status || 'completed').toLowerCase().includes(searchTerm) ||
+            String(item.amount || '').includes(searchTerm);
+        if (!matchSearch) return false;
+
+        const matchesCategory = categoryFilter === 'all' ||
+            (categoryFilter === 'income' ? item.type === 'income' : item.category === categoryFilter);
+        return matchesCategory && (statusFilter === 'all' || (item.status || 'completed') === statusFilter);
+    });
+
+    const countEl = document.getElementById('tx-count');
+    if (countEl) {
+        countEl.textContent = filtered.length
+            ? `${filtered.length} movimiento${filtered.length !== 1 ? 's' : ''}`
+            : '';
+    }
+    renderTransactionList(document.getElementById('list'), filtered);
+}
+
+function renderTransactionLedgerFromCache() {
+    if (!state.dashboardData) {
+        loadData();
+        return;
+    }
+    renderTransactionLedger(state.dashboardData.incomeItems, state.dashboardData.expenseItems);
+}
+
 function updateGreeting(fullName) {
     const firstName = (fullName || '').split(' ')[0];
     const hour = new Date().getHours();
@@ -209,11 +246,12 @@ async function loadData() {
     }
 
     const startTs = firebase.firestore.Timestamp.fromDate(startDate);
+    const endTs = firebase.firestore.Timestamp.fromDate(endDate);
 
     try {
         const planPromise = dbService.getPlan(state.currentUser.uid).catch(() => null);
         const { incomeItems: rawIncome, expenseItems: rawExpense } =
-            await dbService.getTransactions(state.currentUser.uid, startTs);
+            await dbService.getTransactions(state.currentUser.uid, startTs, endTs);
 
         if (myToken !== state.currentLoadToken) return;
 
@@ -226,6 +264,7 @@ async function loadData() {
 
         const incomeItems  = rawIncome.filter(withinPeriod);
         const expenseItems = rawExpense.filter(withinPeriod);
+        state.dashboardData = { incomeItems, expenseItems };
 
         const totalIncome   = incomeItems .reduce((s, i) => s + (Number(i.amount) || 0), 0);
         const totalExpenses = expenseItems.reduce((s, i) => s + (Number(i.amount) || 0), 0);
@@ -234,45 +273,18 @@ async function loadData() {
         const balanceEl = document.getElementById('balance');
         if (balanceEl) {
             balanceEl.textContent = `S/ ${fmt(balance)}`;
-            balanceEl.className   = `balance-number ${balance >= 0 ? 'balance-positive' : 'balance-negative'}`;
+            const balanceState = balance === 0
+                ? 'balance-zero'
+                : (balance > 0 ? 'balance-positive' : 'balance-negative');
+            balanceEl.className = `balance-number ${balanceState}`;
         }
         document.getElementById('total-income')  .textContent = `S/ ${fmt(totalIncome)}`;
         document.getElementById('total-expenses') .textContent = `S/ ${fmt(totalExpenses)}`;
         updatePeriodLabel();
         updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, startDate, endDate });
 
-        const allItems = sortTransactions([...incomeItems, ...expenseItems], state.currentSort);
-
-        const searchTerm     = document.getElementById('search-input')?.value.toLowerCase() || '';
-        const categoryFilter = document.getElementById('category-filter')?.value || 'all';
-        const statusFilter   = document.getElementById('status-filter')?.value || 'all';
-
-        const filtered = allItems.filter(item => {
-            const matchSearch = !searchTerm ||
-                (item.note || '').toLowerCase().includes(searchTerm) ||
-                (item.counterparty || '').toLowerCase().includes(searchTerm) ||
-                (item.reference || '').toLowerCase().includes(searchTerm) ||
-                (item.actorEmail || '').toLowerCase().includes(searchTerm) ||
-                (item.status || 'completed').toLowerCase().includes(searchTerm) ||
-                String(item.amount || '').includes(searchTerm);
-            if (!matchSearch) return false;
-
-            const matchesCategory = categoryFilter === 'all' ||
-                (categoryFilter === 'income' ? item.type === 'income' : item.category === categoryFilter);
-            const matchesStatus = statusFilter === 'all' || (item.status || 'completed') === statusFilter;
-            return matchesCategory && matchesStatus;
-        });
-
-        const countEl = document.getElementById('tx-count');
-        if (countEl) {
-            countEl.textContent = filtered.length
-                ? `${filtered.length} movimiento${filtered.length !== 1 ? 's' : ''}`
-                : '';
-        }
-
         updateStrategyPanel({ totalExpenses });
-
-        renderTransactionList(document.getElementById('list'), filtered);
+        renderTransactionLedger(incomeItems, expenseItems);
         renderCharts({
             incomeItems,
             expenseItems,
@@ -385,6 +397,7 @@ auth.onAuthStateChanged(user => {
     // before revealing the app so a signed-in user never sees the landing page.
     document.body.classList.remove('auth-pending');
     if (user) {
+        state.dashboardData = null;
         state.currentUser = user;
         ensureAuthenticatedUserDocument(user);
         showPage('dashboard');
@@ -420,6 +433,7 @@ auth.onAuthStateChanged(user => {
         window.addEventListener('konteo:refresh', () => loadData(), { once: false });
     } else {
         state.currentUser = null;
+        state.dashboardData = null;
         showPage('home');
     }
 });
@@ -613,13 +627,14 @@ document.querySelectorAll('[data-google-auth]').forEach(button => {
     button.addEventListener('click', () => signInWithGoogle(button));
 });
 
-document.getElementById('logout-btn').onclick = async () => {
+async function signOutCurrentUser() {
     if (confirm('¿Cerrar sesión?')) {
         try { await auth.signOut(); showToast('Sesión cerrada', 'success'); }
         catch (err) { showToast('Error: ' + err.message, 'error'); }
     }
-};
+}
 
+document.getElementById('logout-btn').onclick = signOutCurrentUser;
 document.getElementById('show-register')?.addEventListener('click', e => { e.preventDefault(); showPage('register'); });
 document.getElementById('show-login')?.addEventListener('click',    e => { e.preventDefault(); showPage('login'); });
 document.getElementById('home-start-register')?.addEventListener('click', () => showPage('register'));
@@ -673,6 +688,10 @@ document.getElementById('form-recovery')?.addEventListener('submit', async e => 
 // PROFILE MODAL
 // ──────────────────────────────────────────────
 document.getElementById('profile-btn')?.addEventListener('click', () => openModal('modal-profile'));
+document.getElementById('btn-logout-profile')?.addEventListener('click', async () => {
+    closeModal('modal-profile');
+    await signOutCurrentUser();
+});
 document.getElementById('form-profile')?.addEventListener('submit', async e => {
     e.preventDefault();
     try { await saveUserProfile(); }
@@ -735,7 +754,7 @@ document.getElementById('btn-apply-range')?.addEventListener('click', () => {
 document.getElementById('sort-select')?.addEventListener('change', e => {
     state.currentSort = e.target.value;
     persistUiState();
-    loadData();
+    renderTransactionLedgerFromCache();
 });
 
 // ──────────────────────────────────────────────
@@ -1028,10 +1047,10 @@ document.addEventListener('click', e => {
 let searchTimeout;
 document.getElementById('search-input')?.addEventListener('input', () => {
     clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(loadData, 280);
+    searchTimeout = setTimeout(renderTransactionLedgerFromCache, 180);
 });
-document.getElementById('category-filter')?.addEventListener('change', loadData);
-document.getElementById('status-filter')?.addEventListener('change', loadData);
+document.getElementById('category-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
+document.getElementById('status-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
 
 // ──────────────────────────────────────────────
 // PLAN

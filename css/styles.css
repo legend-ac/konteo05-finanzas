@@ -1716,7 +1716,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .home-header { padding: 18px 0; }
     .home-hero { padding: 58px 0 42px; }
     .home-copy h1 { font-size: clamp(44px, 12vw, 60px); }
-    .home-visual { display: block; }
     .home-art { max-width: 430px; margin: 0 auto; transform: none; aspect-ratio: 1.15 / 1; }
     .login-container { padding: 16px; }
     .login-box { padding: 38px 24px; border-radius: 22px; }
@@ -1886,5 +1885,91 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .empty-state { min-height: 220px; padding-inline: 14px; }
     .empty-state-actions { width: 100%; }
     .empty-state-action { flex: 1; min-width: 0; padding-inline: 8px; }
+}
+
+/* Interaction and accessibility pass. These rules intentionally live beside
+   the final dashboard rules so mobile and desktop share one control language. */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+.balance-hero .balance-zero { color: rgba(25,19,8,.60); }
+.detail-btn { font-family: inherit; }
+.detail-btn svg, .empty-state-icon svg { display: block; }
+
+.category-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+.category-buttons legend {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 0 0 2px;
+    padding: 0;
+    color: var(--text-2);
+    font-size: 11px;
+    font-weight: 600;
+}
+.category-option {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 42px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg-3);
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color var(--t) var(--ease), background var(--t) var(--ease), color var(--t) var(--ease);
+}
+.category-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    opacity: 0;
+    pointer-events: none;
+}
+.category-option:has(input:checked) {
+    border-color: var(--gold);
+    background: var(--gold-faint);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 32%, transparent);
+}
+.category-option:has(input:focus-visible) {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+.category-option:hover { border-color: var(--line-2); color: var(--text); }
+
+#form-profile .profile-session-action { display: none; }
+@media (max-width: 680px) {
+    .custom-range-panel { margin-top: 12px; padding: 16px; }
+    .category-buttons { grid-template-columns: 1fr; }
+    .category-option { justify-content: flex-start; padding-inline: 14px; }
+    #form-profile .profile-session-action {
+        display: inline-flex;
+        flex: 1 1 100%;
+        justify-content: center;
+        border-color: rgba(244,63,94,.38);
+        color: var(--expense);
+    }
 }
 

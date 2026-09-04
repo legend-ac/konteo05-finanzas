@@ -178,7 +178,6 @@
     </div>
 
     <!-- ==================== DASHBOARD ==================== -->
-    <!-- ==================== DASHBOARD ==================== -->
     <div id="dashboard-page" class="page hidden">
 
         <header class="app-header">
@@ -311,7 +310,7 @@
                                 <option value="cancelled">Cancelados</option>
                                 <option value="voided">Anulados</option>
                             </select>
-                            <select id="sort-select" aria-label="Ordenar">
+                            <select id="sort-select" class="category-filter" aria-label="Ordenar">
                                 <option value="date_desc">M&aacute;s recientes</option>
                                 <option value="date_asc">M&aacute;s antiguos</option>
                                 <option value="amount_desc">Mayor monto</option>
@@ -416,23 +415,29 @@
             </div>
             <input type="hidden" id="income-edit-id">
             <div class="amount-input-wrap">
+                <label class="sr-only" for="income-amount">Monto del ingreso</label>
                 <span class="amount-currency">S/</span>
-                <input type="number" id="income-amount" placeholder="0.00" step="0.01" min="0.01" required>
+                <input type="number" id="income-amount" placeholder="0.00" step="0.01" min="0.01" required aria-describedby="income-amount-help">
             </div>
+            <span id="income-amount-help" class="sr-only">Ingresa un monto mayor a cero.</span>
             <div class="quick-amounts" data-target="income-amount">
                 <button type="button" class="quick-amount" data-amount="50">+50</button>
                 <button type="button" class="quick-amount" data-amount="100">+100</button>
                 <button type="button" class="quick-amount" data-amount="500">+500</button>
                 <button type="button" class="quick-amount" data-amount="1000">+1,000</button>
             </div>
+            <label class="sr-only" for="income-date">Fecha del ingreso</label>
             <input type="date" id="income-date" required>
+            <label class="sr-only" for="income-source">Fuente del ingreso</label>
             <select id="income-source">
                 <option value="salario">Salario</option>
                 <option value="freelance">Freelance</option>
                 <option value="negocio">Negocio</option>
                 <option value="otros">Otros</option>
             </select>
+            <label class="sr-only" for="income-counterparty">Cliente o contraparte, opcional</label>
             <input type="text" id="income-counterparty" placeholder="Cliente o contraparte (opcional)" maxlength="100">
+            <label class="sr-only" for="income-note">Nota del ingreso, opcional</label>
             <input type="text" id="income-note" placeholder="Nota (opcional)" maxlength="100">
             <div class="modal-buttons">
                 <button type="button" class="cancel" data-modal="modal-income">Cancelar</button>
@@ -460,6 +465,7 @@
             </div>
             <input type="hidden" id="expense-edit-id">
             <div class="amount-input-wrap">
+                <label class="sr-only" for="expense-amount">Monto del gasto</label>
                 <span class="amount-currency">S/</span>
                 <input type="number" id="expense-amount" placeholder="0.00" step="0.01" min="0.01" required>
             </div>
@@ -469,14 +475,19 @@
                 <button type="button" class="quick-amount" data-amount="100">+100</button>
                 <button type="button" class="quick-amount" data-amount="200">+200</button>
             </div>
+            <label class="sr-only" for="expense-date">Fecha del gasto</label>
             <input type="date" id="expense-date" required>
-            <div class="category-buttons">
-                <label><span class="cat-label-dot green"></span>Fijo<input type="radio" name="category" value="green"></label>
-                <label><span class="cat-label-dot yellow"></span>Necesario<input type="radio" name="category" value="yellow"></label>
-                <label><span class="cat-label-dot red"></span>Antojo<input type="radio" name="category" value="red"></label>
-            </div>
+            <fieldset class="category-buttons">
+                <legend>Tipo de gasto</legend>
+                <label class="category-option"><input type="radio" name="category" value="green"><span class="cat-label-dot green"></span><span>Fijo</span></label>
+                <label class="category-option"><input type="radio" name="category" value="yellow"><span class="cat-label-dot yellow"></span><span>Necesario</span></label>
+                <label class="category-option"><input type="radio" name="category" value="red"><span class="cat-label-dot red"></span><span>Antojo</span></label>
+            </fieldset>
+            <label class="sr-only" for="expense-counterparty">Proveedor o contraparte, opcional</label>
             <input type="text" id="expense-counterparty" placeholder="Proveedor o contraparte (opcional)" maxlength="100">
+            <label class="sr-only" for="expense-note">Nota del gasto, opcional</label>
             <input type="text" id="expense-note" placeholder="Nota (opcional)" maxlength="100">
+            <label class="sr-only" for="expense-method">Método de pago</label>
             <select id="expense-method">
                 <option value="efectivo">Efectivo</option>
                 <option value="debito">Tarjeta d&eacute;bito</option>
@@ -553,6 +564,7 @@
             </section>
             <div class="modal-buttons">
                 <button type="button" id="btn-open-recovery" class="cancel">Recuperar contrase&ntilde;a</button>
+                <button type="button" id="btn-logout-profile" class="cancel profile-session-action">Salir de mi cuenta</button>
                 <button type="button" class="cancel" data-modal="modal-profile">Cancelar</button>
                 <button type="submit">Guardar</button>
             </div>

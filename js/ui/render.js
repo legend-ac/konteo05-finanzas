@@ -3,10 +3,30 @@
 import { formatBusinessDate, transactionBusinessDate } from './helpers.js';
 
 const CAT_LABEL = { green: 'Fijo', yellow: 'Necesario', red: 'Antojo' };
+const SVG_NS = 'http://www.w3.org/2000/svg';
 const SOURCE_LABEL = {
     salario: 'Salario', freelance: 'Freelance',
     negocio: 'Negocio', otros: null
 };
+
+function makeLineIcon(paths) {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '14');
+    svg.setAttribute('height', '14');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    paths.forEach(d => {
+        const path = document.createElementNS(SVG_NS, 'path');
+        path.setAttribute('d', d);
+        svg.appendChild(path);
+    });
+    return svg;
+}
 function createRow(item, index) {
     const isIncome = item.type === 'income';
     const dateStr  = formatBusinessDate(transactionBusinessDate(item));
@@ -66,7 +86,11 @@ function createRow(item, index) {
     detailBtn.dataset.id = item.id;
     detailBtn.dataset.type = isIncome ? 'income' : 'expense';
     detailBtn.setAttribute('aria-label', 'Ver detalle');
-    detailBtn.textContent = 'i';
+    detailBtn.appendChild(makeLineIcon([
+        'M12 16v-4',
+        'M12 8h.01',
+        'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
+    ]));
 
     const editBtn = document.createElement('button');
     editBtn.className = 'edit-btn';
@@ -100,7 +124,11 @@ export function renderTransactionList(listEl, filtered) {
         const icon = document.createElement('span');
         icon.className = 'empty-state-icon';
         icon.setAttribute('aria-hidden', 'true');
-        icon.textContent = '+';
+        icon.appendChild(makeLineIcon([
+            'M5 3h14a2 2 0 0 1 2 2v16l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2Z',
+            'M8 8h8',
+            'M8 12h8'
+        ]));
         const title = document.createElement('h3');
         title.textContent = 'Empieza con tu primer movimiento';
         const copy = document.createElement('p');
