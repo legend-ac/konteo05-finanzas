@@ -108,6 +108,93 @@ export async function savePlan(uid, planData) {
     planCache.set(uid, { value: { ...planData }, savedAt: Date.now() });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BILLETERAS / CUENTAS
+// A wallet is deliberately separate from Gmail senders. Transactions reference
+// a wallet with accountId; old records without it remain valid and appear as
+// "Sin asignar" until the user chooses to classify them.
+// ─────────────────────────────────────────────────────────────────────────────
+function walletsRef(uid) {
+    return db.collection('users').doc(uid).collection('wallets');
+}
+
+export async function getWallets(uid) {
+    const snapshot = await walletsRef(uid).get();
+    return snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => {
+            if ((a.active !== false) !== (b.active !== false)) return a.active === false ? 1 : -1;
+            return String(a.name || '').localeCompare(String(b.name || ''), 'es');
+        });
+}
+
+export async function saveWallet(uid, wallet, editId = null) {
+    const ref = editId ? walletsRef(uid).doc(editId) : walletsRef(uid).doc();
+    const payload = cleanObject({
+        name: String(wallet.name || '').trim(),
+        institution: String(wallet.institution || '').trim(),
+        type: wallet.type || 'bank',
+        currency: wallet.currency || 'PEN',
+        openingBalance: Number(wallet.openingBalance || 0),
+        color: wallet.color || 'gold',
+        includeInTotal: wallet.includeInTotal !== false,
+        active: wallet.active !== false,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if (!editId) payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    await ref.set(payload, { merge: true });
+    return ref.id;
+}
+
+export async function archiveWallet(uid, id) {
+    await walletsRef(uid).doc(id).set({
+        active: false,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+}
+
+/**
+ * One atomic transfer makes two linked account movements. They are marked as
+ * transfers, therefore they update each wallet but never inflate the general
+ * income/expense totals.
+ */
+export async function saveTransfer(uid, data, requestId = null) {
+    const transferId = requestId || db.collection('_ids').doc().id;
+    const outRef = db.collection('transactions').doc(uid).collection('expenses').doc(`transfer_out_${transferId}`);
+    const inRef = db.collection('transactions').doc(uid).collection('income').doc(`transfer_in_${transferId}`);
+    const [outCurrent, inCurrent] = await Promise.all([outRef.get(), inRef.get()]);
+    if (outCurrent.exists || inCurrent.exists) return transferId;
+
+    const amount = Number(data.amount || 0);
+    const operationDate = data.operationDate || businessDateString(data.date?.toDate?.() || new Date());
+    const common = cleanObject({
+        amount,
+        date: data.date,
+        operationDate,
+        occurredAt: data.occurredAt || firebase.firestore.Timestamp.fromDate(new Date()),
+        actorUid: data.actorUid || uid,
+        actorEmail: data.actorEmail || '',
+        status: 'completed',
+        transferId,
+        isTransfer: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const batch = db.batch();
+    batch.set(outRef, {
+        ...common, accountId: data.fromAccountId, operationType: 'transfer_out',
+        category: 'yellow', method: 'transferencia', note: data.note || 'Transferencia entre billeteras',
+        counterparty: data.toName || '', reference: `TRF-${transferId}`
+    });
+    batch.set(inRef, {
+        ...common, accountId: data.toAccountId, operationType: 'transfer_in',
+        source: 'transferencia', note: data.note || 'Transferencia entre billeteras',
+        counterparty: data.fromName || '', reference: `TRF-${transferId}`
+    });
+    await batch.commit();
+    return transferId;
+}
+
 /**
  * Obtiene transacciones desde una fecha de inicio.
  */
@@ -322,18 +409,34 @@ export async function deleteTransaction(uid, type, id) {
     await batch.commit();
 }
 
+/** Deletes both legs of a transfer so balances can never be left inconsistent. */
+export async function deleteTransfer(uid, transferId) {
+    if (!transferId) return;
+    const root = db.collection('transactions').doc(uid);
+    const [outgoing, incoming] = await Promise.all([
+        root.collection('expenses').where('transferId', '==', transferId).get(),
+        root.collection('income').where('transferId', '==', transferId).get()
+    ]);
+    const docs = [...outgoing.docs, ...incoming.docs];
+    if (!docs.length) return;
+    const batch = db.batch();
+    docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+}
+
 /**
  * Elimina TODOS los datos de la cuenta de un usuario de forma aislada.
  */
 export async function deleteAllUserData(uid) {
     if (!uid) return;
-    const [incSnap, expSnap] = await Promise.all([
+    const [incSnap, expSnap, walletsSnap] = await Promise.all([
         db.collection('transactions').doc(uid).collection('income').get(),
-        db.collection('transactions').doc(uid).collection('expenses').get()
+        db.collection('transactions').doc(uid).collection('expenses').get(),
+        walletsRef(uid).get()
     ]);
 
     // Eliminar documentos en lotes
-    const docsToDelete = [...incSnap.docs, ...expSnap.docs];
+    const docsToDelete = [...incSnap.docs, ...expSnap.docs, ...walletsSnap.docs];
     for (let i = 0; i < docsToDelete.length; i += 400) {
         const batch = db.batch();
         docsToDelete.slice(i, i + 400).forEach(doc => batch.delete(doc.ref));

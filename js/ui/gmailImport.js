@@ -16,7 +16,7 @@ import {
 
 import { parseAllEmails } from '../services/gmailParser.js';
 import { db, firebase }   from '../firebase/config.js';
-import { saveIncome, saveExpense, getImportedGmailIds } from '../services/dbService.js';
+import { saveIncome, saveExpense, getImportedGmailIds, getWallets } from '../services/dbService.js';
 import { businessDateToDate } from './helpers.js';
 
 // ─────────────────────────────────────────────
@@ -27,6 +27,7 @@ let pendingTxs        = [];
 let selectedIds       = new Set();
 let importedGmailIds  = new Set();
 let gmailPreference   = null;
+let walletOptions     = [];
 
 // ─────────────────────────────────────────────
 // FIRESTORE: preferencia del usuario
@@ -130,6 +131,29 @@ function sourceLabel(source) {
     return SOURCE_LABELS[source] || source;
 }
 
+function entitySourceId(entity) {
+    return `custom-${String(entity?.id || entity?.sender || '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
+}
+
+function entityForTransaction(tx) {
+    return getCustomEntities().find(entity => entitySourceId(entity) === tx.source);
+}
+
+function walletOptionsHtml(selected = '', includeEmpty = true) {
+    const empty = includeEmpty ? '<option value="">Sin asignar por ahora</option>' : '';
+    return empty + walletOptions
+        .filter(wallet => wallet.active !== false)
+        .map(wallet => `<option value="${escapeHtml(wallet.id)}" ${wallet.id === selected ? 'selected' : ''}>${escapeHtml(wallet.institution ? `${wallet.institution} · ${wallet.name}` : wallet.name)}</option>`)
+        .join('');
+}
+
+function renderAccountControl(tx, idx) {
+    if (tx.reviewOnly || !walletOptions.some(wallet => wallet.active !== false)) return '';
+    const entity = entityForTransaction(tx);
+    const accountId = tx.accountId || entity?.defaultAccountId || '';
+    return `<label class="gmail-account-control" for="gmail-account-${idx}"><span>Billetera</span><select id="gmail-account-${idx}" class="gmail-tx-account" data-idx="${idx}">${walletOptionsHtml(accountId)}</select></label>`;
+}
+
 function renderCategoryControl(tx, idx) {
     if (tx.type !== 'expense' || tx.reviewOnly) return '';
     const options = EXPENSE_CATEGORIES.map(([value, label]) => (
@@ -165,6 +189,7 @@ function renderTxCard(tx, idx) {
             ${reason}
         </div>
         ${renderCategoryControl(tx, idx)}
+        ${renderAccountControl(tx, idx)}
         <div class="gmail-tx-amount ${typeClass}-amount">${sign} ${fmtAmt(tx.amount, tx.currency)}</div>
     </article>`;
 }
@@ -460,7 +485,7 @@ function renderEntitiesList() {
             <div class="gmail-entity-info">
                 <strong>${escapeHtml(entity.name)}</strong>
                 <span>${escapeHtml(entity.sender)}</span>
-                <small>${entity.defaultType === 'income' ? 'Ingreso' : entity.defaultType === 'expense' ? 'Gasto' : 'Detectar según correo'}${entity.defaultType !== 'income' ? ` · ${EXPENSE_CATEGORIES.find(([value]) => value === entity.defaultCategory)?.[1] || 'Necesario'}` : ''}</small>
+                <small>${entity.defaultType === 'income' ? 'Ingreso' : entity.defaultType === 'expense' ? 'Gasto' : 'Detectar según correo'}${entity.defaultType !== 'income' ? ` · ${EXPENSE_CATEGORIES.find(([value]) => value === entity.defaultCategory)?.[1] || 'Necesario'}` : ''}${entity.defaultAccountId ? ` · ${escapeHtml(walletOptions.find(wallet => wallet.id === entity.defaultAccountId)?.name || 'Billetera asignada')}` : ''}</small>
             </div>
             <button type="button" class="gmail-entity-delete" data-entity-id="${escapeHtml(entity.id)}" aria-label="Eliminar ${escapeHtml(entity.name)}">Eliminar</button>
         </article>`).join('');
@@ -505,6 +530,9 @@ function buildEntitiesModal() {
                         </select>
                     </label>
                 </div>
+                <label>Destino predeterminado
+                    <select id="gmail-entity-account">${walletOptionsHtml('', true)}</select>
+                </label>
                 <button type="submit" class="gmail-btn-primary">Agregar entidad</button>
             </form>
             <p id="gmail-entity-feedback" class="gmail-entity-feedback" aria-live="polite"></p>
@@ -691,7 +719,8 @@ async function doImport() {
                 amount: tx.amount, note: tx.description, date: dateTs, operationDate: tx.date,
                 occurredAt, actorUid: currentUid, status: 'completed',
                 source: `gmail:${tx.source}`, gmailId: tx.gmailId,
-                counterparty: tx.description
+                counterparty: tx.description,
+                accountId: tx.accountId || entityForTransaction(tx)?.defaultAccountId || ''
             };
 
             const docId = `gmail_${tx.gmailId}`;
@@ -767,6 +796,7 @@ function wireListeners(pref) {
         const sender = normalizeEntitySender(document.getElementById('gmail-entity-sender')?.value);
         const defaultType = document.getElementById('gmail-entity-type')?.value || 'auto';
         const defaultCategory = document.getElementById('gmail-entity-category')?.value || 'yellow';
+        const defaultAccountId = document.getElementById('gmail-entity-account')?.value || '';
         const feedback = document.getElementById('gmail-entity-feedback');
 
         if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sender)) {
@@ -778,7 +808,7 @@ function wireListeners(pref) {
             return;
         }
 
-        const entity = { id: `entity-${Date.now().toString(36)}`, name, sender, defaultType, defaultCategory, active: true };
+        const entity = { id: `entity-${Date.now().toString(36)}`, name, sender, defaultType, defaultCategory, defaultAccountId, active: true };
         await saveGmailPref({ customEntities: [...getCustomEntities(), entity] });
         e.target.reset();
         if (document.getElementById('gmail-entity-category')) document.getElementById('gmail-entity-category').value = 'yellow';
@@ -851,6 +881,12 @@ function wireListeners(pref) {
             if (pendingTxs[idx]?.type === 'expense') pendingTxs[idx].category = categorySelect.value;
             return;
         }
+        const accountSelect = e.target.closest('.gmail-tx-account');
+        if (accountSelect) {
+            const idx = Number.parseInt(accountSelect.dataset.idx, 10);
+            if (pendingTxs[idx]) pendingTxs[idx].accountId = accountSelect.value;
+            return;
+        }
         const cb = e.target.closest('.gmail-tx-check');
         if (!cb) return;
         const idx = parseInt(cb.dataset.idx, 10);
@@ -918,6 +954,7 @@ export async function initGmailImport(uid) {
     loadImportedIds();
 
     const pref = await getGmailPref();
+    walletOptions = await getWallets(uid).catch(() => []);
 
     buildModal();
     buildEntitiesModal();

@@ -45,6 +45,9 @@ service cloud.firestore {
         isValidOptionalText('counterparty', 100) &&
         isValidOptionalText('actorUid', 128) &&
         isValidOptionalText('actorEmail', 120) &&
+        isValidOptionalText('accountId', 120) &&
+        isValidOptionalText('transferId', 120) &&
+        (!('isTransfer' in request.resource.data) || request.resource.data.isTransfer is bool) &&
         (!('status' in request.resource.data) || request.resource.data.status in ['completed', 'pending', 'cancelled', 'voided']);
     }
 
@@ -151,6 +154,18 @@ service cloud.firestore {
     match /plans/{userId} {
       allow read, delete: if isOwner(userId);
       allow create, update: if isOwner(userId) && isValidPlanData();
+    }
+
+    match /users/{userId}/wallets/{walletId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60 &&
+        (!('institution' in request.resource.data) || (request.resource.data.institution is string && request.resource.data.institution.size() <= 60)) &&
+        (!('type' in request.resource.data) || request.resource.data.type in ['bank', 'wallet', 'cash', 'savings', 'credit']) &&
+        (!('currency' in request.resource.data) || request.resource.data.currency in ['PEN', 'USD', 'EUR']) &&
+        (!('openingBalance' in request.resource.data) || (request.resource.data.openingBalance is number && request.resource.data.openingBalance >= -999999999 && request.resource.data.openingBalance <= 999999999)) &&
+        (!('active' in request.resource.data) || request.resource.data.active is bool) &&
+        (!('includeInTotal' in request.resource.data) || request.resource.data.includeInTotal is bool);
     }
 
     // An audit event can be created alongside a movement but never changed or

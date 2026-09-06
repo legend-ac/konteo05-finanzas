@@ -29,6 +29,7 @@ function makeLineIcon(paths) {
 }
 function createRow(item, index) {
     const isIncome = item.type === 'income';
+    const isTransfer = Boolean(item.isTransfer || item.transferId);
     const dateStr  = formatBusinessDate(transactionBusinessDate(item));
 
     let metaParts = [dateStr];
@@ -39,6 +40,7 @@ function createRow(item, index) {
         const catLabel = CAT_LABEL[item.category];
         if (catLabel) metaParts.push(catLabel);
     }
+    if (isTransfer) metaParts.push('Transferencia');
 
     const el = document.createElement('div');
     el.className = 'item';
@@ -92,21 +94,24 @@ function createRow(item, index) {
         'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
     ]));
 
-    const editBtn = document.createElement('button');
-    editBtn.className = 'edit-btn';
-    editBtn.dataset.id   = item.id;
-    editBtn.dataset.type = isIncome ? 'income' : 'expense';
-    editBtn.setAttribute('aria-label', 'Editar');
-    editBtn.textContent  = '✎';
-
     const delBtn = document.createElement('button');
     delBtn.className = 'delete-btn';
     delBtn.dataset.id   = item.id;
     delBtn.dataset.type = isIncome ? 'income' : 'expense';
-    delBtn.setAttribute('aria-label', 'Eliminar');
+    delBtn.setAttribute('aria-label', isTransfer ? 'Eliminar transferencia' : 'Eliminar');
     delBtn.textContent  = '✕';
 
-    actions.append(detailBtn, editBtn, delBtn);
+    actions.append(detailBtn);
+    if (!isTransfer) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-btn';
+        editBtn.dataset.id   = item.id;
+        editBtn.dataset.type = isIncome ? 'income' : 'expense';
+        editBtn.setAttribute('aria-label', 'Editar');
+        editBtn.textContent  = '✎';
+        actions.append(editBtn);
+    }
+    actions.append(delBtn);
     right.append(amt, actions);
 
     el.append(left, right);

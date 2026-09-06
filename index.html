@@ -200,6 +200,17 @@
             </div>
         </header>
 
+        <nav class="desktop-nav" aria-label="Navegación principal">
+            <div class="desktop-nav-brand">Panel financiero</div>
+            <button class="desktop-nav-new btn-open-income" type="button">+ Nuevo movimiento</button>
+            <button class="app-nav-link active" data-view="home" type="button"><span>⌂</span> Inicio</button>
+            <button class="app-nav-link" data-view="wallets" type="button"><span>▣</span> Billeteras</button>
+            <button class="app-nav-link" data-action="gmail" type="button"><span>✉</span> Automatización</button>
+            <button class="app-nav-link" data-action="entities" type="button"><span>⚙</span> Reglas de Gmail</button>
+            <button class="app-nav-link" data-action="profile" type="button"><span>◉</span> Perfil y ajustes</button>
+        </nav>
+
+        <section id="home-view" class="app-view">
         <div class="dashboard-shell">
 
             <div class="dashboard-top">
@@ -402,6 +413,44 @@
             <button id="btn-expense" class="btn-add-action btn-add-expense btn-open-expense" type="button">&minus; Gasto</button>
         </div>
 
+        </div><!-- /dashboard-shell -->
+        </section><!-- /home-view -->
+
+        <section id="wallets-view" class="app-view hidden" aria-labelledby="wallets-title">
+            <div class="wallets-shell">
+                <div class="wallets-page-heading">
+                    <div>
+                        <p class="dashboard-eyebrow">Organización</p>
+                        <h1 id="wallets-title">Tus billeteras</h1>
+                        <p>Administra dónde está tu dinero. Gmail solo detecta; tus billeteras organizan.</p>
+                    </div>
+                    <button id="btn-new-wallet" class="wallet-primary" type="button">+ Agregar cuenta</button>
+                </div>
+                <section class="wallet-total-card" aria-label="Saldo total de billeteras">
+                    <span>Saldo total</span>
+                    <strong id="wallets-total">S/ 0.00</strong>
+                    <small id="wallets-total-detail">0 cuentas activas</small>
+                </section>
+                <div class="wallets-layout">
+                    <section class="wallets-list-panel" aria-labelledby="wallets-list-title">
+                        <div class="wallets-panel-heading">
+                            <div><h2 id="wallets-list-title">Cuentas</h2><span id="wallets-count">0 cuentas activas</span></div>
+                            <button id="btn-wallet-transfer" class="wallet-secondary" type="button">Transferir</button>
+                        </div>
+                        <div id="wallets-list" class="wallets-list"></div>
+                    </section>
+                    <aside id="wallet-detail" class="wallet-detail-panel" aria-live="polite"></aside>
+                </div>
+            </div>
+        </section>
+
+        <nav class="mobile-nav" aria-label="Navegación móvil">
+            <button class="app-nav-link active" data-view="home" type="button"><span>⌂</span><small>Inicio</small></button>
+            <button class="app-nav-link" data-view="wallets" type="button"><span>▣</span><small>Billeteras</small></button>
+            <button class="app-nav-link" data-action="gmail" type="button"><span>✉</span><small>Gmail</small></button>
+            <button class="app-nav-link" data-action="profile" type="button"><span>◉</span><small>Más</small></button>
+        </nav>
+
     </div><!-- /dashboard-page -->
 <!-- ==================== MODALS ==================== -->
 
@@ -443,6 +492,8 @@
                 <option value="negocio">Negocio</option>
                 <option value="otros">Otros</option>
             </select>
+            <label class="sr-only" for="income-account">Billetera de destino</label>
+            <select id="income-account" class="account-select"><option value="">Sin asignar a una billetera</option></select>
             <label class="sr-only" for="income-counterparty">Cliente o contraparte, opcional</label>
             <input type="text" id="income-counterparty" placeholder="Cliente o contraparte (opcional)" maxlength="100">
             <label class="sr-only" for="income-note">Nota del ingreso, opcional</label>
@@ -503,10 +554,60 @@
                 <option value="transferencia">Transferencia</option>
                 <option value="billetera">Billetera digital</option>
             </select>
+            <label class="sr-only" for="expense-account">Billetera desde la que pagaste</label>
+            <select id="expense-account" class="account-select"><option value="">Sin asignar a una billetera</option></select>
             <div class="modal-buttons">
                 <button type="button" class="cancel" data-modal="modal-expense">Cancelar</button>
                 <button type="submit">Guardar gasto</button>
             </div>
+        </form>
+    </div>
+</div>
+
+<!-- Billetera -->
+<div id="modal-wallet" class="modal hidden" role="dialog" aria-labelledby="modal-wallet-title" aria-modal="true">
+    <div class="modal-content wallet-modal">
+        <div class="modal-handle"></div>
+        <h3 id="modal-wallet-title">Nueva billetera</h3>
+        <form id="form-wallet">
+            <input type="hidden" id="wallet-edit-id">
+            <label class="sr-only" for="wallet-name">Nombre de la cuenta</label>
+            <input id="wallet-name" type="text" maxlength="60" placeholder="Nombre: BCP ahorro" required>
+            <label class="sr-only" for="wallet-institution">Institución</label>
+            <input id="wallet-institution" type="text" maxlength="60" placeholder="Institución: BCP, Yape, efectivo…">
+            <div class="wallet-form-grid">
+                <select id="wallet-type" aria-label="Tipo de cuenta">
+                    <option value="bank">Cuenta bancaria</option>
+                    <option value="wallet">Billetera digital</option>
+                    <option value="cash">Efectivo</option>
+                    <option value="savings">Ahorro</option>
+                    <option value="credit">Tarjeta de crédito</option>
+                </select>
+                <select id="wallet-color" aria-label="Color de la cuenta">
+                    <option value="gold">Dorado</option><option value="green">Verde</option><option value="blue">Azul</option><option value="purple">Morado</option>
+                </select>
+            </div>
+            <label class="sr-only" for="wallet-opening-balance">Saldo inicial</label>
+            <input id="wallet-opening-balance" type="number" min="-999999999" max="999999999" step="0.01" placeholder="Saldo inicial (puede ser 0.00)">
+            <label class="wallet-check"><input id="wallet-include-total" type="checkbox" checked> Incluir en el saldo total</label>
+            <div class="modal-buttons"><button type="button" class="cancel" data-modal="modal-wallet">Cancelar</button><button type="submit">Guardar cuenta</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Transferencia entre billeteras -->
+<div id="modal-transfer" class="modal hidden" role="dialog" aria-labelledby="modal-transfer-title" aria-modal="true">
+    <div class="modal-content wallet-modal">
+        <div class="modal-handle"></div>
+        <h3 id="modal-transfer-title">Transferir entre billeteras</h3>
+        <form id="form-transfer">
+            <label class="sr-only" for="transfer-from">Desde</label><select id="transfer-from" required></select>
+            <label class="sr-only" for="transfer-to">Hacia</label><select id="transfer-to" required></select>
+            <div class="amount-input-wrap"><span class="amount-currency">S/</span><input id="transfer-amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></div>
+            <label class="sr-only" for="transfer-date">Fecha</label><input id="transfer-date" type="date" required>
+            <label class="sr-only" for="transfer-note">Nota</label><input id="transfer-note" type="text" maxlength="100" placeholder="Nota (opcional)">
+            <p class="transfer-note">No suma ni resta tu saldo total; solo mueve dinero entre tus billeteras.</p>
+            <div class="modal-buttons"><button type="button" class="cancel" data-modal="modal-transfer">Cancelar</button><button type="submit">Transferir</button></div>
         </form>
     </div>
 </div>
@@ -558,7 +659,7 @@
                 <div>
                     <span class="profile-section-kicker">Importaci&oacute;n Gmail</span>
                     <h4 id="profile-gmail-title">Entidades y reglas</h4>
-                    <p>Agrega remitentes oficiales, define si son ingresos o gastos y activa solo los que deseas revisar.</p>
+                    <p>Agrega remitentes oficiales, define su destino en billeteras y activa solo los que deseas revisar.</p>
                 </div>
                 <button type="button" id="btn-gmail-entities" class="cancel">Gestionar entidades</button>
             </section>

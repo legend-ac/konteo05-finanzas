@@ -295,8 +295,12 @@ async function loadData() {
         const expenseItems = rawExpense.filter(withinPeriod);
         state.dashboardData = { incomeItems, expenseItems };
 
-        const totalIncome   = incomeItems .reduce((s, i) => s + (Number(i.amount) || 0), 0);
-        const totalExpenses = expenseItems.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+        // Transfers only redistribute money between wallets. They must never
+        // make the global dashboard claim there was an income or an expense.
+        const realIncomeItems = incomeItems.filter(item => !item.isTransfer && item.operationType !== 'transfer_in');
+        const realExpenseItems = expenseItems.filter(item => !item.isTransfer && item.operationType !== 'transfer_out');
+        const totalIncome   = realIncomeItems .reduce((s, i) => s + (Number(i.amount) || 0), 0);
+        const totalExpenses = realExpenseItems.reduce((s, i) => s + (Number(i.amount) || 0), 0);
         const balance       = totalIncome - totalExpenses;
 
         const balanceEl = document.getElementById('balance');
@@ -310,13 +314,13 @@ async function loadData() {
         document.getElementById('total-income')  .textContent = `S/ ${fmt(totalIncome)}`;
         document.getElementById('total-expenses') .textContent = `S/ ${fmt(totalExpenses)}`;
         updatePeriodLabel();
-        updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, startDate, endDate });
+        updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems: realExpenseItems, startDate, endDate });
 
         updateStrategyPanel({ totalExpenses });
         renderTransactionLedger(incomeItems, expenseItems);
         renderCharts({
-            incomeItems,
-            expenseItems,
+            incomeItems: realIncomeItems,
+            expenseItems: realExpenseItems,
             totalIncome,
             totalExpenses,
             expenseLimit: state.planConfig.expenseLimit
@@ -330,8 +334,8 @@ async function loadData() {
             loadPlanConfigToUi();
             updateStrategyPanel({ totalExpenses });
             renderCharts({
-                incomeItems,
-                expenseItems,
+                incomeItems: realIncomeItems,
+                expenseItems: realExpenseItems,
                 totalIncome,
                 totalExpenses,
                 expenseLimit: state.planConfig.expenseLimit
@@ -350,9 +354,15 @@ async function loadData() {
 async function deleteItem(id, type) {
     if (!confirm('¿Eliminar este registro?')) return;
     try {
-        await dbService.deleteTransaction(state.currentUser.uid, type, id);
-        showToast('Eliminado', 'success');
-        loadData();
+        const current = await dbService.getTransactionById(state.currentUser.uid, type, id);
+        if (current?.isTransfer || current?.transferId) {
+            await dbService.deleteTransfer(state.currentUser.uid, current.transferId);
+            showToast('Transferencia eliminada en ambas billeteras', 'success');
+        } else {
+            await dbService.deleteTransaction(state.currentUser.uid, type, id);
+            showToast('Eliminado', 'success');
+        }
+        refreshFinancialViews();
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
     }
@@ -362,6 +372,10 @@ async function editItem(id, type) {
     try {
         const data = await dbService.getTransactionById(state.currentUser.uid, type, id);
         if (!data) { showToast('Registro no encontrado', 'error'); return; }
+        if (data.isTransfer || data.transferId) {
+            showToast('Las transferencias se gestionan desde Billeteras', 'warn');
+            return;
+        }
 
         const dateStr = transactionBusinessDate(data) || todayString();
 
@@ -372,6 +386,7 @@ async function editItem(id, type) {
             document.getElementById('income-counterparty').value = data.counterparty || '';
             const src = document.getElementById('income-source');
             if (src) src.value = data.source || 'otros';
+            setAccountOptions('income-account', data.accountId || '');
             document.getElementById('income-edit-id').value = id;
             openModal('modal-income');
         } else {
@@ -383,6 +398,7 @@ async function editItem(id, type) {
             if (mth) mth.value = data.method || 'efectivo';
             const radio = document.querySelector(`input[name="category"][value="${data.category}"]`);
             if (radio) radio.checked = true;
+            setAccountOptions('expense-account', data.accountId || '');
             document.getElementById('expense-edit-id').value = id;
             openModal('modal-expense');
         }
@@ -454,12 +470,13 @@ auth.onAuthStateChanged(user => {
         if (recoveryEl) recoveryEl.value = user.email || '';
 
         loadData();
+        loadWallets();
 
         // Gmail auto-import feature
         initGmailImport(user.uid);
 
         // Refresh dashboard when gmail import completes
-        window.addEventListener('konteo:refresh', () => loadData(), { once: false });
+        window.addEventListener('konteo:refresh', refreshFinancialViews, { once: false });
     } else {
         state.currentUser = null;
         state.dashboardData = null;
@@ -827,6 +844,7 @@ function openIncomeModal() {
     if (counterparty) counterparty.value = '';
     const amt = document.getElementById('income-amount');
     if (amt) amt.value = '';
+    setAccountOptions('income-account', state.selectedWalletId || '');
     openModal('modal-income');
 }
 
@@ -844,6 +862,7 @@ function openExpenseModal() {
     if (counterparty) counterparty.value = '';
     const amt = document.getElementById('expense-amount');
     if (amt) amt.value = '';
+    setAccountOptions('expense-account', state.selectedWalletId || '');
     document.querySelectorAll('input[name="category"]').forEach(r => { r.checked = false; });
     openModal('modal-expense');
 }
@@ -853,6 +872,121 @@ document.addEventListener('click', e => {
     if (incBtn) { e.preventDefault(); openIncomeModal(); return; }
     const expBtn = e.target.closest('#btn-expense, #btn-expense-d, .btn-open-expense');
     if (expBtn) { e.preventDefault(); openExpenseModal(); return; }
+});
+
+function openWalletModal(wallet = null) {
+    document.getElementById('modal-wallet-title').textContent = wallet ? 'Editar billetera' : 'Nueva billetera';
+    document.getElementById('wallet-edit-id').value = wallet?.id || '';
+    document.getElementById('wallet-name').value = wallet?.name || '';
+    document.getElementById('wallet-institution').value = wallet?.institution || '';
+    document.getElementById('wallet-type').value = wallet?.type || 'bank';
+    document.getElementById('wallet-color').value = wallet?.color || 'gold';
+    document.getElementById('wallet-opening-balance').value = wallet ? Number(wallet.openingBalance || 0) : '';
+    document.getElementById('wallet-include-total').checked = wallet?.includeInTotal !== false;
+    openModal('modal-wallet');
+}
+
+function openTransferModal() {
+    if (activeWallets().length < 2) {
+        showToast('Crea al menos dos billeteras activas para transferir', 'warn');
+        return;
+    }
+    setAccountOptions('transfer-from', state.selectedWalletId || activeWallets()[0].id);
+    const destination = activeWallets().find(wallet => wallet.id !== document.getElementById('transfer-from').value)?.id || '';
+    setAccountOptions('transfer-to', destination);
+    document.getElementById('transfer-amount').value = '';
+    document.getElementById('transfer-date').value = todayString();
+    document.getElementById('transfer-date').max = todayString();
+    document.getElementById('transfer-note').value = '';
+    document.getElementById('form-transfer').dataset.submissionKey = createSubmissionKey();
+    openModal('modal-transfer');
+}
+
+document.querySelectorAll('.app-nav-link').forEach(button => {
+    button.addEventListener('click', () => {
+        if (button.dataset.view) changeAppView(button.dataset.view);
+        if (button.dataset.action === 'gmail') document.getElementById('btn-gmail-import')?.click();
+        if (button.dataset.action === 'entities') document.getElementById('btn-gmail-entities')?.click();
+        if (button.dataset.action === 'profile') document.getElementById('profile-btn')?.click();
+    });
+});
+
+document.getElementById('btn-new-wallet')?.addEventListener('click', () => openWalletModal());
+document.getElementById('btn-wallet-transfer')?.addEventListener('click', openTransferModal);
+document.getElementById('wallets-list')?.addEventListener('click', event => {
+    const item = event.target.closest('[data-wallet-id]');
+    if (!item) return;
+    state.selectedWalletId = item.dataset.walletId;
+    renderWallets();
+});
+document.getElementById('wallet-detail')?.addEventListener('click', async event => {
+    const action = event.target.closest('[data-wallet-action]')?.dataset.walletAction;
+    if (!action) return;
+    const wallet = state.wallets.find(item => item.id === state.selectedWalletId);
+    if (action === 'income') openIncomeModal();
+    else if (action === 'expense') openExpenseModal();
+    else if (action === 'transfer') openTransferModal();
+    else if (action === 'edit' && wallet) openWalletModal(wallet);
+    else if (action === 'archive' && wallet) {
+        if (!confirm(`¿Archivar ${wallet.name}? Sus movimientos se conservan.`)) return;
+        try {
+            await dbService.archiveWallet(state.currentUser.uid, wallet.id);
+            showToast('Cuenta archivada', 'success');
+            state.selectedWalletId = null;
+            await loadWallets();
+        } catch (error) { showToast('No se pudo archivar: ' + error.message, 'error'); }
+    }
+});
+
+document.getElementById('form-wallet')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const name = normalizeText(document.getElementById('wallet-name').value, 60);
+    const openingBalance = Number(document.getElementById('wallet-opening-balance').value || 0);
+    if (!name || !Number.isFinite(openingBalance) || Math.abs(openingBalance) > 999999999) {
+        showToast('Revisa el nombre y saldo inicial', 'error');
+        return;
+    }
+    try {
+        const id = await dbService.saveWallet(state.currentUser.uid, {
+            name,
+            institution: normalizeText(document.getElementById('wallet-institution').value, 60),
+            type: document.getElementById('wallet-type').value,
+            color: document.getElementById('wallet-color').value,
+            openingBalance,
+            includeInTotal: document.getElementById('wallet-include-total').checked
+        }, document.getElementById('wallet-edit-id').value || null);
+        state.selectedWalletId = id;
+        closeModal('modal-wallet');
+        showToast('Billetera guardada', 'success');
+        await loadWallets();
+    } catch (error) { showToast('No se pudo guardar: ' + error.message, 'error'); }
+});
+
+document.getElementById('form-transfer')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (form.dataset.saving === 'true') return;
+    const fromAccountId = document.getElementById('transfer-from').value;
+    const toAccountId = document.getElementById('transfer-to').value;
+    const amount = Math.round(Number(document.getElementById('transfer-amount').value || 0) * 100) / 100;
+    const dateString = document.getElementById('transfer-date').value;
+    if (!fromAccountId || !toAccountId || fromAccountId === toAccountId || !Number.isFinite(amount) || amount <= 0 || !dateString) {
+        showToast('Elige dos billeteras distintas, monto y fecha válidos', 'error');
+        return;
+    }
+    form.dataset.saving = 'true';
+    try {
+        await dbService.saveTransfer(state.currentUser.uid, {
+            fromAccountId, toAccountId, amount,
+            date: firebase.firestore.Timestamp.fromDate(businessDateToDate(dateString)), operationDate: dateString,
+            note: normalizeNote(document.getElementById('transfer-note').value),
+            fromName: walletName(fromAccountId), toName: walletName(toAccountId), ...transactionActorData()
+        }, form.dataset.submissionKey || createSubmissionKey());
+        closeModal('modal-transfer');
+        showToast('Transferencia registrada sin afectar tu saldo total', 'success');
+        await refreshFinancialViews();
+    } catch (error) { showToast('No se pudo transferir: ' + error.message, 'error'); }
+    finally { form.dataset.saving = 'false'; }
 });
 
 // ──────────────────────────────────────────────
@@ -905,6 +1039,7 @@ document.getElementById('form-income').onsubmit = async e => {
     const dateStr = document.getElementById('income-date').value;
     const note    = normalizeNote(document.getElementById('income-note').value);
     const source  = document.getElementById('income-source')?.value || 'otros';
+    const accountId = document.getElementById('income-account')?.value || '';
     const counterparty = normalizeText(document.getElementById('income-counterparty')?.value || '', 100);
     const editId  = document.getElementById('income-edit-id').value;
 
@@ -919,7 +1054,7 @@ document.getElementById('form-income').onsubmit = async e => {
     try {
         const data = {
             amount, date: firebase.firestore.Timestamp.fromDate(date), operationDate: dateStr,
-            note, source, counterparty, ...transactionActorData()
+            note, source, counterparty, accountId, ...transactionActorData()
         };
         await dbService.saveIncome(state.currentUser.uid, data, editId || null, form.dataset.submissionKey || null);
         showToast(editId ? 'Ingreso actualizado' : 'Ingreso guardado', 'success');
@@ -927,7 +1062,7 @@ document.getElementById('form-income').onsubmit = async e => {
         closeModal('modal-income');
         form.reset();
         document.getElementById('income-edit-id').value = '';
-        loadData();
+        refreshFinancialViews();
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
     } finally {
@@ -952,6 +1087,7 @@ document.getElementById('form-expense').onsubmit = async e => {
     const category = document.querySelector('input[name="category"]:checked')?.value;
     const note     = normalizeNote(document.getElementById('expense-note').value);
     const method   = document.getElementById('expense-method')?.value || 'efectivo';
+    const accountId = document.getElementById('expense-account')?.value || '';
     const counterparty = normalizeText(document.getElementById('expense-counterparty')?.value || '', 100);
     const editId   = document.getElementById('expense-edit-id').value;
 
@@ -967,7 +1103,7 @@ document.getElementById('form-expense').onsubmit = async e => {
     try {
         const data = {
             amount, date: firebase.firestore.Timestamp.fromDate(date), operationDate: dateStr,
-            category, note, method, counterparty, ...transactionActorData()
+            category, note, method, counterparty, accountId, ...transactionActorData()
         };
         await dbService.saveExpense(state.currentUser.uid, data, editId || null, form.dataset.submissionKey || null);
         showToast(editId ? 'Gasto actualizado' : 'Gasto guardado', 'success');
@@ -975,7 +1111,7 @@ document.getElementById('form-expense').onsubmit = async e => {
         closeModal('modal-expense');
         form.reset();
         document.getElementById('expense-edit-id').value = '';
-        loadData();
+        refreshFinancialViews();
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
     } finally {
@@ -1018,6 +1154,7 @@ async function showMovementDetail(id, type) {
         appendMovementDetailField(fields, isIncome ? 'Origen' : 'Categoría', isIncome ? (data.source || 'Otros') : (categoryNames[data.category] || data.category));
         appendMovementDetailField(fields, isIncome ? 'Cliente / contraparte' : 'Proveedor / contraparte', data.counterparty);
         appendMovementDetailField(fields, 'Método', data.method || (isIncome ? 'Registro manual' : '—'));
+        appendMovementDetailField(fields, 'Billetera', data.accountId ? walletName(data.accountId) : 'Sin asignar');
         appendMovementDetailField(fields, 'Referencia', data.reference || id);
         appendMovementDetailField(fields, 'Registrado por', data.actorEmail || data.actorUid || state.currentUser.email);
         appendMovementDetailField(fields, 'Estado', data.status === 'completed' ? 'Completada' : (data.status || 'Registrada'));
@@ -1047,6 +1184,192 @@ async function showMovementDetail(id, type) {
         console.error('detail error:', err);
         showToast('No se pudo cargar el detalle: ' + err.message, 'error');
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BILLETERAS
+// Gmail sources are not wallets. A wallet represents the place where money is
+// held; a movement can optionally point to one. Existing movements remain safe
+// and are simply shown as "Sin asignar".
+// ─────────────────────────────────────────────────────────────────────────────
+const WALLET_TYPE_LABELS = {
+    bank: 'Cuenta bancaria', wallet: 'Billetera digital', cash: 'Efectivo',
+    savings: 'Ahorro', credit: 'Tarjeta de crédito'
+};
+const walletBalances = new Map();
+let walletTransactions = [];
+
+function activeWallets() {
+    return state.wallets.filter(wallet => wallet.active !== false);
+}
+
+function setAccountOptions(selectId, selected = '') {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const allowEmpty = select.classList.contains('account-select');
+    select.textContent = '';
+    if (allowEmpty) {
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = 'Sin asignar a una billetera';
+        select.appendChild(empty);
+    }
+    activeWallets().forEach(wallet => {
+        const option = document.createElement('option');
+        option.value = wallet.id;
+        option.textContent = `${wallet.institution ? `${wallet.institution} · ` : ''}${wallet.name}`;
+        select.appendChild(option);
+    });
+    select.value = selected || (allowEmpty ? '' : (activeWallets()[0]?.id || ''));
+}
+
+function walletName(id) {
+    const wallet = state.wallets.find(item => item.id === id);
+    return wallet ? `${wallet.institution ? `${wallet.institution} · ` : ''}${wallet.name}` : 'Sin asignar';
+}
+
+function accountBalance(wallet) {
+    return walletBalances.get(wallet.id) || 0;
+}
+
+function createWalletItem(wallet) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = `wallet-list-item ${state.selectedWalletId === wallet.id ? 'is-selected' : ''}`;
+    item.dataset.walletId = wallet.id;
+    const identity = document.createElement('span');
+    identity.className = `wallet-list-icon wallet-color-${wallet.color || 'gold'}`;
+    identity.textContent = wallet.type === 'wallet' ? '◉' : wallet.type === 'cash' ? 'S/' : wallet.type === 'credit' ? '▤' : '▣';
+    const copy = document.createElement('span');
+    copy.className = 'wallet-list-copy';
+    const name = document.createElement('strong');
+    name.textContent = wallet.name;
+    const meta = document.createElement('small');
+    meta.textContent = wallet.institution || WALLET_TYPE_LABELS[wallet.type] || 'Cuenta';
+    copy.append(name, meta);
+    const amount = document.createElement('span');
+    amount.className = 'wallet-list-amount';
+    amount.textContent = `S/ ${fmt(accountBalance(wallet))}`;
+    item.append(identity, copy, amount);
+    return item;
+}
+
+function renderWalletDetail() {
+    const panel = document.getElementById('wallet-detail');
+    if (!panel) return;
+    panel.textContent = '';
+    const wallet = state.wallets.find(item => item.id === state.selectedWalletId && item.active !== false);
+    if (!wallet) {
+        const empty = document.createElement('div');
+        empty.className = 'wallet-detail-empty';
+        empty.innerHTML = '<span>▣</span><h2>Elige una cuenta</h2><p>Verás su saldo, movimientos y acciones desde aquí.</p>';
+        panel.appendChild(empty);
+        return;
+    }
+    const movements = walletTransactions
+        .filter(item => item.accountId === wallet.id)
+        .sort((a, b) => (b.date?.toMillis?.() || 0) - (a.date?.toMillis?.() || 0));
+    const income = movements.filter(item => item.type === 'income').reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const expense = movements.filter(item => item.type === 'expense').reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const heading = document.createElement('div');
+    heading.className = 'wallet-detail-heading';
+    heading.innerHTML = `<span class="wallet-detail-type">${WALLET_TYPE_LABELS[wallet.type] || 'Cuenta'}</span><h2></h2><p></p>`;
+    heading.querySelector('h2').textContent = wallet.name;
+    heading.querySelector('p').textContent = wallet.institution || 'Sin institución definida';
+    const balance = document.createElement('strong');
+    balance.className = 'wallet-detail-balance';
+    balance.textContent = `S/ ${fmt(accountBalance(wallet))}`;
+    const actions = document.createElement('div');
+    actions.className = 'wallet-detail-actions';
+    actions.innerHTML = `<button type="button" class="wallet-primary" data-wallet-action="income">+ Ingreso</button><button type="button" class="wallet-secondary" data-wallet-action="expense">− Gasto</button><button type="button" class="wallet-secondary" data-wallet-action="transfer">Transferir</button>`;
+    const stats = document.createElement('div');
+    stats.className = 'wallet-detail-stats';
+    stats.innerHTML = `<div><span>Ingresos</span><strong>S/ ${fmt(income)}</strong></div><div><span>Gastos</span><strong>S/ ${fmt(expense)}</strong></div><div><span>Movimientos</span><strong>${movements.length}</strong></div>`;
+    const recent = document.createElement('div');
+    recent.className = 'wallet-recent';
+    recent.innerHTML = '<h3>Últimos movimientos</h3>';
+    if (!movements.length) {
+        const p = document.createElement('p');
+        p.className = 'wallet-no-movements';
+        p.textContent = 'Aún no hay movimientos asignados a esta billetera.';
+        recent.appendChild(p);
+    } else {
+        movements.slice(0, 5).forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'wallet-recent-row';
+            const direction = item.type === 'income' ? '+' : '−';
+            row.innerHTML = `<span><strong></strong><small>${formatBusinessDate(transactionBusinessDate(item))}</small></span><b class="${item.type}">${direction} S/ ${fmt(Number(item.amount) || 0)}</b>`;
+            row.querySelector('strong').textContent = item.note || (item.type === 'income' ? 'Ingreso' : 'Gasto');
+            recent.appendChild(row);
+        });
+    }
+    const management = document.createElement('div');
+    management.className = 'wallet-management';
+    management.innerHTML = '<button type="button" data-wallet-action="edit">Editar cuenta</button><button type="button" data-wallet-action="archive">Archivar cuenta</button>';
+    panel.append(heading, balance, actions, stats, recent, management);
+}
+
+function renderWallets() {
+    const list = document.getElementById('wallets-list');
+    const active = activeWallets();
+    const total = active.filter(wallet => wallet.includeInTotal !== false).reduce((sum, wallet) => sum + accountBalance(wallet), 0);
+    const count = `${active.length} cuenta${active.length !== 1 ? 's' : ''} activa${active.length !== 1 ? 's' : ''}`;
+    document.getElementById('wallets-total').textContent = `S/ ${fmt(total)}`;
+    document.getElementById('wallets-total-detail').textContent = count;
+    document.getElementById('wallets-count').textContent = count;
+    if (!list) return;
+    list.textContent = '';
+    if (!active.length) {
+        list.innerHTML = '<div class="wallet-list-empty"><strong>Todavía no tienes cuentas registradas.</strong><span>Crea una para organizar tu dinero por banco, billetera o efectivo.</span></div>';
+    } else {
+        active.forEach(wallet => list.appendChild(createWalletItem(wallet)));
+    }
+    renderWalletDetail();
+    setAccountOptions('income-account', document.getElementById('income-account')?.value || '');
+    setAccountOptions('expense-account', document.getElementById('expense-account')?.value || '');
+    setAccountOptions('transfer-from', state.selectedWalletId || '');
+    setAccountOptions('transfer-to', '');
+}
+
+async function loadWallets() {
+    if (!state.currentUser) return;
+    try {
+        const [wallets, transactions] = await Promise.all([
+            dbService.getWallets(state.currentUser.uid),
+            dbService.getAllTransactionsOrdered(state.currentUser.uid)
+        ]);
+        state.wallets = wallets;
+        walletTransactions = transactions;
+        walletBalances.clear();
+        wallets.forEach(wallet => walletBalances.set(wallet.id, Number(wallet.openingBalance || 0)));
+        transactions.forEach(item => {
+            if (!item.accountId || !walletBalances.has(item.accountId) || item.status === 'cancelled' || item.status === 'voided') return;
+            const current = walletBalances.get(item.accountId) || 0;
+            walletBalances.set(item.accountId, current + (item.type === 'income' ? Number(item.amount || 0) : -Number(item.amount || 0)));
+        });
+        if (!state.selectedWalletId || !activeWallets().some(wallet => wallet.id === state.selectedWalletId)) {
+            state.selectedWalletId = activeWallets()[0]?.id || null;
+        }
+        renderWallets();
+    } catch (error) {
+        console.error('wallets error:', error);
+        showToast('No se pudieron cargar las billeteras', 'error');
+    }
+}
+
+function changeAppView(view) {
+    const isWallets = view === 'wallets';
+    document.getElementById('home-view')?.classList.toggle('hidden', isWallets);
+    document.getElementById('wallets-view')?.classList.toggle('hidden', !isWallets);
+    document.querySelectorAll('.app-nav-link[data-view]').forEach(button => {
+        button.classList.toggle('active', button.dataset.view === view);
+    });
+    if (isWallets) loadWallets();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function refreshFinancialViews() {
+    await Promise.all([loadData(), loadWallets()]);
 }
 
 // ──────────────────────────────────────────────

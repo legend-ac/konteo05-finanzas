@@ -6,6 +6,8 @@ export const state = {
     currentBudget: 0,
     currentLoadToken: 0,
     dashboardData: null,
+    wallets: [],
+    selectedWalletId: null,
     isOnline: navigator.onLine,
     currentSort: localStorage.getItem('konteo.sort') || 'date_desc',
     exportPeriod: localStorage.getItem('konteo.export.period') || 'semanal',
