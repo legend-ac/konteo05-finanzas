@@ -62,23 +62,6 @@ const PERIOD_LABELS = {
 function updatePeriodLabel() {
     const el = document.getElementById('balance-period-label');
     if (el) el.textContent = PERIOD_LABELS[state.currentFilter] || 'Balance';
-
-    const label = document.getElementById('period-trigger-label');
-    if (!label) return;
-    const today = new Date();
-    const date = new Intl.DateTimeFormat('es-PE', {
-        day: 'numeric', month: 'short', timeZone: BUSINESS_TIME_ZONE
-    }).format(today);
-    if (state.currentFilter === 'today') label.textContent = `Hoy · ${date}`;
-    else if (state.currentFilter === 'week') label.textContent = 'Esta semana';
-    else if (state.currentFilter === 'month') label.textContent = 'Este mes';
-    else if (state.customRangeStart && state.customRangeEnd) {
-        const shortDate = value => new Intl.DateTimeFormat('es-PE', {
-            day: 'numeric', month: 'short', timeZone: BUSINESS_TIME_ZONE
-        }).format(new Date(`${value}T12:00:00-05:00`));
-        label.textContent = `${shortDate(state.customRangeStart)} — ${shortDate(state.customRangeEnd)}`;
-    }
-    else label.textContent = 'Personalizado';
 }
 
 function updateDashboardTime() {
@@ -278,9 +261,11 @@ async function loadData() {
     const endTs = firebase.firestore.Timestamp.fromDate(endDate);
 
     try {
-        const planPromise = dbService.getPlan(state.currentUser.uid).catch(() => null);
-        const { incomeItems: rawIncome, expenseItems: rawExpense } =
-            await dbService.getTransactions(state.currentUser.uid, startTs, endTs);
+        // Ambas solicitudes en paralelo: transacciones y plan de presupuesto
+        const [{ incomeItems: rawIncome, expenseItems: rawExpense }, plan] = await Promise.all([
+            dbService.getTransactions(state.currentUser.uid, startTs, endTs),
+            dbService.getPlan(state.currentUser.uid).catch(() => null)
+        ]);
 
         if (myToken !== state.currentLoadToken) return;
 
@@ -316,6 +301,13 @@ async function loadData() {
         updatePeriodLabel();
         updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems: realExpenseItems, startDate, endDate });
 
+        // Cargar configuración del plan antes de renderizar gráficas
+        if (plan) {
+            state.planConfig.incomeTarget = Number(plan.incomeTarget || 0);
+            state.planConfig.expenseLimit = Number(plan.expenseLimit || 0);
+            loadPlanConfigToUi();
+        }
+
         updateStrategyPanel({ totalExpenses });
         renderTransactionLedger(incomeItems, expenseItems);
         renderCharts({
@@ -325,22 +317,6 @@ async function loadData() {
             totalExpenses,
             expenseLimit: state.planConfig.expenseLimit
         });
-
-        const plan = await planPromise;
-        if (myToken !== state.currentLoadToken) return;
-        if (plan) {
-            state.planConfig.incomeTarget  = Number(plan.incomeTarget  || 0);
-            state.planConfig.expenseLimit  = Number(plan.expenseLimit  || 0);
-            loadPlanConfigToUi();
-            updateStrategyPanel({ totalExpenses });
-            renderCharts({
-                incomeItems: realIncomeItems,
-                expenseItems: realExpenseItems,
-                totalIncome,
-                totalExpenses,
-                expenseLimit: state.planConfig.expenseLimit
-            });
-        }
 
     } catch (err) {
         console.error('loadData error:', err);
@@ -685,8 +661,6 @@ document.getElementById('show-register')?.addEventListener('click', e => { e.pre
 document.getElementById('show-login')?.addEventListener('click',    e => { e.preventDefault(); showPage('login'); });
 document.getElementById('home-start-register')?.addEventListener('click', () => showPage('register'));
 document.getElementById('home-start-login')?.addEventListener('click',    () => showPage('login'));
-document.getElementById('home-start-login-2')?.addEventListener('click',  () => showPage('login'));
-document.getElementById('home-cta-register')?.addEventListener('click',   () => showPage('register'));
 document.getElementById('back-home-from-login')?.addEventListener('click',    e => { e.preventDefault(); showPage('home'); });
 document.getElementById('back-home-from-register')?.addEventListener('click', e => { e.preventDefault(); showPage('home'); });
 
@@ -733,7 +707,7 @@ document.getElementById('form-recovery')?.addEventListener('submit', async e => 
 // ──────────────────────────────────────────────
 // PROFILE MODAL
 // ──────────────────────────────────────────────
-document.getElementById('profile-btn')?.addEventListener('click', () => openModal('modal-profile'));
+
 document.getElementById('btn-logout-profile')?.addEventListener('click', async () => {
     closeModal('modal-profile');
     await signOutCurrentUser();
@@ -744,28 +718,6 @@ document.getElementById('form-profile')?.addEventListener('submit', async e => {
     catch (err) { showToast('Error al guardar perfil: ' + err.message, 'error'); }
 });
 
-// ──────────────────────────────────────────────
-// PERIOD FILTERS
-// ──────────────────────────────────────────────
-function setPeriodPanelOpen(open) {
-    const panel = document.getElementById('period-panel');
-    const trigger = document.getElementById('period-trigger');
-    if (!panel || !trigger) return;
-    panel.classList.toggle('hidden', !open);
-    trigger.setAttribute('aria-expanded', String(open));
-}
-
-document.getElementById('period-trigger')?.addEventListener('click', () => {
-    const panel = document.getElementById('period-panel');
-    setPeriodPanelOpen(panel?.classList.contains('hidden'));
-});
-document.getElementById('period-panel-close')?.addEventListener('click', () => setPeriodPanelOpen(false));
-document.addEventListener('click', event => {
-    const panel = document.getElementById('period-panel');
-    const trigger = document.getElementById('period-trigger');
-    if (!panel || panel.classList.contains('hidden')) return;
-    if (!panel.contains(event.target) && !trigger?.contains(event.target)) setPeriodPanelOpen(false);
-});
 
 document.querySelectorAll('.filter').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -781,7 +733,6 @@ document.querySelectorAll('.filter').forEach(btn => {
         if (state.currentFilter === 'custom') {
             document.getElementById('range-start')?.focus();
         } else {
-            setPeriodPanelOpen(false);
             loadData();
         }
     });
@@ -905,9 +856,10 @@ function openTransferModal() {
 document.querySelectorAll('.app-nav-link').forEach(button => {
     button.addEventListener('click', () => {
         if (button.dataset.view) changeAppView(button.dataset.view);
+        // Gmail: delegar al botón del header que ya tiene el listener de initGmailImport
         if (button.dataset.action === 'gmail') document.getElementById('btn-gmail-import')?.click();
-        if (button.dataset.action === 'entities') document.getElementById('btn-gmail-entities')?.click();
-        if (button.dataset.action === 'profile') document.getElementById('profile-btn')?.click();
+        // Perfil: llamar directamente al modal sin delegación indirecta
+        if (button.dataset.action === 'profile') openModal('modal-profile');
     });
 });
 
@@ -1440,16 +1392,7 @@ document.getElementById('status-filter')?.addEventListener('change', renderTrans
 document.getElementById('btn-save-plan')?.addEventListener('click', async () => {
     if (await savePlanConfigFromUi()) loadData();
 });
-// Accordion toggles for plan and charts sections
-['plan-toggle', 'charts-toggle'].forEach(id => {
-    const row = document.getElementById(id);
-    if (!row) return;
-    const section = row.closest('.plan-section, .charts-section-wrap');
-    if (!section) return;
-    row.addEventListener('click', () => section.classList.toggle('open'));
-});
-// Open plan section by default
-document.getElementById('plan-card')?.classList.add('open');
+
 
 // ──────────────────────────────────────────────
 // EXPORT — usa el período activo del dashboard

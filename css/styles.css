@@ -2035,61 +2035,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     }
 }
 
-/* Period control: one explicit context instead of four competing tabs. */
-.dashboard-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
-.dashboard-time { color: var(--text-3); font-weight: 500; letter-spacing: .04em; }
-.dashboard-title-right { position: relative; }
-.period-trigger {
-    min-width: 190px;
-    height: 52px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-    align-items: center;
-    gap: 0 10px;
-    padding: 8px 12px 8px 14px;
-    border: 1px solid var(--line-2);
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--bg-2) 88%, transparent);
-    color: var(--text);
-    text-align: left;
-    cursor: pointer;
-}
-.period-trigger:hover, .period-trigger[aria-expanded="true"] { border-color: var(--gold); background: var(--bg-3); }
-.period-trigger-kicker { color: var(--text-3); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.period-trigger strong { font-size: 13px; font-weight: 700; }
-.period-trigger svg { grid-column: 2; grid-row: 1 / span 2; transition: transform var(--t) var(--ease); }
-.period-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
-.period-panel {
-    position: absolute;
-    z-index: 30;
-    top: calc(100% + 9px);
-    right: 0;
-    width: min(380px, calc(100vw - 28px));
-    padding: 16px;
-    border: 1px solid var(--line-2);
-    border-radius: 17px;
-    background: var(--bg-2);
-    box-shadow: 0 20px 50px rgba(0,0,0,.3);
-}
-.period-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
-.period-panel-heading > div { display: grid; gap: 3px; }
-.period-panel-heading span { color: var(--gold); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.period-panel-heading strong { font-size: 16px; }
-.period-panel-heading button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--text-2); font-size: 20px; cursor: pointer; }
-.period-presets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
-.period-presets .filter { height: 38px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-3); color: var(--text-2); }
-.period-presets .filter.active { border-color: var(--gold); background: var(--gold-faint); color: var(--gold); box-shadow: none; }
-.period-panel .custom-range-panel { margin: 12px 0 0; padding: 12px; border-radius: 12px; }
-.period-panel .btn-apply { height: 40px; border-width: 1px; }
 
-@media (max-width: 680px) {
-    .dashboard-time { width: 100%; margin-top: 2px; }
-    .period-trigger { width: 100%; min-width: 0; height: 50px; }
-    .period-panel { position: fixed; top: auto; right: 0; bottom: 0; left: 0; width: 100%; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; }
-    .period-panel::before { content: ''; display: block; width: 38px; height: 4px; margin: -8px auto 16px; border-radius: 4px; background: var(--line-2); }
-    .period-presets { grid-template-columns: 1fr 1fr; }
-}
 
 /* Gmail source policy: selecting sources for import is separate from limiting
    what Gmail is queried for. The latter is explicit and persists per user. */
@@ -2205,6 +2151,28 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .wallets-layout { grid-template-columns: 1fr; }
 }
 
+/* Gmail is a review flow, not a second dashboard. Keep its connected state
+   compact and make the next action unmistakable. */
+.gmail-modal-content { width: min(620px, calc(100vw - 40px)); max-width: 620px; padding: 26px; }
+.gmail-modal-header h3 { font-size: 20px; }.gmail-modal-sub { margin-top: 6px; color: var(--text-2); }
+.gmail-connected-box { gap: 14px; padding: 17px; border-color: rgba(34,197,94,.24); background: rgba(34,197,94,.055); }
+.gmail-connected-kicker { color: var(--income); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+.gmail-connected-email { margin-top: -7px; font-size: 14px; }
+.gmail-days-row { display: grid; grid-template-columns: 115px minmax(0, 1fr); gap: 12px; align-items: center; }.gmail-days-row select { width: 100%; height: 40px; }
+.gmail-reading-rule { margin-top: 0; padding: 12px 0 0; }.gmail-reading-rule input:disabled { cursor: not-allowed; opacity: .45; }.gmail-reading-rule:has(input:disabled) { cursor: default; }.gmail-reading-rule strong { font-size: 13px; }.gmail-reading-rule small { max-width: 420px; }
+.gmail-known-sources { margin: -2px 0 0; color: var(--text-3); font-size: 11px; line-height: 1.45; }.gmail-known-sources strong { color: var(--text-2); }
+.gmail-consent-actions { align-items: center; justify-content: flex-end; }.gmail-consent-actions .gmail-btn-primary { order: 3; min-width: 196px; }.gmail-consent-actions .gmail-btn-sm { height: 36px; padding: 0 12px; }
+.gmail-entities-modal .gmail-modal-header { margin-bottom: 16px; }.gmail-entity-form { padding: 16px; }.gmail-entity-form > label { color: var(--text-2); }
+@media (max-width: 599px) {
+    .gmail-modal-content { width: 100%; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+    .gmail-modal-header h3 { font-size: 18px; }
+    .gmail-days-row { grid-template-columns: 1fr; gap: 6px; }
+    .gmail-days-row select { height: 42px; }
+    .gmail-consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .gmail-consent-actions .gmail-btn-primary { grid-column: 1 / -1; grid-row: 1; width: 100%; min-width: 0; }
+    .gmail-consent-actions .gmail-btn-sm { width: 100%; }
+}
+
 /* ========================================================================
    KONTEO WORKSPACE — final visual system
    One deliberate application shell replaces the previous stack of dashboard
@@ -2226,8 +2194,10 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
         background: color-mix(in srgb, var(--bg) 94%, transparent);
         backdrop-filter: blur(14px);
     }
+    /* En PC el header muestra solo nombre + tema + salir. Gmail y Perfil viven en el nav lateral. */
     #dashboard-page > header .header-brand { display: none; }
     #dashboard-page > header .header-actions { margin-left: auto; gap: 8px; }
+    #dashboard-page > header #btn-gmail-import { display: none; }
     #user-name { color: var(--text-2); }
     .desktop-nav {
         z-index: 360;
@@ -2289,7 +2259,8 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .dashboard-title-row { align-items: end; margin-bottom: 24px; }
     .dashboard-title-left h1 { font-size: clamp(30px, 3vw, 42px); }
     .dashboard-eyebrow { color: var(--gold); }
-    .period-trigger { min-width: 206px; height: 56px; border-radius: 12px; }
+    /* dashboard-title-right: flex column para period-bar + custom-range-panel */
+    .dashboard-title-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
     .dashboard-overview {
         grid-template-columns: minmax(260px, 1.3fr) repeat(2, minmax(150px, .72fr));
         gap: 12px;
@@ -2351,14 +2322,17 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .brand-icon { width: 30px; height: 30px; }
     #dashboard-page > header h2 { font-size: 14px; }
     .header-actions { gap: 5px; }
-    #user-name, #logout-btn, #profile-btn .profile-btn-label { display: none; }
-    #profile-btn { width: 32px; min-width: 32px; padding: 0; display: grid; place-items: center; }
+    #user-name, #logout-btn { display: none; }
+    .btn-gmail-hd span { display: none; } /* Solo icono en mobile */
     .btn-gmail-hd { width: 34px; padding: 0; justify-content: center; }
     .dashboard-shell { padding: 20px 14px 152px; }
-    .dashboard-title-row { align-items: stretch; gap: 12px; margin-bottom: 14px; }
+    .dashboard-title-row { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 14px; }
     .dashboard-title-left h1 { max-width: 11ch; font-size: clamp(28px, 8.5vw, 34px); line-height: 1.04; }
     .dashboard-time { margin-top: 3px; }
-    .period-trigger { height: 54px; border-radius: 12px; }
+    /* Period tabs: full-width en mobile */
+    .dashboard-title-right { width: 100%; align-items: stretch; }
+    .period-bar { width: 100%; }
+    .period-bar .filter { flex: 1; height: 40px; border-radius: 10px; font-size: 12px; }
     .dashboard-overview { grid-template-columns: 1fr 1fr; gap: 9px; border: 0; background: transparent; overflow: visible; }
     .balance-hero { grid-column: 1 / -1; min-height: 176px; padding: 20px; border: 0; border-radius: 16px; background: linear-gradient(135deg, #d0a33d, #e4bd5e); color: #171208; }
     .balance-hero .balance-period-label,

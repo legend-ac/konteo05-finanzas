@@ -315,8 +315,8 @@ function buildModal() {
         <!-- HEADER del modal -->
         <div class="gmail-modal-header">
             <div>
-                <h3 id="gmail-modal-title">✉️ Auto-importar movimientos</h3>
-                <p class="gmail-modal-sub" id="gmail-modal-sub">Conecta el Gmail donde recibes notificaciones de tu banco.</p>
+                <h3 id="gmail-modal-title">Importar desde Gmail</h3>
+                <p class="gmail-modal-sub" id="gmail-modal-sub">Revisa notificaciones financieras y decide qué movimientos registrar.</p>
             </div>
             <button id="gmail-modal-close" class="gmail-close-btn" aria-label="Cerrar">✕</button>
         </div>
@@ -325,8 +325,8 @@ function buildModal() {
         <div id="gmail-state-consent" class="gmail-state">
             <div class="gmail-consent-box">
                 <div class="gmail-consent-icon">🔒</div>
-                <h4>¿Activar importación automática?</h4>
-                <p>Konteo 05 leerá los emails de notificación de tus bancos y apps de pago para registrar tus movimientos automáticamente.</p>
+                <h4>Conecta tu correo de notificaciones</h4>
+                <p>Konteo revisa correos de bancos y billeteras. Nunca registra un movimiento sin que lo confirmes.</p>
                 <div class="gmail-consent-features">
                     <div class="gmail-cf-item">✅ Solo lectura — nunca envía ni borra emails</div>
                     <div class="gmail-cf-item">✅ Tú decides qué importar antes de guardar</div>
@@ -338,7 +338,7 @@ function buildModal() {
                     <span>🟢 Interbank</span><span>🔵 BBVA</span><span>🔴 Scotiabank</span>
                 </div>
                 <div class="gmail-days-row" style="justify-content:center;margin-top:8px">
-                    <label for="gmail-days-select">Buscar en los últimos:</label>
+                    <label for="gmail-days-select">Período a revisar:</label>
                     <select id="gmail-days-select">
                         <option value="7">7 días</option>
                         <option value="30" selected>30 días</option>
@@ -353,7 +353,7 @@ function buildModal() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
                     </svg>
-                    Autorizar con Gmail
+                    Conectar Gmail
                 </button>
             </div>
         </div>
@@ -361,12 +361,13 @@ function buildModal() {
         <!-- Estado 2: Ya conectado — acción rápida -->
         <div id="gmail-state-connected" class="gmail-state hidden">
             <div class="gmail-connected-box">
+                <span class="gmail-connected-kicker">Cuenta conectada</span>
                 <div class="gmail-connected-email" id="gmail-connected-email-label">
                     <span class="gmail-dot"></span>
                     <span id="gmail-email-display">Cargando…</span>
                 </div>
                 <div class="gmail-days-row" style="margin-top:12px">
-                    <label for="gmail-days-select2">Buscar en los últimos:</label>
+                    <label for="gmail-days-select2">Período a revisar:</label>
                     <select id="gmail-days-select2">
                         <option value="7">7 días</option>
                         <option value="30" selected>30 días</option>
@@ -376,13 +377,14 @@ function buildModal() {
                 </div>
                 <label class="gmail-reading-rule">
                     <input id="gmail-only-configured-entities" type="checkbox">
-                    <span><strong>Leer solo mis entidades activas</strong><small id="gmail-reading-rule-summary"></small></span>
+                    <span><strong>Usar solo mis remitentes configurados</strong><small id="gmail-reading-rule-summary"></small></span>
                 </label>
+                <p class="gmail-known-sources"><strong>Fuentes reconocidas:</strong> Yape, Plin, BCP, Interbank, BBVA y Scotiabank.</p>
             </div>
             <div class="gmail-consent-actions">
-                <button id="gmail-btn-disconnect" class="gmail-btn-sm gmail-btn-danger">Desconectar Gmail</button>
-                <button id="gmail-btn-manage-entities" class="gmail-btn-sm" type="button">Gestionar entidades</button>
-                <button id="gmail-btn-sync" class="gmail-btn-primary">🔄 Buscar movimientos ahora</button>
+                <button id="gmail-btn-sync" class="gmail-btn-primary">Revisar correos</button>
+                <button id="gmail-btn-manage-entities" class="gmail-btn-sm" type="button">Configurar remitentes</button>
+                <button id="gmail-btn-disconnect" class="gmail-btn-sm gmail-btn-danger">Desconectar</button>
             </div>
         </div>
 
@@ -450,7 +452,7 @@ function getActiveCustomEntities() {
 }
 
 function isRestrictedToConfiguredEntities() {
-    return gmailPreference?.onlyConfiguredEntities === true;
+    return gmailPreference?.onlyConfiguredEntities === true && getActiveCustomEntities().length > 0;
 }
 
 function renderReadingRule() {
@@ -458,10 +460,11 @@ function renderReadingRule() {
     const summary = document.getElementById('gmail-reading-rule-summary');
     if (!checkbox || !summary) return;
     const active = getActiveCustomEntities();
+    checkbox.disabled = active.length === 0;
     checkbox.checked = isRestrictedToConfiguredEntities();
     summary.textContent = active.length
-        ? `${active.length} entidad${active.length !== 1 ? 'es' : ''} activa${active.length !== 1 ? 's' : ''}: ${active.map(entity => entity.name).join(', ')}`
-        : 'Agrega y activa entidades para limitar la lectura.';
+        ? `${active.length} remitente${active.length !== 1 ? 's' : ''} activo${active.length !== 1 ? 's' : ''}: ${active.map(entity => entity.name).join(', ')}`
+        : 'Aún no configuraste remitentes propios; se usarán las fuentes reconocidas.';
 }
 
 function normalizeEntitySender(value) {
@@ -473,7 +476,7 @@ function renderEntitiesList() {
     if (!list) return;
     const entities = getCustomEntities();
     if (!entities.length) {
-        list.innerHTML = '<p class="gmail-entities-empty">Aún no agregaste entidades manuales.</p>';
+        list.innerHTML = '<p class="gmail-entities-empty">Aún no agregaste remitentes propios. Las fuentes reconocidas seguirán disponibles al revisar correos.</p>';
         return;
     }
     list.innerHTML = entities.map(entity => `
@@ -506,14 +509,14 @@ function buildEntitiesModal() {
             <div class="modal-handle"></div>
             <div class="gmail-modal-header">
                 <div>
-                    <h3 id="gmail-entities-title">Entidades de Gmail</h3>
-                    <p class="gmail-modal-sub">Agrega solo correos oficiales. Siempre verás los movimientos antes de importarlos.</p>
+                    <h3 id="gmail-entities-title">Remitentes de Gmail</h3>
+                    <p class="gmail-modal-sub">Agrega correos oficiales que quieras revisar y asígnalos a una billetera si corresponde.</p>
                 </div>
                 <button type="button" id="gmail-entities-close" class="gmail-close-btn" aria-label="Cerrar">×</button>
             </div>
             <form id="gmail-entity-form" class="gmail-entity-form">
-                <input id="gmail-entity-name" type="text" maxlength="50" placeholder="Nombre de entidad: Caja Ejemplo" required>
-                <input id="gmail-entity-sender" type="email" maxlength="120" placeholder="Correo oficial: alertas@entidad.pe" required>
+                <input id="gmail-entity-name" type="text" maxlength="50" placeholder="Nombre visible: Caja Ejemplo" required>
+                <input id="gmail-entity-sender" type="email" maxlength="120" placeholder="Correo del remitente: alertas@entidad.pe" required>
                 <div class="gmail-entity-form-grid">
                     <label>Tipo por defecto
                         <select id="gmail-entity-type">
@@ -533,11 +536,11 @@ function buildEntitiesModal() {
                 <label>Destino predeterminado
                     <select id="gmail-entity-account">${walletOptionsHtml('', true)}</select>
                 </label>
-                <button type="submit" class="gmail-btn-primary">Agregar entidad</button>
+                <button type="submit" class="gmail-btn-primary">Agregar remitente</button>
             </form>
             <p id="gmail-entity-feedback" class="gmail-entity-feedback" aria-live="polite"></p>
             <div class="gmail-entities-list-header">
-                <span class="gmail-results-kicker">Tus entidades</span>
+                <span class="gmail-results-kicker">Tus remitentes</span>
                 <span>Actívalas o páusalas cuando quieras.</span>
             </div>
             <div id="gmail-entities-list" class="gmail-entities-list"></div>
