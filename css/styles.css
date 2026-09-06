@@ -2108,3 +2108,100 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .gmail-reading-rule strong { color: var(--text); font-size: 12px; }
 .gmail-reading-rule small { color: var(--text-3); font-size: 11px; line-height: 1.35; }
 
+/* ========================================================================
+   FINAL APP SHELL
+   A 768px+ viewport is a desktop/tablet workspace, never a stretched mobile
+   view. The earlier 980px cutoff created the white bottom navigation visible
+   in the previous release; these rules intentionally override it.
+   ======================================================================== */
+.wallet-color-red { background: rgba(244,63,94,.16); color: var(--expense); }
+
+@media (min-width: 768px) {
+    .desktop-nav {
+        position: fixed;
+        z-index: 260;
+        top: 48px;
+        bottom: 0;
+        left: 0;
+        width: 216px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 20px 12px;
+        border-right: 1px solid var(--line);
+        background: var(--bg-2);
+    }
+    #dashboard-page > header { padding-left: 238px; }
+    .dashboard-shell,
+    .wallets-shell {
+        width: calc(100% - 216px);
+        max-width: 1260px;
+        margin-left: 216px;
+        margin-right: 0;
+    }
+    .mobile-nav { display: none !important; }
+    .action-bar-mobile { display: none !important; }
+
+    /* A sidebar is useful at this width; two compressed content columns are not. */
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .dashboard-support { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard-overview { grid-template-columns: minmax(280px, 1.25fr) repeat(2, minmax(170px, .8fr)); }
+}
+
+@media (min-width: 1120px) {
+    .dashboard-grid { grid-template-columns: minmax(0, 1.45fr) minmax(310px, .82fr); }
+    .dashboard-support { position: sticky; top: 72px; grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+    .desktop-nav { display: none !important; }
+    .mobile-nav {
+        position: fixed;
+        z-index: 260;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        min-height: 64px;
+        padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--line);
+        background: var(--bg-2) !important;
+        box-shadow: 0 -10px 28px rgba(0,0,0,.28);
+    }
+    .mobile-nav .app-nav-link {
+        display: flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 3px;
+        border: 0 !important;
+        border-radius: 9px;
+        background: transparent !important;
+        color: var(--text-3) !important;
+        font-size: 15px;
+        text-align: center;
+    }
+    .mobile-nav .app-nav-link.active {
+        background: rgba(34,197,94,.12) !important;
+        color: var(--income) !important;
+    }
+    .mobile-nav .app-nav-link > span { width: auto; }
+    .mobile-nav .app-nav-link small { color: inherit; font-size: 9px; font-weight: 700; }
+    .dashboard-shell { padding: 0 14px 150px; }
+    .dashboard-top { padding-top: 18px; }
+    .dashboard-title-row { gap: 12px; margin-bottom: 14px; }
+    .dashboard-title-left h1 { font-size: clamp(28px, 9vw, 35px); }
+    .dashboard-overview { gap: 8px; border: 0; background: transparent; overflow: visible; }
+    .balance-hero { border: 1px solid rgba(212,168,67,.42); border-radius: 16px; }
+    .overview-stat { min-height: 96px; border: 1px solid var(--line); border-radius: 14px; }
+    .metrics-strip { margin-top: 8px; }
+    .dashboard-grid { gap: 12px; margin-top: 12px; }
+    .dashboard-support { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .action-bar-mobile { bottom: 64px; padding: 8px 14px; background: var(--bg-2); }
+    .wallets-shell { padding: 20px 14px 88px; }
+    .wallets-page-heading { margin-bottom: 16px; }
+    .wallets-layout { grid-template-columns: 1fr; }
+}
+

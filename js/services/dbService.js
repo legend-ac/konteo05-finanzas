@@ -118,6 +118,18 @@ function walletsRef(uid) {
     return db.collection('users').doc(uid).collection('wallets');
 }
 
+// These are the six financial entities that the parser already understands
+// out of the box. They are wallet suggestions, not Gmail rules: the user can
+// rename, archive or leave them at a zero balance.
+const DEFAULT_WALLETS = [
+    { sourceKey: 'yape', name: 'Yape', institution: 'Yape', type: 'wallet', color: 'purple' },
+    { sourceKey: 'plin', name: 'Plin', institution: 'Plin', type: 'wallet', color: 'blue' },
+    { sourceKey: 'bcp', name: 'Cuenta BCP', institution: 'BCP', type: 'bank', color: 'gold' },
+    { sourceKey: 'interbank', name: 'Cuenta Interbank', institution: 'Interbank', type: 'bank', color: 'green' },
+    { sourceKey: 'bbva', name: 'Cuenta BBVA', institution: 'BBVA', type: 'bank', color: 'blue' },
+    { sourceKey: 'scotiabank', name: 'Cuenta Scotiabank', institution: 'Scotiabank', type: 'bank', color: 'red' }
+];
+
 export async function getWallets(uid) {
     const snapshot = await walletsRef(uid).get();
     return snapshot.docs
@@ -126,6 +138,26 @@ export async function getWallets(uid) {
             if ((a.active !== false) !== (b.active !== false)) return a.active === false ? 1 : -1;
             return String(a.name || '').localeCompare(String(b.name || ''), 'es');
         });
+}
+
+export async function seedDefaultWallets(uid) {
+    const current = await getWallets(uid);
+    const existingKeys = new Set(current.map(wallet => wallet.sourceKey).filter(Boolean));
+    const missing = DEFAULT_WALLETS.filter(wallet => !existingKeys.has(wallet.sourceKey));
+    if (!missing.length) return current;
+    const batch = db.batch();
+    missing.forEach(wallet => {
+        const ref = walletsRef(uid).doc(`system-${wallet.sourceKey}`);
+        batch.set(ref, {
+            ...wallet,
+            currency: 'PEN', openingBalance: 0, includeInTotal: true,
+            active: true, systemDefault: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    });
+    await batch.commit();
+    return getWallets(uid);
 }
 
 export async function saveWallet(uid, wallet, editId = null) {

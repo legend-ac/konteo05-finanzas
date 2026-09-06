@@ -1335,14 +1335,20 @@ async function loadWallets() {
     if (!state.currentUser) return;
     try {
         const [wallets, transactions] = await Promise.all([
-            dbService.getWallets(state.currentUser.uid),
+            dbService.seedDefaultWallets(state.currentUser.uid),
             dbService.getAllTransactionsOrdered(state.currentUser.uid)
         ]);
         state.wallets = wallets;
-        walletTransactions = transactions;
+        const walletBySource = new Map(wallets.filter(wallet => wallet.sourceKey).map(wallet => [wallet.sourceKey, wallet.id]));
+        walletTransactions = transactions.map(item => {
+            if (item.accountId) return item;
+            const sourceKey = String(item.source || '').replace(/^gmail:/, '').toLowerCase();
+            const inheritedWalletId = walletBySource.get(sourceKey);
+            return inheritedWalletId ? { ...item, accountId: inheritedWalletId, inheritedAccount: true } : item;
+        });
         walletBalances.clear();
         wallets.forEach(wallet => walletBalances.set(wallet.id, Number(wallet.openingBalance || 0)));
-        transactions.forEach(item => {
+        walletTransactions.forEach(item => {
             if (!item.accountId || !walletBalances.has(item.accountId) || item.status === 'cancelled' || item.status === 'voided') return;
             const current = walletBalances.get(item.accountId) || 0;
             walletBalances.set(item.accountId, current + (item.type === 'income' ? Number(item.amount || 0) : -Number(item.amount || 0)));
