@@ -254,9 +254,14 @@ function labelledQuery(label, query) {
     return { label, query };
 }
 
-export async function fetchTransactionEmails(daysBack = 30, customEntities = []) {
+export async function fetchTransactionEmails(daysBack = 30, customEntities = [], options = {}) {
     const safeDays = Math.max(1, Math.min(90, Number.parseInt(daysBack, 10) || 30));
-    const senders = [...new Set([...SENDERS, ...getCustomSenders(customEntities)])];
+    const customSenders = getCustomSenders(customEntities);
+    const onlyConfiguredEntities = options.onlyConfiguredEntities === true;
+    if (onlyConfiguredEntities && customSenders.length === 0) {
+        throw new Error('Activa al menos una entidad antes de limitar la lectura de Gmail.');
+    }
+    const senders = [...new Set(onlyConfiguredEntities ? customSenders : [...SENDERS, ...customSenders])];
     // Gmail puede devolver resultados incompletos cuando una consulta OR contiene
     // demasiados remitentes. Buscamos grupos pequeños y unimos los IDs.
     const groupedQueries = chunk(senders, 8).map((group, index) => (
@@ -264,7 +269,7 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [])
     ));
     // Estas fuentes suelen emitir desde subdominios variables o agrupar correos
     // en conversaciones. Las consultas directas evitan que queden fuera del OR.
-    const priorityQueries = [
+    const priorityQueries = onlyConfiguredEntities ? [] : [
         labelledQuery('sip', `from:no-reply@operaciones.agora.pe newer_than:${safeDays}d`),
         labelledQuery('sip-dominio', `from:operaciones.agora.pe newer_than:${safeDays}d`),
         labelledQuery('plin-interbank', `from:servicioalcliente@interbank.com.pe newer_than:${safeDays}d`),

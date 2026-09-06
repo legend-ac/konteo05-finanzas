@@ -207,31 +207,39 @@
                 <!-- Title + Period tabs -->
                 <div class="dashboard-title-row">
                     <div class="dashboard-title-left">
-                        <p class="dashboard-eyebrow" id="dashboard-greeting">Control financiero</p>
+                        <p class="dashboard-eyebrow"><span id="dashboard-greeting">Control financiero</span><span id="dashboard-time" class="dashboard-time"></span></p>
                         <h1 id="dashboard-title">Lo que importa, primero.</h1>
                     </div>
                     <div class="dashboard-title-right">
-                        <div class="period-bar" role="group" aria-label="Periodo">
-                            <button class="filter active" data-filter="today">Hoy</button>
-                            <button class="filter" data-filter="week">7 d&iacute;as</button>
-                            <button class="filter" data-filter="month">Mes</button>
-                            <button class="filter" data-filter="custom">Rango</button>
-                        </div>
-
+                        <button id="period-trigger" class="period-trigger" type="button" aria-expanded="false" aria-controls="period-panel">
+                            <span class="period-trigger-kicker">Per&iacute;odo</span>
+                            <strong id="period-trigger-label">Hoy</strong>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <section id="period-panel" class="period-panel hidden" aria-label="Seleccionar período">
+                            <div class="period-panel-heading">
+                                <div><span>Vista temporal</span><strong>Elige el período</strong></div>
+                                <button id="period-panel-close" type="button" aria-label="Cerrar selector de período">×</button>
+                            </div>
+                            <div class="period-presets" role="group" aria-label="Períodos rápidos">
+                                <button class="filter active" data-filter="today" type="button">Hoy</button>
+                                <button class="filter" data-filter="week" type="button">Esta semana</button>
+                                <button class="filter" data-filter="month" type="button">Este mes</button>
+                                <button class="filter" data-filter="custom" type="button">Personalizado</button>
+                            </div>
+                            <div id="custom-range-panel" class="custom-range-panel hidden">
+                                <div class="range-row">
+                                    <span class="range-label">Desde</span>
+                                    <input type="date" id="range-start" aria-label="Fecha inicio">
+                                </div>
+                                <div class="range-row">
+                                    <span class="range-label">Hasta</span>
+                                    <input type="date" id="range-end" aria-label="Fecha fin">
+                                </div>
+                                <button id="btn-apply-range" class="btn-apply" type="button">Aplicar período</button>
+                            </div>
+                        </section>
                     </div>
-                </div>
-
-                <!-- Custom range panel -->
-                <div id="custom-range-panel" class="custom-range-panel hidden">
-                    <div class="range-row">
-                        <span class="range-label">Desde</span>
-                        <input type="date" id="range-start" aria-label="Fecha inicio">
-                    </div>
-                    <div class="range-row">
-                        <span class="range-label">Hasta</span>
-                        <input type="date" id="range-end" aria-label="Fecha fin">
-                    </div>
-                    <button id="btn-apply-range" class="btn-apply">Aplicar</button>
                 </div>
 
                 <!-- Balance overview (PC: 3-col card | Mobile: stacked in 1 card) -->

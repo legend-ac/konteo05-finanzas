@@ -62,6 +62,32 @@ const PERIOD_LABELS = {
 function updatePeriodLabel() {
     const el = document.getElementById('balance-period-label');
     if (el) el.textContent = PERIOD_LABELS[state.currentFilter] || 'Balance';
+
+    const label = document.getElementById('period-trigger-label');
+    if (!label) return;
+    const today = new Date();
+    const date = new Intl.DateTimeFormat('es-PE', {
+        day: 'numeric', month: 'short', timeZone: BUSINESS_TIME_ZONE
+    }).format(today);
+    if (state.currentFilter === 'today') label.textContent = `Hoy · ${date}`;
+    else if (state.currentFilter === 'week') label.textContent = 'Esta semana';
+    else if (state.currentFilter === 'month') label.textContent = 'Este mes';
+    else if (state.customRangeStart && state.customRangeEnd) {
+        const shortDate = value => new Intl.DateTimeFormat('es-PE', {
+            day: 'numeric', month: 'short', timeZone: BUSINESS_TIME_ZONE
+        }).format(new Date(`${value}T12:00:00-05:00`));
+        label.textContent = `${shortDate(state.customRangeStart)} — ${shortDate(state.customRangeEnd)}`;
+    }
+    else label.textContent = 'Personalizado';
+}
+
+function updateDashboardTime() {
+    const el = document.getElementById('dashboard-time');
+    if (!el) return;
+    const time = new Intl.DateTimeFormat('es-PE', {
+        hour: '2-digit', minute: '2-digit', hour12: true, timeZone: BUSINESS_TIME_ZONE
+    }).format(new Date());
+    el.textContent = ` · ${time}`;
 }
 
 function updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, startDate, endDate }) {
@@ -136,6 +162,9 @@ function updateGreeting(fullName) {
 }
 
 // ──────────────────────────────────────────────
+updateDashboardTime();
+window.setInterval(updateDashboardTime, 60_000);
+
 // PROFILE
 // ──────────────────────────────────────────────
 async function loadUserProfile() {
@@ -701,6 +730,26 @@ document.getElementById('form-profile')?.addEventListener('submit', async e => {
 // ──────────────────────────────────────────────
 // PERIOD FILTERS
 // ──────────────────────────────────────────────
+function setPeriodPanelOpen(open) {
+    const panel = document.getElementById('period-panel');
+    const trigger = document.getElementById('period-trigger');
+    if (!panel || !trigger) return;
+    panel.classList.toggle('hidden', !open);
+    trigger.setAttribute('aria-expanded', String(open));
+}
+
+document.getElementById('period-trigger')?.addEventListener('click', () => {
+    const panel = document.getElementById('period-panel');
+    setPeriodPanelOpen(panel?.classList.contains('hidden'));
+});
+document.getElementById('period-panel-close')?.addEventListener('click', () => setPeriodPanelOpen(false));
+document.addEventListener('click', event => {
+    const panel = document.getElementById('period-panel');
+    const trigger = document.getElementById('period-trigger');
+    if (!panel || panel.classList.contains('hidden')) return;
+    if (!panel.contains(event.target) && !trigger?.contains(event.target)) setPeriodPanelOpen(false);
+});
+
 document.querySelectorAll('.filter').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter').forEach(b => {
@@ -711,9 +760,11 @@ document.querySelectorAll('.filter').forEach(btn => {
         btn.setAttribute('aria-pressed', 'true');
         state.currentFilter = btn.dataset.filter;
         toggleCustomRangePanel(state.currentFilter);
+        updatePeriodLabel();
         if (state.currentFilter === 'custom') {
             document.getElementById('range-start')?.focus();
         } else {
+            setPeriodPanelOpen(false);
             loadData();
         }
     });
@@ -748,6 +799,8 @@ document.getElementById('btn-apply-range')?.addEventListener('click', () => {
         b.classList.toggle('active', active);
         b.setAttribute('aria-pressed', String(active));
     });
+    updatePeriodLabel();
+    setPeriodPanelOpen(false);
     loadData();
 });
 

@@ -226,7 +226,7 @@ function renderSourceControls() {
         </div>
         <label class="gmail-remember-sources">
             <input id="gmail-remember-sources" type="checkbox" ${gmailPreference?.rememberSources ? 'checked' : ''}>
-            <span>Recordar esta selección para próximos análisis</span>
+            <span>Preseleccionar estas fuentes para importar</span>
         </label>`;
 }
 
@@ -349,10 +349,14 @@ function buildModal() {
                         <option value="90">90 días</option>
                     </select>
                 </div>
+                <label class="gmail-reading-rule">
+                    <input id="gmail-only-configured-entities" type="checkbox">
+                    <span><strong>Leer solo mis entidades activas</strong><small id="gmail-reading-rule-summary"></small></span>
+                </label>
             </div>
             <div class="gmail-consent-actions">
                 <button id="gmail-btn-disconnect" class="gmail-btn-sm gmail-btn-danger">Desconectar Gmail</button>
-                <button id="gmail-btn-manage-entities" class="gmail-btn-sm" type="button">Entidades</button>
+                <button id="gmail-btn-manage-entities" class="gmail-btn-sm" type="button">Gestionar entidades</button>
                 <button id="gmail-btn-sync" class="gmail-btn-primary">🔄 Buscar movimientos ahora</button>
             </div>
         </div>
@@ -414,6 +418,25 @@ function buildModal() {
 
 function getCustomEntities() {
     return Array.isArray(gmailPreference?.customEntities) ? gmailPreference.customEntities : [];
+}
+
+function getActiveCustomEntities() {
+    return getCustomEntities().filter(entity => entity?.active !== false);
+}
+
+function isRestrictedToConfiguredEntities() {
+    return gmailPreference?.onlyConfiguredEntities === true;
+}
+
+function renderReadingRule() {
+    const checkbox = document.getElementById('gmail-only-configured-entities');
+    const summary = document.getElementById('gmail-reading-rule-summary');
+    if (!checkbox || !summary) return;
+    const active = getActiveCustomEntities();
+    checkbox.checked = isRestrictedToConfiguredEntities();
+    summary.textContent = active.length
+        ? `${active.length} entidad${active.length !== 1 ? 'es' : ''} activa${active.length !== 1 ? 's' : ''}: ${active.map(entity => entity.name).join(', ')}`
+        : 'Agrega y activa entidades para limitar la lectura.';
 }
 
 function normalizeEntitySender(value) {
@@ -556,7 +579,7 @@ async function connectAndSearch(daysBack) {
 async function doSearch(daysBack) {
     try {
         document.getElementById('gmail-loading-msg').textContent = `Buscando emails de los últimos ${daysBack} días…`;
-        const customEntities = gmailPreference?.customEntities || [];
+        const customEntities = getActiveCustomEntities();
         
         // Consultar transacciones registradas e IDs de Gmail guardados previamente en Firestore
         const { gmailIds: dbGmailIds, existingTxKeys } = await getImportedGmailIds(currentUid).catch(() => ({ gmailIds: new Set(), existingTxKeys: new Set() }));
@@ -571,7 +594,9 @@ async function doSearch(daysBack) {
 
         const allExistingIds = new Set([...importedGmailIds, ...dbGmailIds]);
 
-        const rawMessages = await fetchTransactionEmails(daysBack, customEntities);
+        const rawMessages = await fetchTransactionEmails(daysBack, customEntities, {
+            onlyConfiguredEntities: isRestrictedToConfiguredEntities()
+        });
 
         document.getElementById('gmail-loading-msg').textContent = `Analizando ${rawMessages.length} email${rawMessages.length !== 1 ? 's' : ''}…`;
 
@@ -726,6 +751,16 @@ function wireListeners(pref) {
         await getGmailPref();
         openEntitiesModal();
     });
+    document.getElementById('gmail-only-configured-entities')?.addEventListener('change', async e => {
+        const enabled = e.target.checked;
+        if (enabled && getActiveCustomEntities().length === 0) {
+            e.target.checked = false;
+            window.alert('Primero agrega y activa al menos una entidad.');
+            return;
+        }
+        await saveGmailPref({ onlyConfiguredEntities: enabled });
+        renderReadingRule();
+    });
     document.getElementById('gmail-entity-form')?.addEventListener('submit', async e => {
         e.preventDefault();
         const name = String(document.getElementById('gmail-entity-name')?.value || '').trim();
@@ -866,6 +901,7 @@ function wireListeners(pref) {
             const emailEl = document.getElementById('gmail-email-display');
             if (emailEl) emailEl.textContent = fresh.email;
             showState('connected');
+            renderReadingRule();
         } else {
             showState('consent');
         }
