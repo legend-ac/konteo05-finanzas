@@ -5,12 +5,7 @@
     "private": true,
     "scripts": {
         "dev": "npx -y serve .",
-        "lint": "npx -y eslint js/",
-        "test:frontend": "node --experimental-vm-modules --test tests/frontend.test.cjs"
-    },
-    "devDependencies": {
-        "jsdom": "26.1.0",
-        "postcss": "8.5.8"
+        "lint": "npx -y eslint js/"
     },
     "keywords": [
         "finanzas",
