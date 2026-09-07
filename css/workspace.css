@@ -1,0 +1,209 @@
+/* Application layout. This is the single owner of navigation, dashboard geometry
+   and Gmail dialog layout. Public pages and shared controls stay in styles.css. */
+#dashboard-page { background: var(--bg); --text-2: #b4ac9f; --text-3: #9c958a; }
+[data-theme="light"] #dashboard-page { --text-2: #625c53; --text-3: #6e685f; }
+.app-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; height: 60px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--bg-2); z-index: 200; }
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.header-brand h2 { margin: 0; font-size: 15px; letter-spacing: -.04em; }
+.header-sub { color: var(--text-3); font-size: 10px; }
+.brand-icon, .desktop-nav-mark { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 10px; background: var(--gold); color: #181309; font-weight: 800; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+#user-name, #logout-btn { display: none; }
+.desktop-nav { display: none; }
+.mobile-nav { position: fixed; z-index: 250; inset: auto 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg-2); }
+.app-nav-link { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 46px; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--text-2); font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
+.app-nav-link > span { display: inline-flex; }
+.app-nav-link:hover { background: var(--bg-3); color: var(--text); }
+.app-nav-link.active { background: var(--gold-dim); color: var(--gold); }
+.app-nav-link.gmail-connected > span { color: var(--income); }
+.mobile-nav .app-nav-link { flex-direction: column; justify-content: center; gap: 5px; min-height: 50px; padding: 6px 2px; }
+.mobile-nav .app-nav-link small { font-size: 11px; color: inherit; }
+.dashboard-shell, .wallets-shell { width: 100%; min-width: 0; margin: 0 auto; padding: 24px 16px calc(90px + env(safe-area-inset-bottom)); }
+.dashboard-top { padding: 0; }
+.dashboard-title-row { display: flex; flex-direction: column; align-items: stretch; gap: 18px; margin-bottom: 18px; }
+.dashboard-title-left { min-width: 0; }
+.dashboard-title-left h1 { margin: 4px 0 0; color: var(--text); font-size: 30px; line-height: 1.2; letter-spacing: -.045em; }
+.dashboard-eyebrow { display: flex; flex-wrap: wrap; color: var(--text-2); font-size: 11px; font-weight: 600; line-height: 1.6; }
+.dashboard-time { white-space: nowrap; }
+.dashboard-title-right { min-width: 0; }
+.period-bar { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); }
+.period-bar .filter { flex: 1; min-width: 0; min-height: 40px; padding: 7px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); font-size: 12px; cursor: pointer; white-space: nowrap; }
+.period-bar .filter.active { background: var(--gold); color: #191307; font-weight: 700; }
+.custom-range-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); }
+.range-row { display: grid; min-width: 0; gap: 4px; }
+.range-label { color: var(--text-2); font-size: 12px; }
+.range-row input { min-width: 0; width: 100%; min-height: 42px; padding: 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-3); color: var(--text); color-scheme: dark; }
+[data-theme="light"] .range-row input { color-scheme: light; }
+.btn-apply { grid-column: 1 / -1; min-height: 40px; border: 0; border-radius: 8px; background: var(--gold); color: #191307; font-weight: 700; cursor: pointer; }
+.dashboard-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.balance-hero { display: flex; flex-direction: column; gap: 20px; grid-column: 1 / -1; min-width: 0; padding: 22px; border: 1px solid #d5ad53; border-radius: 16px; background: linear-gradient(120deg, #d4a843, #edce80); color: #211908; }
+.balance-hero-content { min-width: 0; }
+.balance-period-label { margin: 0 0 6px; color: #574117; font-size: 12px; font-weight: 600; }
+.balance-number { color: #211908; font-family: 'IBM Plex Mono', monospace; font-size: clamp(28px, 7.5vw, 40px); line-height: 1.25; font-weight: 600; letter-spacing: -.06em; overflow-wrap: anywhere; }
+.balance-caption { margin-top: 6px; color: #574117; font-size: 12px; }
+.balance-hero-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn-balance-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; min-height: 42px; padding: 10px 16px; border: 1px solid #796027; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-balance-income { background: #211908; color: #fff6df; }
+.btn-balance-expense { background: transparent; color: #211908; }
+.btn-balance-expense:hover { background: #211908; color: #fff6df; }
+.overview-stat { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); }
+.overview-stat > span { color: var(--text-2); font-size: 12px; }
+.overview-stat strong { font-family: 'IBM Plex Mono', monospace; font-size: clamp(16px, 2vw, 24px); overflow-wrap: anywhere; }
+.income-stat strong { color: var(--income); }
+.expense-stat strong { color: var(--expense); }
+.metrics-strip { display: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.has-financial-data .metrics-strip { display: grid; }
+.metric-item { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 12px 8px; border: 1px solid var(--line); border-radius: 10px; }
+.metric-label { color: var(--text-3); font-size: 10px; line-height: 1.4; }
+.metric-value { color: var(--text); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; margin-top: 18px; }
+.dashboard-support { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.ledger-card { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); }
+.plan-section, .insights-section { min-width: 0; padding: 20px; border-radius: 14px; background: var(--bg-2); box-shadow: none; backdrop-filter: none; }
+.item:hover { margin: 0; padding-left: 2px; padding-right: 2px; }
+.filter-bar { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 10px; margin: 14px 0; }
+.search-input, .category-filter { width: 100%; min-width: 0; height: 42px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-3); color: var(--text); font-size: 12px; }
+.search-input::placeholder { color: var(--text-3); }
+.ledger-filters { min-width: 0; }
+.ledger-filters summary { width: fit-content; min-height: 40px; padding: 9px 12px; border: 1px solid var(--line-2); border-radius: 8px; color: var(--text-2); font-size: 12px; cursor: pointer; }
+.ledger-filters[open] summary { color: var(--gold); margin-bottom: 10px; }
+.ledger-filter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ledger-filter-fields select:last-child { grid-column: 1 / -1; }
+.empty-state { display: grid; justify-items: center; gap: 10px; min-height: 0; padding: 28px 12px; text-align: center; }
+.empty-state h3 { margin: 0; font-size: 15px; color: var(--text); }
+.empty-state p { max-width: 340px; margin: 0; color: var(--text-2); font-size: 12px; }
+.empty-state-icon { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line-2); border-radius: 10px; color: var(--gold); }
+.app-footer { margin-top: 24px; padding: 0; text-align: center; color: var(--text-3); font-size: 11px; }
+.app-footer a { color: inherit; }
+.wallets-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; margin-top: 16px; }
+.wallet-detail-panel { display: none; min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); }
+.wallets-layout.is-detail-open .wallets-list-panel { display: none; }
+.wallets-layout.is-detail-open .wallet-detail-panel { display: block; }
+.wallet-back { margin-bottom: 18px; }
+.wallet-detail-empty { padding: 30px 16px; text-align: center; color: var(--text-2); }
+.wallet-detail-empty h2 { font-size: 18px; color: var(--text); }
+.wallet-detail-empty > span { display: none; }
+.wallets-page-heading { align-items: flex-start; }
+.wallet-detail-actions button { min-height: 44px; }
+.wallet-list-item { min-height: 64px; }
+.wallet-management button { min-height: 44px; font-size: 12px; }
+
+/* Dialogs stay above the only mobile navigation bar. Scroll the dialog, not
+   a small results list trapped inside another scrolling container. */
+.modal-content { max-height: calc(100dvh - 32px); overscroll-behavior: contain; }
+.profile-session-options { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.profile-session-options button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text-2); font-size: 12px; cursor: pointer; }
+.modal { --text-2: #b4ac9f; --text-3: #9c958a; }
+[data-theme="light"] .modal { --text-2: #625c53; --text-3: #6e685f; }
+.gmail-modal-content { display: flex; flex-direction: column; width: min(680px, calc(100vw - 32px)); max-width: 680px; max-height: calc(100dvh - 32px); padding: 24px; overflow-y: auto; border-radius: 16px; gap: 0; }
+.gmail-modal-content .modal-handle { display: none; }
+.gmail-modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+.gmail-modal-header h3 { margin: 0; font-size: 20px; line-height: 1.3; letter-spacing: -.03em; }
+.gmail-modal-sub { margin: 8px 0 0; color: var(--text-2); font-size: 13px; line-height: 1.5; }
+.gmail-close-btn { min-width: 40px; min-height: 40px; }
+.gmail-settings-link { display: flex; margin-bottom: 18px; }
+.modal[data-state="loading"] .gmail-settings-link, .modal[data-state="results"] .gmail-settings-link, .modal[data-state="success"] .gmail-settings-link { display: none; }
+.gmail-state { display: flex; flex-direction: column; flex: 0 0 auto; gap: 16px; min-width: 0; }
+.gmail-connected-box { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 7px 12px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-3); }
+.gmail-connected-kicker { grid-column: 1; font-size: 11px; color: var(--text-2); }
+.gmail-connected-email { grid-column: 1; display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; font-weight: 600; }
+#gmail-email-display { overflow-wrap: anywhere; }
+.gmail-dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--income); }
+.gmail-disconnect { grid-column: 2; grid-row: 1 / 3; min-height: 40px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); font-size: 12px; cursor: pointer; }
+.gmail-disconnect:hover { color: var(--expense); background: var(--expense-dim); }
+.gmail-search-settings { display: grid; gap: 16px; }
+.gmail-days-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px; color: var(--text-2); font-size: 13px; }
+.gmail-modal-content .gmail-days-row select { min-width: 0; width: 100%; height: 44px; margin: 0; }
+.gmail-reading-rule { display: flex; align-items: flex-start; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.gmail-reading-rule strong { display: block; color: var(--text); font-size: 13px; }
+.gmail-reading-rule small { display: block; margin-top: 5px; color: var(--text-2); font-size: 12px; line-height: 1.5; }
+.gmail-known-sources { margin: 0; color: var(--text-2); font-size: 12px; }
+.gmail-consent-actions, .gmail-actions-row { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.gmail-actions-row { position: sticky; bottom: -24px; z-index: 1; padding-bottom: 16px; margin-bottom: -16px; background: var(--bg-2); }
+.gmail-actions-row .gmail-btn-secondary { margin-right: auto; }
+.gmail-btn-primary { background: var(--gold); color: #211908; box-shadow: none; }
+.gmail-btn-sm { height: auto; min-height: 40px; font-size: 12px; }
+.gmail-spinner { border-top-color: var(--gold); }
+.gmail-results-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.gmail-results-summary { display: grid; min-width: 0; gap: 4px; }
+.gmail-found-count { color: var(--text); font-size: 16px; }
+.gmail-tx-list { display: grid; gap: 12px; overflow: visible; max-height: none; min-height: 0; padding: 0; }
+.gmail-tx-card { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--bg-2); }
+.gmail-tx-card:has(.gmail-tx-check:checked) { border-color: var(--gold); background: var(--gold-faint); }
+.gmail-modal-content input[type="checkbox"] { appearance: auto; flex: 0 0 18px; width: 18px; height: 18px; min-width: 18px; margin: 2px 0 0; padding: 0; accent-color: var(--gold); }
+.gmail-tx-body { grid-column: 2; min-width: 0; }
+.gmail-tx-header { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; }
+.gmail-tx-desc { color: var(--text); font-size: 13px; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
+.gmail-tx-amount { grid-column: 3; grid-row: 1; font-family: 'IBM Plex Mono', monospace; font-size: 13px; white-space: nowrap; }
+.gmail-tx-fields { grid-column: 2 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.gmail-tx-fields:empty { display: none; }
+.gmail-category-control, .gmail-account-control { display: grid; gap: 4px; min-width: 0; font-size: 11px; color: var(--text-2); }
+.gmail-tx-fields select { width: 100%; min-width: 0; height: 40px; padding: 0 8px; font-size: 12px; }
+.gmail-tx-fields > :only-child { grid-column: 1 / -1; }
+.gmail-source-controls { flex-shrink: 0; }
+
+@media (min-width: 768px) {
+    #dashboard-page { padding-left: 208px; }
+    .app-header { height: 64px; padding: 0 28px; }
+    .header-brand { display: none; }
+    .header-actions { margin-left: auto; }
+    #user-name, #logout-btn { display: inline-flex; }
+    .desktop-nav { display: flex; flex-direction: column; gap: 6px; position: fixed; z-index: 250; inset: 0 auto 0 0; width: 208px; padding: 18px 12px; background: var(--bg-2); border-right: 1px solid var(--line); }
+    .desktop-nav-logo { display: flex; align-items: center; gap: 10px; padding: 0 4px 24px; }
+    .desktop-nav-logo strong { display: block; color: var(--text); font-size: 15px; }
+    .desktop-nav-logo small { display: block; color: var(--text-3); font-size: 10px; }
+    .mobile-nav { display: none; }
+    .dashboard-shell, .wallets-shell { max-width: 1420px; padding: 28px clamp(20px, 3vw, 48px) 40px; }
+    .dashboard-title-left h1 { font-size: 32px; }
+    .dashboard-title-row { gap: 16px; }
+    .dashboard-title-right { width: min(100%, 370px); }
+    .balance-hero-actions .btn-balance-action { flex: 0 1 auto; }
+    .dashboard-overview { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+    .balance-hero { grid-column: 1; grid-row: 1 / 3; justify-content: space-between; }
+    .overview-stat { padding: 16px 20px; }
+    .metric-item { padding: 14px; }
+    .metric-label { font-size: 11px; }
+    .ledger-filter-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ledger-filter-fields select:last-child { grid-column: auto; }
+    .wallets-layout { grid-template-columns: minmax(0, 1fr); }
+    .wallet-detail-panel { display: block; }
+    .wallets-layout.is-detail-open .wallets-list-panel { display: block; }
+    .wallet-back { display: none; }
+}
+@media (min-width: 1050px) {
+    .dashboard-title-row { flex-direction: row; align-items: flex-start; justify-content: space-between; }
+    .dashboard-support { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .wallets-layout { grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr); }
+}
+@media (min-width: 1280px) {
+    .dashboard-overview { grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr)); }
+    .balance-hero { grid-row: auto; }
+    .dashboard-grid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; }
+    .dashboard-support { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+    .ledger-title-group { flex-wrap: wrap; gap: 12px; }
+    .item { flex-wrap: wrap; gap: 8px; }
+    .item-right { margin-left: auto; max-width: 100%; }
+    .item-actions button { min-width: 36px; min-height: 36px; }
+    .modal-content input:not([type="checkbox"]), .modal-content select, .modal-content textarea { font-size: 16px; }
+    .gmail-modal-content { width: 100%; max-width: 100%; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); max-height: calc(100dvh - 16px); border-radius: 18px 18px 0 0; }
+    .modal:has(.gmail-modal-content) { align-items: flex-end; padding: 0; }
+    .gmail-modal-header h3 { font-size: 18px; }
+    .gmail-actions-row { bottom: calc(-20px - env(safe-area-inset-bottom)); padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+    .gmail-consent-actions > button { flex: 1; }
+}
+@media (max-width: 420px) {
+    .gmail-connected-box { grid-template-columns: minmax(0, 1fr); }
+    .gmail-disconnect { grid-column: 1; grid-row: auto; justify-self: start; padding-left: 0; }
+    .gmail-tx-card { grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 12px; }
+    .gmail-tx-amount { grid-column: 2; grid-row: 2; }
+    .gmail-tx-fields { grid-column: 2; grid-template-columns: minmax(0, 1fr); }
+    .gmail-days-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .gmail-actions-row > button { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .modal-content, .item { animation: none; }
+    .app-nav-link, .wallet-list-item { transition: none; }
+}

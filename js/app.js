@@ -15,7 +15,7 @@ import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
 import * as dbService             from './services/dbService.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
-import { initGmailImport, clearGmailImportCache } from './ui/gmailImport.js';
+import { initGmailImport, openGmailImport, clearGmailImportCache } from './ui/gmailImport.js';
 
 // ──────────────────────────────────────────────
 // THEME
@@ -123,7 +123,10 @@ function renderTransactionLedger(incomeItems, expenseItems) {
             ? `${filtered.length} movimiento${filtered.length !== 1 ? 's' : ''}`
             : '';
     }
-    renderTransactionList(document.getElementById('list'), filtered);
+    const hasFilters = Boolean(searchTerm || categoryFilter !== 'all' || statusFilter !== 'all');
+    renderTransactionList(document.getElementById('list'), filtered, { hasFilters });
+    const filterLabel = document.getElementById('ledger-filter-label');
+    if (filterLabel) filterLabel.textContent = hasFilters ? 'Filtros activos' : 'Filtrar y ordenar';
 }
 
 function renderTransactionLedgerFromCache() {
@@ -141,7 +144,7 @@ function updateGreeting(fullName) {
     const greeting = document.getElementById('dashboard-greeting');
     const title    = document.getElementById('dashboard-title');
     if (greeting) greeting.textContent = `${saludo}, ${firstName} 👋`;
-    if (title)    title.textContent    = 'Lo que importa, primero.';
+    if (title)    title.textContent    = 'Resumen';
 }
 
 // ──────────────────────────────────────────────
@@ -721,6 +724,12 @@ document.getElementById('form-profile')?.addEventListener('submit', async e => {
 
 document.querySelectorAll('.filter').forEach(btn => {
     btn.addEventListener('click', () => {
+        if (btn.dataset.filter === 'custom') {
+            toggleCustomRangePanel('custom');
+            btn.setAttribute('aria-expanded', 'true');
+            document.getElementById('range-start')?.focus();
+            return;
+        }
         document.querySelectorAll('.filter').forEach(b => {
             b.classList.remove('active');
             b.setAttribute('aria-pressed', 'false');
@@ -730,11 +739,8 @@ document.querySelectorAll('.filter').forEach(btn => {
         state.currentFilter = btn.dataset.filter;
         toggleCustomRangePanel(state.currentFilter);
         updatePeriodLabel();
-        if (state.currentFilter === 'custom') {
-            document.getElementById('range-start')?.focus();
-        } else {
-            loadData();
-        }
+        document.querySelector('[data-filter="custom"]')?.setAttribute('aria-expanded', 'false');
+        loadData();
     });
 });
 
@@ -750,14 +756,13 @@ if (rangeEndInput)    rangeEndInput.setAttribute('max', todayStr);
 if (rangeStartInput && state.customRangeStart) rangeStartInput.value = state.customRangeStart;
 if (rangeEndInput   && state.customRangeEnd)   rangeEndInput.value   = state.customRangeEnd;
 
-rangeStartInput?.addEventListener('change', e => { state.customRangeStart = e.target.value; persistUiState(); });
-rangeEndInput?.addEventListener('change',   e => { state.customRangeEnd   = e.target.value; persistUiState(); });
 
 document.getElementById('btn-apply-range')?.addEventListener('click', () => {
     const s = rangeStartInput?.value || '';
     const e = rangeEndInput?.value   || '';
     if (!s || !e) { showToast('Define fecha inicio y fin', 'error'); return; }
     if (s > e)    { showToast('La fecha inicio no puede ser mayor que la fin', 'error'); return; }
+    if (e > todayString()) { showToast('El período no puede incluir fechas futuras', 'error'); return; }
     state.customRangeStart = s;
     state.customRangeEnd   = e;
     state.currentFilter    = 'custom';
@@ -768,7 +773,6 @@ document.getElementById('btn-apply-range')?.addEventListener('click', () => {
         b.setAttribute('aria-pressed', String(active));
     });
     updatePeriodLabel();
-    setPeriodPanelOpen(false);
     loadData();
 });
 
@@ -856,24 +860,33 @@ function openTransferModal() {
 document.querySelectorAll('.app-nav-link').forEach(button => {
     button.addEventListener('click', () => {
         if (button.dataset.view) changeAppView(button.dataset.view);
-        // Gmail: delegar al botón del header que ya tiene el listener de initGmailImport
-        if (button.dataset.action === 'gmail') document.getElementById('btn-gmail-import')?.click();
+        if (button.dataset.action === 'gmail') openGmailImport();
         // Perfil: llamar directamente al modal sin delegación indirecta
         if (button.dataset.action === 'profile') openModal('modal-profile');
     });
 });
 
 document.getElementById('btn-new-wallet')?.addEventListener('click', () => openWalletModal());
-document.getElementById('btn-wallet-transfer')?.addEventListener('click', openTransferModal);
 document.getElementById('wallets-list')?.addEventListener('click', event => {
     const item = event.target.closest('[data-wallet-id]');
     if (!item) return;
     state.selectedWalletId = item.dataset.walletId;
     renderWallets();
+    document.querySelector('.wallets-layout')?.classList.add('is-detail-open');
+    const heading = document.querySelector('#wallet-detail h2');
+    if (window.matchMedia('(max-width: 767px)').matches && heading) {
+        heading.tabIndex = -1;
+        heading.focus();
+    }
 });
 document.getElementById('wallet-detail')?.addEventListener('click', async event => {
     const action = event.target.closest('[data-wallet-action]')?.dataset.walletAction;
     if (!action) return;
+    if (action === 'back') {
+        document.querySelector('.wallets-layout')?.classList.remove('is-detail-open');
+        document.querySelector('.wallet-list-item.is-selected')?.focus();
+        return;
+    }
     const wallet = state.wallets.find(item => item.id === state.selectedWalletId);
     if (action === 'income') openIncomeModal();
     else if (action === 'expense') openExpenseModal();
@@ -1258,7 +1271,12 @@ function renderWalletDetail() {
     const management = document.createElement('div');
     management.className = 'wallet-management';
     management.innerHTML = '<button type="button" data-wallet-action="edit">Editar cuenta</button><button type="button" data-wallet-action="archive">Archivar cuenta</button>';
-    panel.append(heading, balance, actions, stats, recent, management);
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'wallet-back wallet-secondary';
+    back.dataset.walletAction = 'back';
+    back.textContent = '← Todas las cuentas';
+    panel.append(back, heading, balance, actions, stats, recent, management);
 }
 
 function renderWallets() {
@@ -1321,7 +1339,10 @@ function changeAppView(view) {
     document.getElementById('wallets-view')?.classList.toggle('hidden', !isWallets);
     document.querySelectorAll('.app-nav-link[data-view]').forEach(button => {
         button.classList.toggle('active', button.dataset.view === view);
+        if (button.dataset.view === view) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
     });
+    document.querySelector('.wallets-layout')?.classList.remove('is-detail-open');
     if (isWallets) loadWallets();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }

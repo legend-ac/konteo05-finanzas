@@ -118,7 +118,7 @@ function createRow(item, index) {
     return el;
 }
 
-export function renderTransactionList(listEl, filtered) {
+export function renderTransactionList(listEl, filtered, { hasFilters = false } = {}) {
     if (!listEl) return;
     listEl.textContent = '';
 
@@ -135,21 +135,12 @@ export function renderTransactionList(listEl, filtered) {
             'M8 12h8'
         ]));
         const title = document.createElement('h3');
-        title.textContent = 'Empieza con tu primer movimiento';
+        title.textContent = hasFilters ? 'No hay coincidencias' : 'Sin movimientos en este período';
         const copy = document.createElement('p');
-        copy.textContent = 'Registra un ingreso o gasto para convertir este panel en tu historial financiero.';
-        const actions = document.createElement('div');
-        actions.className = 'empty-state-actions';
-        const income = document.createElement('button');
-        income.type = 'button';
-        income.className = 'empty-state-action empty-state-income btn-open-income';
-        income.textContent = '+ Registrar ingreso';
-        const expense = document.createElement('button');
-        expense.type = 'button';
-        expense.className = 'empty-state-action empty-state-expense btn-open-expense';
-        expense.textContent = '− Registrar gasto';
-        actions.append(income, expense);
-        p.append(icon, title, copy, actions);
+        copy.textContent = hasFilters
+            ? 'Prueba otra búsqueda o cambia los filtros.'
+            : 'Elige otras fechas o registra un ingreso o gasto desde el resumen.';
+        p.append(icon, title, copy);
         listEl.appendChild(p);
         return;
     }

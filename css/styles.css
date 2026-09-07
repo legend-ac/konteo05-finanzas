@@ -283,39 +283,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 /* ================================================
    DASHBOARD HEADER — sticky, full width
    ================================================ */
-#dashboard-page {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-#dashboard-page > header {
-    position: sticky; top: 0; z-index: 200;
-    height: 48px;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 24px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
-    width: 100%; flex-shrink: 0;
-}
 /* Brand icon — IDENTICAL to home page gold square */
-.header-brand { display: flex; align-items: center; gap: 10px; }
-.brand-icon {
-    width: 32px; height: 32px;
-    display: grid; place-items: center;
-    border-radius: 8px;
-    background: var(--gold); color: #17130b;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 14px; font-weight: 700;
-    flex-shrink: 0;
-}
-#dashboard-page > header h2   { font-size: 15px; font-weight: 700; letter-spacing: -.03em; }
-#dashboard-page > header .header-sub { display: block; font-size: 10px; color: var(--text-3); margin-top: 1px; }
-.header-actions { display: flex; align-items: center; gap: 6px; }
-#user-name {
-    font-size: 12px; color: var(--text-2); font-weight: 500;
-    max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    margin-right: 4px;
-}
 .btn-icon {
     width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
     border: 1px solid var(--line); border-radius: var(--r-sm); background: transparent;
@@ -355,33 +323,14 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .btn-hd-income, .btn-hd-expense { display: none; }
 }
 /* ── Gmail Auto-Import header button ── */
-.btn-gmail-hd {
-    height: 32px; padding: 0 12px;
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(234,67,53,.12);
-    border: 1px solid rgba(234,67,53,.35);
-    color: #ea4335; border-radius: var(--r-sm);
-    font-size: 12px; font-weight: 700; cursor: pointer;
-    transition: all var(--t) var(--ease); white-space: nowrap;
-}
-.btn-gmail-hd:hover { background: #ea4335; color: #fff; transform: translateY(-1px); }
-@media (max-width: 680px) { .btn-gmail-hd span { display: none; } }
 
 /* ── Gmail Import Modal ── */
-.gmail-modal-content { max-width: 560px; max-height: 88vh; display: flex; flex-direction: column; }
-.gmail-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
-.gmail-modal-header h3 { font-size: 18px; font-weight: 700; letter-spacing: -.03em; margin: 0; display: flex; align-items: center; gap: 8px; }
-.gmail-modal-sub { font-size: 13px; color: var(--text-3); margin: 4px 0 0; }
 .gmail-close-btn { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--bg-3); color: var(--text-2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--t) var(--ease); }
 .gmail-close-btn:hover { background: var(--line); color: var(--text); }
-.gmail-state { display: flex; flex-direction: column; gap: 16px; }
-.gmail-state.hidden { display: none !important; }
 .gmail-connect-info { display: flex; flex-direction: column; gap: 14px; }
 .gmail-banks-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .gmail-banks-list span { padding: 5px 12px; border-radius: 99px; background: var(--bg-3); border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--text-2); }
 .gmail-connect-note { font-size: 12px; color: var(--text-3); background: var(--bg-3); border-radius: 8px; padding: 10px 12px; line-height: 1.5; }
-.gmail-days-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); }
-.gmail-days-row select { height: 34px; padding: 0 10px; background: var(--bg-3); border: 1px solid var(--line); color: var(--text); border-radius: var(--r-sm); font-size: 13px; cursor: pointer; }
 .gmail-btn-primary { height: 44px; padding: 0 24px; background: #ea4335; color: #fff; border: none; border-radius: var(--r-sm); font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all var(--t) var(--ease); align-self: stretch; }
 .gmail-btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
 .gmail-btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
@@ -393,27 +342,13 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .gmail-spinner { width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--line); border-top-color: #ea4335; animation: gmail-spin .8s linear infinite; }
 @keyframes gmail-spin { to { transform: rotate(360deg); } }
 .gmail-spinner-wrap p { font-size: 13px; color: var(--text-3); text-align: center; }
-.gmail-results-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.gmail-found-count { font-size: 13px; font-weight: 600; color: var(--text-2); }
 .gmail-select-btns { display: flex; gap: 6px; }
-.gmail-tx-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
-.gmail-tx-list::-webkit-scrollbar { width: 4px; }
-.gmail-tx-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
 .gmail-empty { font-size: 13px; color: var(--text-3); text-align: center; padding: 24px 0; }
-.gmail-actions-row { display: flex; gap: 10px; justify-content: flex-end; padding-top: 12px; border-top: 1px solid var(--line); }
-.gmail-tx-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-2); cursor: pointer; transition: border-color var(--t) var(--ease), background var(--t) var(--ease); user-select: none; }
-.gmail-tx-card:hover { border-color: var(--text-3); }
-.gmail-tx-card:has(.gmail-tx-check:checked) { border-color: var(--gold); background: rgba(212,175,55,.06); }
-.gmail-tx-check { width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--gold); cursor: pointer; }
-.gmail-tx-body { flex: 1; min-width: 0; }
-.gmail-tx-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
 .gmail-tx-source { font-size: 11px; font-weight: 700; color: var(--text-3); }
 .gmail-tx-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: .05em; }
 .gmail-badge-income  { background: rgba(34,197,94,.15);  color: var(--income); }
 .gmail-badge-expense { background: rgba(244,63,94,.12);  color: var(--expense); }
-.gmail-tx-desc { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gmail-tx-date { font-size: 11px; color: var(--text-3); margin-top: 2px; }
-.gmail-tx-amount { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; flex-shrink: 0; }
 .gmail-tx-income-amount  { color: var(--income); }
 .gmail-tx-expense-amount { color: var(--expense); }
 .gmail-tx-review { border-style: dashed; cursor: default; opacity: .88; }
@@ -434,192 +369,28 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .gmail-cf-item { font-size: 12px; color: var(--text-2); text-align: left; padding: 5px 10px; background: var(--bg-2); border-radius: 7px; }
 .gmail-consent-sources { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .gmail-consent-sources span { padding: 4px 10px; border-radius: 99px; background: var(--bg-2); border: 1px solid var(--line); font-size: 11px; font-weight: 600; color: var(--text-2); }
-.gmail-consent-actions { display: flex; gap: 10px; justify-content: flex-end; }
-.gmail-connected-box { background: rgba(34,197,94,.07); border: 1px solid rgba(34,197,94,.25); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
-.gmail-connected-email { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .gmail-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--income); flex-shrink: 0; box-shadow: 0 0 6px var(--income); }
 .gmail-btn-danger { background: rgba(244,63,94,.12) !important; border-color: rgba(244,63,94,.35) !important; color: var(--expense) !important; }
 .gmail-btn-danger:hover { background: var(--expense) !important; color: #fff !important; }
-.btn-gmail-hd.gmail-connected { background: rgba(34,197,94,.15); border-color: rgba(34,197,94,.4); color: var(--income); }
-.btn-gmail-hd.gmail-connected:hover { background: var(--income); color: #fff; }
 
 
 /* ================================================
    DASHBOARD LAYOUT
    ================================================ */
-.dashboard-shell {
-    flex: 1;
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-    padding: 0 32px 60px;
-}
-.dashboard-top { padding: 28px 0 0; }
 
 /* Title row */
-.dashboard-title-row {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 20px; margin-bottom: 20px;
-}
-.dashboard-eyebrow {
-    font-size: 10px; font-weight: 700; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--text-3); margin-bottom: 5px;
-}
-.dashboard-title-left h1 {
-    font-size: clamp(24px, 3.2vw, 36px);
-    font-weight: 750; letter-spacing: -.04em; line-height: 1.1; margin: 0;
-}
-
-/* Period tabs */
-.period-bar { display: flex; gap: 4px; flex-shrink: 0; }
-.filter {
-    height: 32px; padding: 0 14px; border-radius: 99px;
-    border: 1px solid transparent; background: transparent;
-    color: var(--text-2); font-size: 13px; font-weight: 500;
-    cursor: pointer; transition: all var(--t) var(--ease); white-space: nowrap;
-}
-.filter:hover { color: var(--text); background: var(--bg-3); }
-.filter.active { background: var(--gold); color: #0e0d0b; font-weight: 600; }
 
 /* Custom range panel */
-.custom-range-panel {
-    background: var(--bg-2); border: 1px solid var(--line);
-    border-radius: 14px; padding: 16px 20px 20px;
-    margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;
-}
-.range-row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 10px; }
-.range-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
-.custom-range-panel input[type="date"] {
-    width: 100%; height: 42px; padding: 0 14px;
-    background: var(--bg-3); border: 1px solid var(--line);
-    border-radius: var(--r-sm); color: var(--text); font-size: 13px;
-    outline: none; transition: border-color var(--t) var(--ease);
-}
-.custom-range-panel input[type="date"]:focus { border-color: var(--gold); }
-.btn-apply {
-    height: 46px; width: 100%;
-    border-radius: var(--r-sm); border: 2px solid var(--gold);
-    background: transparent; color: var(--gold);
-    font-size: 14px; font-weight: 700; cursor: pointer;
-    transition: all var(--t) var(--ease);
-}
-.btn-apply:hover { background: var(--gold); color: #0e0d0b; }
 
 /* Balance overview card — PC: 3 cols, Mobile: balance top + 2-col below */
-.dashboard-overview {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: var(--bg-2);
-    overflow: hidden;
-}
-.balance-hero {
-    padding: 24px 28px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 16px;
-}
-.balance-period-label {
-    font-size: 10px; font-weight: 700; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
-}
-.balance-number {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: clamp(30px, 3.5vw, 48px);
-    font-weight: 500; letter-spacing: -.03em; line-height: 1;
-}
-.balance-positive { color: var(--text); }
-.balance-negative { color: var(--expense); }
-#balance.zero      { color: var(--text-3); }
-.balance-caption { font-size: 12px; color: var(--text-3); margin-top: 6px; }
 
 /* Action CTAs inside Balance Hero Card */
-.balance-hero-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 4px;
-}
-.btn-balance-action {
-    height: 38px;
-    padding: 0 18px;
-    border-radius: var(--r-sm);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all var(--t) var(--ease);
-    letter-spacing: -.01em;
-    border: none;
-    white-space: nowrap;
-}
-.btn-balance-income {
-    background: var(--income);
-    color: #0e0d0b;
-}
-.btn-balance-income:hover {
-    filter: brightness(1.1);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
-}
-.btn-balance-expense {
-    background: transparent;
-    color: var(--expense);
-    border: 1px solid var(--expense) !important;
-}
-.btn-balance-expense:hover {
-    background: var(--expense);
-    color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(244, 63, 148, 0.25);
-}
-
-.overview-stat {
-    display: flex; flex-direction: column; justify-content: center;
-    padding: 28px 24px; border-left: 1px solid var(--line);
-}
-.overview-stat > span {
-    font-size: 10px; font-weight: 700; letter-spacing: .09em;
-    text-transform: uppercase; color: var(--text-3); margin-bottom: 9px;
-}
-.overview-stat strong {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 20px; font-weight: 500; letter-spacing: -.02em;
-}
-.income-stat strong  { color: var(--income); }
-.expense-stat strong { color: var(--expense); }
 
 /* Metrics strip */
-.metrics-strip {
-    display: flex; margin-top: 12px;
-    border: 1px solid var(--line); border-radius: 10px;
-    background: var(--bg-2); overflow: hidden;
-}
-.metric-item {
-    flex: 1; display: flex; flex-direction: column; align-items: center;
-    padding: 12px 8px; border-right: 1px solid var(--line); gap: 3px;
-}
-.metric-item:last-child { border-right: 0; }
-.metric-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
-.metric-value { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text); }
 
 /* Main grid */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.62fr) minmax(280px, .88fr);
-    gap: 20px; align-items: start;
-    margin-top: 20px; padding-bottom: 40px;
-}
 
 /* Ledger card */
-.ledger-card {
-    border: 1px solid var(--line); border-radius: 14px;
-    background: var(--bg-2); padding: 22px 24px 0; min-width: 0;
-}
 .ledger-toolbar {
     display: flex; flex-direction: column;
     gap: 10px; padding-bottom: 18px; border-bottom: 1px solid var(--line);
@@ -627,26 +398,9 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .ledger-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
 .ledger-toolbar h2 { font-size: 18px; font-weight: 650; letter-spacing: -.03em; margin: 0; color: var(--text); line-height: 1; }
 .transactions-count { margin-left: 5px; color: var(--text-3); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; }
-.filter-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.search-input {
-    flex: 1; min-width: 120px; height: 34px; padding: 0 12px;
-    background: var(--bg-3); border: 1px solid var(--line);
-    border-radius: var(--r-sm); color: var(--text); font-size: 12px;
-    outline: none; transition: border-color var(--t) var(--ease);
-}
-.search-input::placeholder { color: var(--text-3); }
-.search-input:focus { border-color: var(--gold); }
-.category-filter, #status-filter, #sort-select {
-    height: 34px; padding: 0 8px;
-    background: var(--bg-3); border: 1px solid var(--line);
-    border-radius: var(--r-sm); color: var(--text);
-    font-size: 11px; outline: none; cursor: pointer;
-}
-.category-filter:focus, #status-filter:focus, #sort-select:focus { border-color: var(--gold); }
 #list { display: flex; flex-direction: column; width: 100%; min-height: 200px; }
 
 /* Sidebar */
-.dashboard-support { display: grid; gap: 20px; }
 .plan-section {
     border: 1px solid var(--line); border-radius: 14px;
     background: var(--bg-2); padding: 22px 22px 20px;
@@ -701,41 +455,12 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     padding: 20px; color: var(--text-3); font-size: 12px; text-align: center;
 }
 
-@media (min-width: 941px) {
-    .dashboard-support { position: sticky; top: 82px; }
-}
-
-
-
-
-
-
-
-
-
 
 /* Footer */
-.app-footer { padding: 14px 0 8px; }
-.app-footer p { font-size: 11px; color: var(--text-3); text-align: center; }
-.app-footer a { color: var(--text-3); text-decoration: none; }
-.app-footer a:hover { color: var(--text-2); }
 
 /* Add action buttons */
-.btn-add-action { height: 38px; padding: 0 16px; border-radius: var(--r-sm); border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--t) var(--ease); }
-.btn-add-income  { background: var(--income); color: #0e0d0b; }
-.btn-add-expense { background: transparent; border: 1px solid var(--expense) !important; color: var(--expense); }
-.btn-add-income:hover  { filter: brightness(1.1); transform: translateY(-1px); }
-.btn-add-expense:hover { background: var(--expense); color: #fff; transform: translateY(-1px); }
 
 /* Mobile sticky bar — hidden on desktop */
-.action-bar-mobile {
-    display: none;
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-    padding: 10px 16px 22px; gap: 10px;
-    background: var(--bg-2); border-top: 1px solid var(--line);
-    box-shadow: 0 -4px 24px rgba(0,0,0,.35);
-}
-.action-bar-mobile .btn-add-action { flex: 1; height: 48px; font-size: 15px; }
 
 /* ================================================
    ITEMS / TRANSACTIONS
@@ -981,10 +706,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 /* ================================================
    RESPONSIVE — TABLET (≤940px)
    ================================================ */
-@media (max-width: 940px) {
-    .dashboard-grid { grid-template-columns: 1fr; }
-    .dashboard-support { grid-template-columns: repeat(2, minmax(0, 1fr)); order: -1; }
-}
 
 /* ================================================
    RESPONSIVE — MOBILE (≤680px)
@@ -993,94 +714,21 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 @media (max-width: 680px) {
 
     /* ── Header: slim 40px bar ── */
-    #dashboard-page > header {
-        height: 40px;
-        padding: 0 12px;
-    }
-    #dashboard-page > header h2 { font-size: 13px; }
-    #dashboard-page > header .header-sub { display: none; }
-    .header-brand { gap: 8px; }
-    .brand-icon { width: 26px; height: 26px; font-size: 12px; border-radius: 6px; }
-    .header-actions { gap: 4px; }
-    #user-name { display: none; }
-    #profile-btn .profile-btn-label { display: none; }
-    #profile-btn { padding: 0; width: 30px; min-width: 30px; height: 30px; justify-content: center; border: none; background: transparent; }
     .btn-icon { width: 30px; height: 30px; font-size: 13px; }
     .btn-text-hd { height: 30px; padding: 0 10px; font-size: 11px; }
     .btn-logout { font-size: 11px; padding: 0 10px; }
 
     /* ── Shell: tight padding ── */
-    .dashboard-shell { padding: 0 12px 90px; }
-    .dashboard-top { padding: 14px 0 0; }
 
     /* ── Title: compact greeting + title ── */
-    .dashboard-title-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-    .dashboard-eyebrow { font-size: 9px; margin-bottom: 2px; letter-spacing: .1em; }
-    .dashboard-title-left h1 {
-        font-size: clamp(20px, 6vw, 26px);
-        letter-spacing: -.03em;
-    }
-
-    /* ── Period tabs: slim, no thick borders ── */
-    .dashboard-title-right { width: 100%; }
-    .period-bar { width: 100%; gap: 4px; }
-    .filter {
-        flex: 1;
-        height: 34px;
-        font-size: 12px;
-        font-weight: 600;
-        border-radius: 8px;
-        border: 1px solid var(--line);
-        text-align: center;
-        padding: 0 2px;
-    }
-    .filter.active {
-        background: var(--gold);
-        color: #0e0d0b;
-        border-color: var(--gold);
-    }
 
     /* ── Balance card: compact ── */
-    .dashboard-overview {
-        grid-template-columns: 1fr 1fr;
-        border-radius: 10px;
-        margin-top: 10px;
-    }
-    .balance-hero {
-        grid-column: 1 / -1;
-        padding: 14px 16px 12px;
-        border-bottom: 1px solid var(--line);
-        gap: 4px;
-    }
-    .balance-period-label { font-size: 9px; margin-bottom: 2px; letter-spacing: .1em; }
-    .balance-number { font-size: clamp(28px, 9vw, 38px); }
-    .balance-caption { font-size: 11px; margin-top: 2px; }
-    .overview-stat {
-        padding: 10px 14px;
-    }
-    .overview-stat > span { font-size: 9px; margin-bottom: 4px; }
-    .overview-stat strong { font-size: 15px; }
-    .income-stat { border-left: 0; }
-    .expense-stat { border-left: 1px solid var(--line); }
-    .balance-hero-actions { display: none; }
 
     /* ── Metrics strip: tighter ── */
-    .metrics-strip { border-radius: 8px; margin-top: 8px; }
-    .metric-item { padding: 8px 6px; gap: 2px; }
-    .metric-label { font-size: 9px; }
-    .metric-value { font-size: 12px; }
 
     /* ── Grid: single column ── */
-    .dashboard-grid { grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
-    .dashboard-support { grid-template-columns: 1fr; order: -1; }
 
     /* ── Ledger: clean & compact ── */
-    .ledger-card { padding: 12px 12px 0; border-radius: 10px; }
     .ledger-toolbar { gap: 8px; padding-bottom: 12px; }
     .ledger-eyebrow { font-size: 9px; margin-bottom: 2px; }
     .ledger-toolbar h2 { font-size: 15px; }
@@ -1090,10 +738,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .btn-export-mini svg { width: 12px; height: 12px; }
 
     /* ── Filter bar: compact controls ── */
-    .filter-bar { width: 100%; gap: 4px; }
-    .search-input { flex: 0 0 100%; width: 100%; height: 34px; font-size: 12px; padding: 0 10px; }
-    .category-filter, #status-filter { height: 34px; flex: 1 1 calc(50% - 2px); font-size: 11px; padding: 0 6px; }
-    #sort-select { height: 34px; flex: 1 1 100%; font-size: 11px; padding: 0 6px; }
 
     /* ── Transaction items: tighter ── */
     .item-desc { font-size: 13px; }
@@ -1112,24 +756,13 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .chart-canvas-wrap-category { height: 200px; }
 
     /* ── Mobile action bar: refined ── */
-    .action-bar-mobile {
-        display: flex;
-        padding: 8px 12px 18px;
-        gap: 8px;
-        box-shadow: 0 -2px 20px rgba(0,0,0,.4);
-    }
-    .action-bar-mobile .btn-add-action { flex: 1; height: 44px; font-size: 14px; border-radius: 10px; }
 
     /* ── Footer ── */
-    .app-footer { padding: 10px 0 6px; }
-    .app-footer p { font-size: 10px; }
 }
 
 /* ── Extra small screens ── */
 @media (max-width: 359px) {
     .item-actions { display: none !important; }
-    .dashboard-title-left h1 { font-size: 18px; }
-    .balance-number { font-size: 26px; }
 }
 
 /* ================================================
@@ -1137,34 +770,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
    A self-contained layout: desktop dialog and mobile sheet are deliberately
    different compositions so imported movements never compete for space.
    ================================================ */
-.gmail-modal-content {
-    width: min(640px, calc(100vw - 40px));
-    max-width: 640px;
-    max-height: min(760px, calc(100dvh - 48px));
-    padding: 26px;
-    overflow: hidden;
-    border-radius: 18px;
-}
-.gmail-modal-content .modal-handle { display: none; }
-.gmail-modal-header {
-    flex: 0 0 auto;
-    margin: 0 0 18px;
-    padding-bottom: 18px;
-    border-bottom: 1px solid var(--line);
-}
-.gmail-modal-header h3 { font-size: 19px; line-height: 1.2; }
-.gmail-modal-sub { max-width: 440px; line-height: 1.55; }
-.gmail-results-state {
-    min-height: 0;
-    flex: 1 1 auto;
-    gap: 14px;
-}
-.gmail-results-toolbar {
-    flex: 0 0 auto;
-    min-width: 0;
-    padding: 2px 0 0;
-}
-.gmail-results-summary { min-width: 0; display: grid; gap: 2px; }
 .gmail-results-kicker {
     color: var(--text-3);
     font-size: 10px;
@@ -1172,7 +777,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     letter-spacing: .11em;
     text-transform: uppercase;
 }
-.gmail-found-count { color: var(--text); font-size: 16px; line-height: 1.2; }
 .gmail-selection-summary {
     color: var(--gold);
     font-family: 'IBM Plex Mono', monospace;
@@ -1181,137 +785,17 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 }
 .gmail-select-btns { flex-shrink: 0; }
 .gmail-btn-sm { height: 30px; padding: 0 13px; }
-.gmail-tx-list {
-    min-height: 0;
-    max-height: none;
-    flex: 1 1 auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding: 1px 6px 1px 1px;
-    scrollbar-gutter: stable;
-}
-.gmail-tx-list::-webkit-scrollbar { width: 6px; }
-.gmail-tx-list::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 99px; }
-.gmail-tx-card {
-    display: grid;
-    grid-template-columns: 20px minmax(0, 1fr) max-content;
-    align-items: center;
-    gap: 12px;
-    min-height: 76px;
-    padding: 12px 14px;
-    overflow: hidden;
-    border-radius: 10px;
-}
-.gmail-tx-card:hover { border-color: var(--gold); background: var(--gold-faint); }
-.gmail-tx-card:has(.gmail-tx-check:checked) {
-    border-color: var(--gold);
-    background: var(--gold-faint);
-    box-shadow: inset 3px 0 0 var(--gold);
-}
-/* This deliberately wins over the generic modal input field styling. */
-.gmail-modal-content .gmail-tx-check {
-    appearance: auto;
-    width: 18px;
-    min-width: 18px;
-    height: 18px;
-    min-height: 18px;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 4px;
-    background: transparent;
-    accent-color: var(--gold);
-}
-.gmail-tx-body { min-width: 0; }
-.gmail-tx-header { gap: 7px; margin: 0 0 4px; }
 .gmail-tx-source { color: var(--text-2); }
-.gmail-tx-desc { font-size: 13px; font-weight: 650; line-height: 1.3; }
 .gmail-tx-date { margin-top: 3px; }
-.gmail-tx-amount { align-self: center; font-size: 14px; white-space: nowrap; }
-.gmail-actions-row {
-    flex: 0 0 auto;
-    justify-content: space-between;
-    padding: 16px 0 0;
-    margin-top: 2px;
-}
-.gmail-actions-row .gmail-btn-primary { width: auto; min-width: 218px; }
-.gmail-actions-row .gmail-btn-secondary { min-width: 108px; }
 
 @media (max-width: 599px) {
-    .modal:has(.gmail-modal-content) { align-items: flex-end; }
-    .gmail-modal-content {
-        width: 100%;
-        max-width: none;
-        max-height: min(92dvh, 760px);
-        padding: 14px 16px 16px;
-        border-radius: 20px 20px 0 0;
-    }
-    .gmail-modal-content .modal-handle {
-        display: block;
-        margin: 0 auto 14px;
-    }
-    .gmail-modal-header { margin-bottom: 14px; padding-bottom: 14px; }
-    .gmail-modal-header h3 { font-size: 16px; }
-    .gmail-modal-sub { font-size: 12px; }
     .gmail-close-btn { width: 32px; height: 32px; }
-    .gmail-results-state { gap: 12px; }
-    .gmail-results-toolbar {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) max-content;
-        align-items: end;
-        gap: 10px;
-    }
-    .gmail-found-count { font-size: 15px; }
     .gmail-select-btns { gap: 5px; }
     .gmail-btn-sm { height: 30px; padding: 0 10px; }
-    .gmail-tx-list { gap: 7px; padding-right: 4px; }
-    .gmail-tx-card {
-        grid-template-columns: 20px minmax(0, 1fr);
-        grid-template-rows: auto auto;
-        align-items: start;
-        min-height: 90px;
-        padding: 12px;
-        gap: 4px 10px;
-    }
-    .gmail-modal-content .gmail-tx-check { grid-row: 1 / span 2; margin-top: 4px; }
-    .gmail-tx-body { grid-column: 2; }
-    .gmail-tx-desc {
-        white-space: normal;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        overflow: hidden;
-    }
-    .gmail-tx-amount {
-        grid-column: 2;
-        justify-self: start;
-        padding-top: 2px;
-        font-size: 13px;
-    }
-    .gmail-actions-row { gap: 8px; padding-top: 12px; }
-    .gmail-actions-row .gmail-btn-secondary,
-    .gmail-actions-row .gmail-btn-primary {
-        min-width: 0;
-        height: 46px;
-        padding: 0 12px;
-    }
-    .gmail-actions-row .gmail-btn-secondary { flex: .75; }
-    .gmail-actions-row .gmail-btn-primary { flex: 1.55; }
 }
 
 /* Gestión de entidades manuales para el importador Gmail. */
-.profile-gmail-settings {
-    display: grid;
-    gap: 10px;
-    margin-top: 16px;
-    padding: 14px;
-    border: 1px solid var(--line);
-    border-radius: var(--r-sm);
-    background: var(--bg-3);
-}
 .profile-section-kicker { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.profile-gmail-settings h4 { margin: 4px 0 0; font-size: 14px; }
-.profile-gmail-settings p { margin: 6px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.45; }
 /* Botón Gestionar entidades — estilo explícito para funcionar fuera de .modal-buttons */
 #btn-gmail-entities {
     height: 36px; padding: 0 14px; border-radius: var(--r-sm);
@@ -1351,11 +835,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 }
 
 /* Mantener visibles y sin interacción las operaciones que requieren revisión. */
-.gmail-tx-card.gmail-tx-review:hover {
-    border-color: var(--line);
-    background: var(--bg-2);
-}
-.gmail-tx-card.is-review .gmail-tx-check { cursor: not-allowed; }
 
 /* Elección de fuentes y categoría antes de la importación. */
 .gmail-source-controls {
@@ -1399,31 +878,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     font-size: 11px;
     cursor: pointer;
 }
-.gmail-modal-content .gmail-source-check,
-.gmail-modal-content .gmail-remember-sources input {
-    appearance: auto;
-    width: 15px;
-    min-width: 15px;
-    height: 15px;
-    min-height: 15px;
-    margin: 0;
-    padding: 0;
-    accent-color: var(--gold);
-}
-
-/* ========================================================================
-   APP SHELL + BILLETERAS
-   Desktop and mobile are intentionally different compositions. The desktop
-   gets persistent navigation; mobile gets a compact bottom navigator.
-   ======================================================================== */
-.desktop-nav, .mobile-nav { display: none; }
 .app-view.hidden { display: none !important; }
-
-.wallets-shell {
-    width: min(1200px, 100%);
-    margin: 0 auto;
-    padding: 34px 32px 72px;
-}
 .wallets-page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 22px; }
 .wallets-page-heading h1 { margin: 0; font-size: clamp(28px, 3.5vw, 38px); letter-spacing: -.05em; }
 .wallets-page-heading > div > p:last-child { max-width: 560px; margin: 8px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.5; }
@@ -1435,8 +890,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .wallet-total-card { display: grid; align-content: center; min-height: 128px; padding: 24px 26px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(115deg, color-mix(in srgb, var(--gold) 20%, var(--bg-2)), var(--bg-2) 66%); }
 .wallet-total-card > span, .wallet-total-card small { color: var(--text-2); font-size: 12px; }
 .wallet-total-card > strong { margin: 6px 0; font-family: 'IBM Plex Mono', monospace; font-size: clamp(30px, 4vw, 46px); letter-spacing: -.06em; color: var(--text); }
-.wallets-layout { display: grid; grid-template-columns: minmax(280px, .9fr) minmax(0, 1.5fr); gap: 18px; margin-top: 18px; align-items: start; }
-.wallets-list-panel, .wallet-detail-panel { border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); }
+.wallets-list-panel { border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); }
 .wallets-list-panel { padding: 18px; }
 .wallets-panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .wallets-panel-heading h2 { margin: 0; font-size: 17px; letter-spacing: -.03em; }
@@ -1448,60 +902,12 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .wallet-list-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 800; }
 .wallet-color-gold { background: rgba(216,174,55,.18); color: var(--gold); }.wallet-color-green { background: rgba(34,197,94,.16); color: var(--income); }.wallet-color-blue { background: rgba(59,130,246,.16); color: #60a5fa; }.wallet-color-purple { background: rgba(168,85,247,.16); color: #c084fc; }
 .wallet-list-copy { display: grid; min-width: 0; gap: 2px; }.wallet-list-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }.wallet-list-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); font-size: 10px; }.wallet-list-amount { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; }
-.wallet-list-empty { display: grid; gap: 5px; padding: 22px 4px 10px; color: var(--text-3); font-size: 12px; line-height: 1.45; }.wallet-list-empty strong { color: var(--text-2); font-size: 13px; }
-.wallet-detail-panel { min-height: 354px; padding: 24px; }.wallet-detail-heading { display: grid; gap: 4px; }.wallet-detail-type { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }.wallet-detail-heading h2 { margin: 0; font-size: 23px; letter-spacing: -.04em; }.wallet-detail-heading p { margin: 0; color: var(--text-3); font-size: 12px; }.wallet-detail-balance { display: block; margin: 22px 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 34px; letter-spacing: -.06em; }.wallet-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }.wallet-detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0; }.wallet-detail-stats div { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg-3); }.wallet-detail-stats span { display: block; overflow: hidden; color: var(--text-3); font-size: 9px; font-weight: 700; letter-spacing: .07em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }.wallet-detail-stats strong { display: block; margin-top: 5px; overflow: hidden; font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.wallet-recent { padding-top: 16px; border-top: 1px solid var(--line); }.wallet-recent h3 { margin: 0 0 8px; font-size: 13px; }.wallet-recent-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }.wallet-recent-row span { display: grid; min-width: 0; gap: 2px; }.wallet-recent-row strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.wallet-recent-row small { color: var(--text-3); font-size: 10px; }.wallet-recent-row b { font-family: 'IBM Plex Mono', monospace; font-size: 12px; white-space: nowrap; }.wallet-recent-row b.income { color: var(--income); }.wallet-recent-row b.expense { color: var(--expense); }.wallet-no-movements { margin: 0; color: var(--text-3); font-size: 12px; }.wallet-management { display: flex; gap: 14px; margin-top: 18px; }.wallet-management button { padding: 0; border: 0; background: transparent; color: var(--text-3); font-size: 11px; cursor: pointer; }.wallet-management button:hover { color: var(--gold); }.wallet-detail-empty { min-height: 300px; display: grid; align-content: center; justify-items: center; text-align: center; color: var(--text-3); }.wallet-detail-empty > span { margin-bottom: 9px; color: var(--gold); font-size: 28px; }.wallet-detail-empty h2 { margin: 0; color: var(--text); font-size: 17px; }.wallet-detail-empty p { max-width: 250px; margin: 6px 0 0; font-size: 12px; line-height: 1.5; }
+.wallet-list-empty { display: grid; gap: 5px; padding: 22px 4px 10px; color: var(--text-3); font-size: 12px; line-height: 1.45; }.wallet-list-empty strong { color: var(--text-2); font-size: 13px; }.wallet-detail-heading { display: grid; gap: 4px; }.wallet-detail-type { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }.wallet-detail-heading h2 { margin: 0; font-size: 23px; letter-spacing: -.04em; }.wallet-detail-heading p { margin: 0; color: var(--text-3); font-size: 12px; }.wallet-detail-balance { display: block; margin: 22px 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 34px; letter-spacing: -.06em; }.wallet-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }.wallet-detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0; }.wallet-detail-stats div { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg-3); }.wallet-detail-stats span { display: block; overflow: hidden; color: var(--text-3); font-size: 9px; font-weight: 700; letter-spacing: .07em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }.wallet-detail-stats strong { display: block; margin-top: 5px; overflow: hidden; font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.wallet-recent { padding-top: 16px; border-top: 1px solid var(--line); }.wallet-recent h3 { margin: 0 0 8px; font-size: 13px; }.wallet-recent-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }.wallet-recent-row span { display: grid; min-width: 0; gap: 2px; }.wallet-recent-row strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.wallet-recent-row small { color: var(--text-3); font-size: 10px; }.wallet-recent-row b { font-family: 'IBM Plex Mono', monospace; font-size: 12px; white-space: nowrap; }.wallet-recent-row b.income { color: var(--income); }.wallet-recent-row b.expense { color: var(--expense); }.wallet-no-movements { margin: 0; color: var(--text-3); font-size: 12px; }.wallet-management { display: flex; gap: 14px; margin-top: 18px; }.wallet-management button { padding: 0; border: 0; background: transparent; color: var(--text-3); font-size: 11px; cursor: pointer; }.wallet-management button:hover { color: var(--gold); }
 .wallet-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.wallet-check { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; cursor: pointer; }.wallet-check input { width: 16px !important; height: 16px !important; padding: 0 !important; accent-color: var(--gold); }.transfer-note { margin: 0; color: var(--text-3); font-size: 11px; line-height: 1.45; }
 
-/* Gmail import card can now choose the destination account before saving. */
-.gmail-tx-card { grid-template-columns: 20px minmax(150px, 1fr) minmax(110px, .52fr) minmax(130px, .62fr) max-content; }
-.gmail-category-control, .gmail-account-control { display: grid; min-width: 0; gap: 4px; }.gmail-category-control span, .gmail-account-control span { color: var(--text-3); font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }.gmail-modal-content .gmail-category-control select, .gmail-modal-content .gmail-account-control select { width: 100%; height: 32px; min-height: 32px; padding: 0 8px; background: var(--bg-3); border: 1px solid var(--line); border-radius: 7px; color: var(--text); font-size: 11px; }.gmail-entity-form > label { display: grid; gap: 5px; color: var(--text-3); font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+/* Gmail import card can now choose the destination account before saving. */.gmail-entity-form > label { display: grid; gap: 5px; color: var(--text-3); font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 
-@media (min-width: 981px) {
-    #dashboard-page > header { padding-left: 262px; }
-    .desktop-nav { position: fixed; z-index: 190; top: 48px; bottom: 0; left: 0; width: 230px; display: flex; flex-direction: column; gap: 5px; padding: 22px 12px; border-right: 1px solid var(--line); background: var(--bg-2); }
-    .desktop-nav-brand { padding: 0 10px 12px; color: var(--text-3); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }.desktop-nav-new { height: 42px; margin: 0 0 14px; border: 0; border-radius: 9px; background: var(--income); color: #07150d; font-size: 13px; font-weight: 800; cursor: pointer; }.app-nav-link { min-height: 38px; display: flex; align-items: center; gap: 10px; width: 100%; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-2); font-size: 13px; text-align: left; cursor: pointer; }.app-nav-link > span { width: 16px; color: var(--text-3); text-align: center; }.app-nav-link:hover { color: var(--text); background: var(--bg-3); }.app-nav-link.active { border-color: rgba(34,197,94,.2); background: rgba(34,197,94,.12); color: var(--income); font-weight: 700; }.app-nav-link.active > span { color: var(--income); }
-    .dashboard-shell, .wallets-shell { width: calc(100% - 230px); max-width: 1430px; margin-left: 230px; margin-right: 0; }
-    .wallets-shell { padding-top: 38px; }
-}
-
-@media (max-width: 980px) {
-    .mobile-nav { position: fixed; z-index: 190; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(4, 1fr); min-height: 60px; padding: 5px max(12px, env(safe-area-inset-left)) max(5px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: color-mix(in srgb, var(--bg-2) 94%, transparent); backdrop-filter: blur(12px); }.mobile-nav .app-nav-link { min-height: 48px; flex-direction: column; justify-content: center; gap: 2px; padding: 3px; border: 0; border-radius: 8px; font-size: 16px; text-align: center; color: var(--text-3); }.mobile-nav .app-nav-link.active { background: rgba(34,197,94,.11); color: var(--income); }.mobile-nav .app-nav-link > span { width: auto; }.mobile-nav .app-nav-link small { color: inherit; font-size: 9px; font-weight: 650; }.wallets-shell { padding-bottom: 86px; }.dashboard-shell { padding-bottom: 86px; }
-}
-
-@media (max-width: 680px) {
-    .dashboard-shell { padding-bottom: 148px; }.action-bar-mobile { bottom: 60px; padding: 8px 12px; }.wallets-shell { padding: 18px 12px 82px; }.wallets-page-heading { align-items: flex-start; flex-direction: column; gap: 14px; margin-bottom: 16px; }.wallets-page-heading h1 { font-size: 26px; }.wallets-page-heading > div > p:last-child { font-size: 12px; }.wallets-page-heading .wallet-primary { width: 100%; }.wallet-total-card { min-height: 110px; padding: 18px; border-radius: 12px; }.wallet-total-card > strong { font-size: 30px; }.wallets-layout { grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }.wallets-list-panel, .wallet-detail-panel { border-radius: 12px; }.wallets-list-panel { padding: 14px; }.wallet-detail-panel { min-height: auto; padding: 18px 14px; }.wallet-detail-balance { font-size: 29px; margin: 17px 0 14px; }.wallet-detail-actions { display: grid; grid-template-columns: 1fr 1fr; }.wallet-detail-actions button:last-child { grid-column: 1 / -1; }.wallet-detail-stats { gap: 6px; margin: 15px 0; }.wallet-detail-stats div { padding: 8px; }.wallet-detail-stats span { font-size: 8px; }.wallet-detail-stats strong { font-size: 10px; }.wallet-form-grid { grid-template-columns: 1fr; }
-    .gmail-tx-card { grid-template-columns: 20px minmax(0, 1fr); grid-template-rows: auto auto auto auto; }.gmail-tx-body { grid-column: 2; }.gmail-category-control, .gmail-account-control { grid-column: 2; grid-template-columns: 75px minmax(0, 1fr); align-items: center; }.gmail-tx-amount { grid-column: 2; justify-self: start; }.gmail-category-control span, .gmail-account-control span { font-size: 9px; }
-}
-.gmail-tx-card {
-    grid-template-columns: 20px minmax(0, 1fr) minmax(122px, 142px) max-content;
-}
-.gmail-tx-card .gmail-tx-check { grid-column: 1; }
-.gmail-tx-card .gmail-tx-body { grid-column: 2; }
-.gmail-tx-card .gmail-tx-amount { grid-column: 4; }
-.gmail-category-control {
-    display: grid;
-    grid-column: 3;
-    gap: 4px;
-    min-width: 0;
-    color: var(--text-3);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-}
-.gmail-modal-content .gmail-tx-category {
-    width: 100%;
-    min-width: 0;
-    height: 32px;
-    margin: 0;
-    padding: 0 26px 0 9px;
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    background-color: var(--bg-3);
-    color: var(--text);
-    font-size: 11px;
-    font-weight: 650;
-    cursor: pointer;
+@media (max-width: 680px) {.wallets-page-heading { align-items: flex-start; flex-direction: column; gap: 14px; margin-bottom: 16px; }.wallets-page-heading h1 { font-size: 26px; }.wallets-page-heading > div > p:last-child { font-size: 12px; }.wallets-page-heading .wallet-primary { width: 100%; }.wallet-total-card { min-height: 110px; padding: 18px; border-radius: 12px; }.wallet-total-card > strong { font-size: 30px; }.wallets-list-panel { border-radius: 12px; }.wallets-list-panel { padding: 14px; }.wallet-detail-balance { font-size: 29px; margin: 17px 0 14px; }.wallet-detail-actions { display: grid; grid-template-columns: 1fr 1fr; }.wallet-detail-actions button:last-child { grid-column: 1 / -1; }.wallet-detail-stats { gap: 6px; margin: 15px 0; }.wallet-detail-stats div { padding: 8px; }.wallet-detail-stats span { font-size: 8px; }.wallet-detail-stats strong { font-size: 10px; }.wallet-form-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 599px) {
@@ -1510,21 +916,11 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .gmail-source-option { flex: 1 1 calc(50% - 3px); justify-content: space-between; min-width: 0; }
     .gmail-source-option > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .gmail-source-option small { display: none; }
-    .gmail-tx-card {
-        grid-template-columns: 20px minmax(0, 1fr);
-        grid-template-rows: auto auto auto;
-        min-height: 124px;
-    }
-    .gmail-modal-content .gmail-tx-check { grid-column: 1; grid-row: 1 / span 3; }
-    .gmail-tx-card .gmail-tx-body { grid-column: 2; grid-row: 1; }
-    .gmail-category-control { grid-column: 2; grid-row: 2; max-width: 170px; }
-    .gmail-tx-card .gmail-tx-amount { grid-column: 2; grid-row: 3; justify-self: start; }
 }
 
 /* ================================================
    EXPORTACIÓN TOOLBAR Y ZONA DE PELIGRO
    ================================================ */
-.dashboard-title-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 .ledger-title-group { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
 .ledger-export-quick { display: flex; align-items: center; gap: 6px; }
@@ -1541,7 +937,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .btn-export-mini.btn-export-pdf:hover { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.7); color: #ef4444; transform: translateY(-1px); }
 
 /* Profile button: icon + label on desktop, icon-only on mobile */
-#profile-btn { display: inline-flex; align-items: center; gap: 5px; }
 .profile-btn-icon { flex-shrink: 0; }
 
 /* Danger Zone in Profile Modal */
@@ -1584,104 +979,24 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 }
 .btn-danger-submit:hover:not(:disabled) { background: #dc2626; transform: translateY(-1px); }
 .btn-danger-submit:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-
-/* ================================================
-   FINTECH V2 — refined banking-inspired dashboard
-   Desktop is an analytical workspace; mobile is a focused daily control.
-   ================================================ */
-#dashboard-page {
-    background:
-        radial-gradient(circle at 8% -10%, rgba(212,168,67,.16), transparent 27rem),
-        radial-gradient(circle at 96% 12%, rgba(34,197,94,.09), transparent 23rem),
-        var(--bg);
-}
-#dashboard-page > header {
-    height: 64px; padding: 0 max(24px, calc((100vw - 1320px) / 2));
-    background: color-mix(in srgb, var(--bg) 84%, transparent);
-    backdrop-filter: blur(18px); border-bottom-color: color-mix(in srgb, var(--line) 72%, transparent);
-}
-.header-brand { gap: 12px; }
-.brand-icon { width: 36px; height: 36px; border-radius: 12px; box-shadow: 0 10px 24px rgba(212,168,67,.22); }
-#dashboard-page > header h2 { font-size: 16px; letter-spacing: -.04em; }
-.header-actions { gap: 8px; }
-.btn-gmail-hd, .btn-text-hd, .btn-icon {
+.btn-text-hd, .btn-icon {
     height: 36px; border-radius: 11px;
     border-color: color-mix(in srgb, var(--line-2) 70%, transparent);
     background: color-mix(in srgb, var(--bg-2) 72%, transparent);
 }
 .btn-icon { width: 36px; }
-.btn-gmail-hd { padding: 0 14px; }
-
-.dashboard-shell { max-width: 1320px; padding: 0 28px 72px; }
-.dashboard-top { padding-top: 38px; }
-.dashboard-title-row { margin-bottom: 26px; }
-.dashboard-title-left h1 { font-size: clamp(30px, 3.25vw, 46px); max-width: 12ch; }
-.dashboard-eyebrow { color: var(--gold); letter-spacing: .14em; }
-.period-bar {
-    gap: 3px; padding: 4px; border: 1px solid color-mix(in srgb, var(--line-2) 72%, transparent);
-    border-radius: 14px; background: color-mix(in srgb, var(--bg-2) 72%, transparent);
-}
-.filter { height: 36px; padding: 0 15px; border-radius: 10px; }
-.filter.active { box-shadow: 0 7px 18px rgba(212,168,67,.18); }
-
-.dashboard-overview {
-    grid-template-columns: minmax(0, 1.55fr) minmax(190px, .72fr) minmax(190px, .72fr);
-    gap: 14px; border: 0; border-radius: 0; background: transparent; overflow: visible;
-}
-.balance-hero {
-    position: relative; isolation: isolate; min-height: 244px; padding: 30px;
-    overflow: hidden; border: 1px solid rgba(246,220,143,.24); border-radius: 24px;
-    background: linear-gradient(135deg, #b88726 0%, #e5be58 49%, #f2d681 100%);
-    color: #191308; box-shadow: 0 22px 45px rgba(0,0,0,.18);
-}
-.balance-hero::before {
-    content: ''; position: absolute; z-index: -1; width: 240px; height: 240px; border-radius: 50%;
-    right: -82px; top: -96px; background: rgba(255,255,255,.23); filter: blur(2px);
-}
-.balance-hero::after {
-    content: ''; position: absolute; z-index: -1; width: 180px; height: 180px; border-radius: 50%;
-    left: 38%; bottom: -142px; background: rgba(89,55,5,.16);
-}
-.balance-period-label { color: rgba(25,19,8,.64); }
-.balance-number { color: #171106; font-size: clamp(34px, 4.1vw, 56px); }
-.balance-caption { color: rgba(25,19,8,.66); }
-.balance-hero-actions { margin-top: auto; }
-.btn-balance-action { height: 40px; border-radius: 12px; }
-.btn-balance-income { background: #181208; color: #f9e5a2; box-shadow: 0 8px 18px rgba(25,19,8,.18); }
-.btn-balance-income:hover { box-shadow: 0 11px 23px rgba(25,19,8,.23); }
-.btn-balance-expense { color: #2f220c; border-color: rgba(47,34,12,.4) !important; background: rgba(255,255,255,.2); }
-.btn-balance-expense:hover { background: #2f220c; border-color: #2f220c !important; }
-.overview-stat {
-    min-height: 244px; justify-content: flex-end; padding: 28px 24px;
-    border: 1px solid color-mix(in srgb, var(--line-2) 76%, transparent); border-radius: 24px;
-    background: color-mix(in srgb, var(--bg-2) 82%, transparent); backdrop-filter: blur(14px);
-}
-.overview-stat > span { margin-bottom: 10px; }
-.overview-stat strong { font-size: clamp(20px, 2vw, 28px); }
-.metrics-strip { gap: 12px; margin-top: 14px; border: 0; border-radius: 0; background: transparent; overflow: visible; }
-.metric-item {
-    align-items: flex-start; padding: 15px 17px; border: 1px solid color-mix(in srgb, var(--line-2) 68%, transparent);
-    border-radius: 16px; background: color-mix(in srgb, var(--bg-2) 72%, transparent); backdrop-filter: blur(12px);
-}
-.metric-item:last-child { border-right: 1px solid color-mix(in srgb, var(--line-2) 68%, transparent); }
-.metric-value { font-size: 15px; }
-
-.dashboard-grid { grid-template-columns: minmax(0, 1.48fr) minmax(320px, .84fr); gap: 18px; margin-top: 18px; }
-.ledger-card, .plan-section, .insights-section {
+.plan-section, .insights-section {
     border-color: color-mix(in srgb, var(--line-2) 72%, transparent);
     border-radius: 22px; background: color-mix(in srgb, var(--bg-2) 83%, transparent); backdrop-filter: blur(14px);
     box-shadow: 0 18px 42px rgba(0,0,0,.08);
 }
-.ledger-card { padding: 24px 26px 0; }
 .ledger-toolbar { gap: 15px; padding-bottom: 17px; }
 .ledger-toolbar h2, .plan-h2, .insights-h2 { font-size: 20px; }
-.search-input, .category-filter, #status-filter, #sort-select, .plan-input {
+.plan-input {
     height: 38px; border-radius: 11px; background: color-mix(in srgb, var(--bg-3) 78%, transparent);
 }
-.search-input { min-width: 200px; }
 .item { padding: 14px 2px; transition: background var(--t) var(--ease), padding var(--t) var(--ease); }
 .item:hover { margin: 0 -10px; padding-left: 12px; padding-right: 12px; border-radius: 13px; background: var(--bg-3); }
-.dashboard-support { gap: 18px; }
 .plan-section, .insights-section { padding: 24px; }
 .chart-block { padding-top: 16px; margin-top: 16px; }
 .chart-canvas-wrap { height: 205px; }
@@ -1689,60 +1004,18 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .budget-bar { height: 6px; border-radius: 99px; background: var(--bg-4); }
 .budget-bar-fill { border-radius: inherit; }
 .btn-save-plan { height: 44px; border-radius: 12px; box-shadow: 0 10px 18px rgba(212,168,67,.15); }
-.app-footer { padding: 20px 0 12px; }
-
-@media (max-width: 940px) {
-    #dashboard-page > header { padding: 0 20px; }
-    .dashboard-shell { padding-inline: 20px; }
-    .dashboard-overview { grid-template-columns: 1.35fr 1fr 1fr; }
-    .balance-hero, .overview-stat { min-height: 210px; }
-    .balance-hero { padding: 25px; }
-    .dashboard-grid { grid-template-columns: 1fr; }
-    .dashboard-support { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); position: static; }
-}
 
 @media (max-width: 680px) {
-    #dashboard-page > header { height: 56px; padding: 0 14px; background: color-mix(in srgb, var(--bg) 91%, transparent); }
-    .brand-icon { width: 32px; height: 32px; border-radius: 10px; }
-    #dashboard-page > header h2 { font-size: 14px; }
-    .btn-gmail-hd, .btn-icon, #profile-btn { width: 34px; height: 34px; border-radius: 10px; }
-    .btn-gmail-hd { padding: 0; justify-content: center; }
+    .btn-icon { width: 34px; height: 34px; border-radius: 10px; }
     .btn-logout { display: none; }
-    .dashboard-shell { padding: 0 14px 96px; }
-    .dashboard-top { padding-top: 24px; }
-    .dashboard-title-row { gap: 16px; margin-bottom: 18px; }
-    .dashboard-title-left h1 { font-size: clamp(29px, 9vw, 38px); max-width: 10ch; }
-    .period-bar { width: 100%; padding: 3px; border-radius: 13px; }
-    .filter { height: 38px; border: 0; border-radius: 10px; font-size: 12px; }
-    .dashboard-overview { grid-template-columns: 1fr 1fr; gap: 9px; }
-    .balance-hero { grid-column: 1 / -1; min-height: 225px; padding: 24px; border-radius: 22px; border-bottom: 1px solid rgba(246,220,143,.24); }
-    .balance-number { font-size: clamp(35px, 11vw, 46px); }
-    .balance-hero-actions { display: flex; }
-    .btn-balance-action { flex: 1; justify-content: center; height: 42px; }
-    .overview-stat { min-height: 116px; padding: 17px 15px; border-radius: 16px; }
-    .overview-stat strong { font-size: 18px; }
-    .metrics-strip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 9px; }
-    .metric-item { min-width: 0; padding: 12px 10px; border-radius: 14px; }
-    .metric-label { font-size: 8px; letter-spacing: .06em; }
-    .metric-value { max-width: 100%; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .dashboard-grid { margin-top: 12px; gap: 12px; }
-    .dashboard-support { grid-template-columns: 1fr; gap: 12px; }
-    .ledger-card, .plan-section, .insights-section { border-radius: 18px; }
-    .ledger-card { padding: 18px 16px 0; }
+    .plan-section, .insights-section { border-radius: 18px; }
     .ledger-toolbar { gap: 12px; }
     .ledger-toolbar h2, .plan-h2, .insights-h2 { font-size: 18px; }
-    .filter-bar { gap: 7px; }
-    .search-input, .category-filter, #status-filter, #sort-select { height: 40px; border-radius: 11px; }
     .item { padding: 13px 0; }
     .item:hover { margin: 0; padding-left: 0; padding-right: 0; background: transparent; }
     .plan-section, .insights-section { padding: 19px 17px; }
     .chart-canvas-wrap { height: 190px; }
     .chart-canvas-wrap-category { height: 214px; }
-    .action-bar-mobile {
-        padding: 9px 14px calc(12px + env(safe-area-inset-bottom));
-        background: color-mix(in srgb, var(--bg-2) 89%, transparent); backdrop-filter: blur(18px);
-    }
-    .action-bar-mobile .btn-add-action { height: 48px; border-radius: 14px; }
 }
 
 /* Shared public and access views: same visual language as the product. */
@@ -1786,12 +1059,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 /* Dashboard balance and profile ergonomics.
    Empty charts never reserve space, and account settings remain usable at any
    viewport height instead of being cut off below the fold. */
-.dashboard-support {
-    align-content: start;
-}
-.dashboard-support .plan-section {
-    order: -1;
-}
 .insights-section:not(.has-cashflow-data) .chart-block-cashflow,
 .insights-section:not(.has-category-data) .chart-block-category {
     display: none;
@@ -1826,12 +1093,10 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 #form-profile #profile-emergency-contact,
 #form-profile #profile-bio,
 #form-profile .account-meta,
-#form-profile .profile-gmail-settings,
 #form-profile .profile-danger-zone,
 #form-profile .modal-buttons {
     grid-column: 1 / -1;
 }
-#form-profile .profile-gmail-settings,
 #form-profile .profile-danger-zone {
     margin-top: 4px;
 }
@@ -1870,83 +1135,14 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
         flex-wrap: wrap;
     }
 }
-
-/* Dashboard V3 — one compact financial workspace, without decorative voids.
-   The transaction ledger is the primary task; the budget is adjacent context. */
-.dashboard-shell { max-width: 1240px; }
-.dashboard-top { padding-top: 30px; }
-.dashboard-title-row { align-items: center; margin-bottom: 18px; }
-.dashboard-title-left h1 { max-width: none; font-size: clamp(30px, 3vw, 40px); line-height: 1.05; }
-.dashboard-title-right { margin-left: auto; }
-.period-bar { box-shadow: none; }
-
-.dashboard-overview { grid-template-columns: minmax(0, 1.42fr) repeat(2, minmax(190px, .78fr)); gap: 12px; }
-.balance-hero, .overview-stat { min-height: 160px; border-radius: 18px; }
-.balance-hero { padding: 22px 24px; }
-.overview-stat { justify-content: center; align-items: flex-start; padding: 22px; }
-.overview-stat > span { margin-bottom: 8px; }
-.balance-hero-actions { margin-top: 10px; }
-.btn-balance-action { height: 38px; }
-.metrics-strip { margin-top: 12px; }
-#dashboard-page:not(.has-financial-data) .metrics-strip { display: none; }
-
-.dashboard-grid { grid-template-columns: minmax(0, 1.52fr) minmax(320px, .88fr); gap: 16px; margin-top: 16px; }
-.ledger-card { padding: 22px 24px 0; }
-.dashboard-support { gap: 16px; }
 .plan-section, .insights-section { padding: 22px; }
 .plan-input-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .plan-input-row .plan-input-wrap { min-width: 0; }
 
 #list, #list:has(> .empty) { min-height: 0; }
-.empty-state {
-    min-height: 238px;
-    display: grid;
-    place-items: center;
-    align-content: center;
-    gap: 10px;
-    padding: 30px 20px;
-    text-align: center;
-}
-.empty-state-icon {
-    width: 38px; height: 38px; display: grid; place-items: center;
-    border: 1px solid color-mix(in srgb, var(--gold) 54%, var(--line));
-    border-radius: 13px; background: var(--gold-faint); color: var(--gold);
-    font-size: 25px; font-weight: 500; line-height: 1;
-}
-.empty-state h3 { margin: 2px 0 0; color: var(--text); font-size: 16px; letter-spacing: -.02em; }
-.empty-state p { max-width: 42ch; margin: 0; color: var(--text-3); font-size: 12px; line-height: 1.55; }
-.empty-state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
-.empty-state-action {
-    height: 36px; padding: 0 12px; border-radius: 10px;
-    border: 1px solid var(--line-2); background: var(--bg-3); color: var(--text);
-    font-size: 12px; font-weight: 700; cursor: pointer;
-}
-.empty-state-income { border-color: rgba(34,197,94,.45); color: var(--income); }
-.empty-state-income:hover { background: rgba(34,197,94,.10); }
-.empty-state-expense { border-color: rgba(244,63,94,.4); color: var(--expense); }
-.empty-state-expense:hover { background: rgba(244,63,94,.10); }
-
-@media (max-width: 940px) {
-    .dashboard-title-left h1 { font-size: clamp(29px, 4.6vw, 38px); }
-    .dashboard-overview { grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(150px, .8fr)); }
-    .dashboard-grid { grid-template-columns: 1fr; }
-    .dashboard-support { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 
 @media (max-width: 680px) {
-    .dashboard-top { padding-top: 20px; }
-    .dashboard-title-row { align-items: flex-start; margin-bottom: 14px; }
-    .dashboard-title-left h1 { max-width: 12ch; font-size: clamp(27px, 8vw, 34px); }
-    .dashboard-title-right { width: 100%; margin-left: 0; }
-    .dashboard-overview { grid-template-columns: 1fr 1fr; gap: 9px; }
-    .balance-hero { min-height: 184px; padding: 20px; }
-    .overview-stat { min-height: 102px; padding: 16px; }
-    .overview-stat strong { font-size: 17px; }
-    .dashboard-support { grid-template-columns: 1fr; }
     .plan-input-row { grid-template-columns: 1fr; gap: 10px; }
-    .empty-state { min-height: 220px; padding-inline: 14px; }
-    .empty-state-actions { width: 100%; }
-    .empty-state-action { flex: 1; min-width: 0; padding-inline: 8px; }
 }
 
 /* Interaction and accessibility pass. These rules intentionally live beside
@@ -1962,9 +1158,8 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     white-space: nowrap;
     border: 0;
 }
-.balance-hero .balance-zero { color: rgba(25,19,8,.60); }
 .detail-btn { font-family: inherit; }
-.detail-btn svg, .empty-state-icon svg { display: block; }
+.detail-btn svg { display: block; }
 
 .category-buttons {
     display: grid;
@@ -2023,7 +1218,6 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 
 #form-profile .profile-session-action { display: none; }
 @media (max-width: 680px) {
-    .custom-range-panel { margin-top: 12px; padding: 16px; }
     .category-buttons { grid-template-columns: 1fr; }
     .category-option { justify-content: flex-start; padding-inline: 14px; }
     #form-profile .profile-session-action {
@@ -2036,327 +1230,30 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 }
 
 
-
 /* Gmail source policy: selecting sources for import is separate from limiting
    what Gmail is queried for. The latter is explicit and persists per user. */
-.gmail-reading-rule {
-    display: flex;
-    align-items: flex-start;
-    gap: 9px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(34,197,94,.18);
-    color: var(--text-2);
-    cursor: pointer;
-}
-.gmail-reading-rule input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--gold); }
-.gmail-reading-rule span { display: grid; gap: 3px; }
-.gmail-reading-rule strong { color: var(--text); font-size: 12px; }
-.gmail-reading-rule small { color: var(--text-3); font-size: 11px; line-height: 1.35; }
-
-/* ========================================================================
-   FINAL APP SHELL
-   A 768px+ viewport is a desktop/tablet workspace, never a stretched mobile
-   view. The earlier 980px cutoff created the white bottom navigation visible
-   in the previous release; these rules intentionally override it.
-   ======================================================================== */
 .wallet-color-red { background: rgba(244,63,94,.16); color: var(--expense); }
 
-@media (min-width: 768px) {
-    .desktop-nav {
-        position: fixed;
-        z-index: 260;
-        top: 48px;
-        bottom: 0;
-        left: 0;
-        width: 216px;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        padding: 20px 12px;
-        border-right: 1px solid var(--line);
-        background: var(--bg-2);
-    }
-    #dashboard-page > header { padding-left: 238px; }
-    .dashboard-shell,
-    .wallets-shell {
-        width: calc(100% - 216px);
-        max-width: 1260px;
-        margin-left: 216px;
-        margin-right: 0;
-    }
-    .mobile-nav { display: none !important; }
-    .action-bar-mobile { display: none !important; }
-
-    /* A sidebar is useful at this width; two compressed content columns are not. */
-    .dashboard-grid { grid-template-columns: 1fr; }
-    .dashboard-support { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dashboard-overview { grid-template-columns: minmax(280px, 1.25fr) repeat(2, minmax(170px, .8fr)); }
-}
-
-@media (min-width: 1120px) {
-    .dashboard-grid { grid-template-columns: minmax(0, 1.45fr) minmax(310px, .82fr); }
-    .dashboard-support { position: sticky; top: 72px; grid-template-columns: 1fr; }
-}
-
 @media (max-width: 767px) {
-    .desktop-nav { display: none !important; }
-    .mobile-nav {
-        position: fixed;
-        z-index: 260;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        display: grid !important;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        min-height: 64px;
-        padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
-        border-top: 1px solid var(--line);
-        background: var(--bg-2) !important;
-        box-shadow: 0 -10px 28px rgba(0,0,0,.28);
-    }
-    .mobile-nav .app-nav-link {
-        display: flex;
-        min-height: 48px;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-        padding: 3px;
-        border: 0 !important;
-        border-radius: 9px;
-        background: transparent !important;
-        color: var(--text-3) !important;
-        font-size: 15px;
-        text-align: center;
-    }
-    .mobile-nav .app-nav-link.active {
-        background: rgba(34,197,94,.12) !important;
-        color: var(--income) !important;
-    }
-    .mobile-nav .app-nav-link > span { width: auto; }
-    .mobile-nav .app-nav-link small { color: inherit; font-size: 9px; font-weight: 700; }
-    .dashboard-shell { padding: 0 14px 150px; }
-    .dashboard-top { padding-top: 18px; }
-    .dashboard-title-row { gap: 12px; margin-bottom: 14px; }
-    .dashboard-title-left h1 { font-size: clamp(28px, 9vw, 35px); }
-    .dashboard-overview { gap: 8px; border: 0; background: transparent; overflow: visible; }
-    .balance-hero { border: 1px solid rgba(212,168,67,.42); border-radius: 16px; }
-    .overview-stat { min-height: 96px; border: 1px solid var(--line); border-radius: 14px; }
-    .metrics-strip { margin-top: 8px; }
-    .dashboard-grid { gap: 12px; margin-top: 12px; }
-    .dashboard-support { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .action-bar-mobile { bottom: 64px; padding: 8px 14px; background: var(--bg-2); }
-    .wallets-shell { padding: 20px 14px 88px; }
     .wallets-page-heading { margin-bottom: 16px; }
-    .wallets-layout { grid-template-columns: 1fr; }
 }
 
 /* Gmail is a review flow, not a second dashboard. Keep its connected state
-   compact and make the next action unmistakable. */
-.gmail-modal-content { width: min(620px, calc(100vw - 40px)); max-width: 620px; padding: 26px; }
-.gmail-modal-header h3 { font-size: 20px; }.gmail-modal-sub { margin-top: 6px; color: var(--text-2); }
-.gmail-connected-box { gap: 14px; padding: 17px; border-color: rgba(34,197,94,.24); background: rgba(34,197,94,.055); }
-.gmail-connected-kicker { color: var(--income); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
-.gmail-connected-email { margin-top: -7px; font-size: 14px; }
-.gmail-days-row { display: grid; grid-template-columns: 115px minmax(0, 1fr); gap: 12px; align-items: center; }.gmail-days-row select { width: 100%; height: 40px; }
-.gmail-reading-rule { margin-top: 0; padding: 12px 0 0; }.gmail-reading-rule input:disabled { cursor: not-allowed; opacity: .45; }.gmail-reading-rule:has(input:disabled) { cursor: default; }.gmail-reading-rule strong { font-size: 13px; }.gmail-reading-rule small { max-width: 420px; }
-.gmail-known-sources { margin: -2px 0 0; color: var(--text-3); font-size: 11px; line-height: 1.45; }.gmail-known-sources strong { color: var(--text-2); }
-.gmail-consent-actions { align-items: center; justify-content: flex-end; }.gmail-consent-actions .gmail-btn-primary { order: 3; min-width: 196px; }.gmail-consent-actions .gmail-btn-sm { height: 36px; padding: 0 12px; }
-.gmail-entities-modal .gmail-modal-header { margin-bottom: 16px; }.gmail-entity-form { padding: 16px; }.gmail-entity-form > label { color: var(--text-2); }
-@media (max-width: 599px) {
-    .gmail-modal-content { width: 100%; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
-    .gmail-modal-header h3 { font-size: 18px; }
-    .gmail-days-row { grid-template-columns: 1fr; gap: 6px; }
-    .gmail-days-row select { height: 42px; }
-    .gmail-consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .gmail-consent-actions .gmail-btn-primary { grid-column: 1 / -1; grid-row: 1; width: 100%; min-width: 0; }
-    .gmail-consent-actions .gmail-btn-sm { width: 100%; }
-}
-
-/* ========================================================================
-   KONTEO WORKSPACE — final visual system
-   One deliberate application shell replaces the previous stack of dashboard
-   variants. PC and mobile share data, not layout.
-   ======================================================================== */
-#dashboard-page { background: var(--bg); }
-.desktop-nav-logo { display: none; }
+   compact and make the next action unmistakable. */.gmail-entity-form { padding: 16px; }.gmail-entity-form > label { color: var(--text-2); }
 
 @media (min-width: 768px) {
-    #dashboard-page > header {
-        position: fixed;
-        z-index: 350;
-        top: 0;
-        right: 0;
-        left: 232px;
-        width: auto;
-        height: 64px;
-        padding: 0 28px;
-        background: color-mix(in srgb, var(--bg) 94%, transparent);
-        backdrop-filter: blur(14px);
-    }
     /* En PC el header muestra solo nombre + tema + salir. Gmail y Perfil viven en el nav lateral. */
-    #dashboard-page > header .header-brand { display: none; }
-    #dashboard-page > header .header-actions { margin-left: auto; gap: 8px; }
-    #dashboard-page > header #btn-gmail-import { display: none; }
-    #user-name { color: var(--text-2); }
-    .desktop-nav {
-        z-index: 360;
-        top: 0;
-        width: 232px;
-        padding: 16px 12px;
-        background: #11100e;
-    }
-    .desktop-nav-logo {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-height: 48px;
-        margin: 0 6px 22px;
-    }
-    .desktop-nav-mark {
-        width: 34px;
-        height: 34px;
-        display: grid;
-        place-items: center;
-        border-radius: 10px;
-        background: var(--gold);
-        color: #1a1408;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 14px;
-        font-weight: 800;
-    }
-    .desktop-nav-logo strong { display: block; color: var(--text); font-size: 15px; letter-spacing: -.03em; }
-    .desktop-nav-logo small { display: block; margin-top: 1px; color: var(--text-3); font-size: 10px; }
-    .desktop-nav-new {
-        height: 44px;
-        margin: 0 0 18px;
-        border-radius: 10px;
-        background: var(--income);
-        color: #092311;
-        font-size: 13px;
-    }
-    .desktop-nav .app-nav-link {
-        min-height: 42px;
-        margin-bottom: 3px;
-        padding: 0 11px;
-        border-radius: 9px;
-        background: transparent;
-        color: var(--text-2);
-    }
-    .desktop-nav .app-nav-link:hover { background: var(--bg-3); color: var(--text); }
-    .desktop-nav .app-nav-link.active { background: rgba(34,197,94,.13); color: var(--income); }
-    .dashboard-shell,
-    .wallets-shell {
-        width: calc(100% - 232px);
-        max-width: 1440px;
-        margin-left: 232px;
-        padding-right: clamp(24px, 4vw, 56px);
-        padding-left: clamp(24px, 4vw, 56px);
-    }
-    .dashboard-shell { padding-top: 96px; }
-    .wallets-shell { padding-top: 104px; }
-    .dashboard-top { padding: 0; }
-    .dashboard-title-row { align-items: end; margin-bottom: 24px; }
-    .dashboard-title-left h1 { font-size: clamp(30px, 3vw, 42px); }
-    .dashboard-eyebrow { color: var(--gold); }
-    /* dashboard-title-right: flex column para period-bar + custom-range-panel */
-    .dashboard-title-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-    .dashboard-overview {
-        grid-template-columns: minmax(260px, 1.3fr) repeat(2, minmax(150px, .72fr));
-        gap: 12px;
-        border: 0;
-        background: transparent;
-        overflow: visible;
-    }
-    .balance-hero {
-        min-height: 176px;
-        padding: 24px 26px;
-        border: 0;
-        border-radius: 18px;
-        background: linear-gradient(135deg, #d0a33d, #e4bd5e);
-        color: #16120a;
-    }
-    .balance-hero .balance-period-label,
-    .balance-hero .balance-caption { color: rgba(22,18,10,.66); }
-    .balance-hero .balance-number { color: #171208; font-size: clamp(34px, 4vw, 48px); }
-    .balance-hero .btn-balance-income { background: #171208; color: #fff7df; }
-    .balance-hero .btn-balance-expense { border-color: rgba(23,18,8,.36) !important; color: #171208; }
-    .overview-stat {
-        min-height: 176px;
-        padding: 24px;
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        background: var(--bg-2);
-    }
-    .metrics-strip { margin-top: 12px; border-radius: 12px; }
-    .metric-item { min-height: 62px; align-items: flex-start; padding: 12px 16px; }
-    .dashboard-grid { gap: 16px; margin-top: 16px; }
-    .ledger-card,
     .plan-section,
     .insights-section { border-radius: 16px; box-shadow: none; }
-    .ledger-card { padding: 22px 24px 0; }
-    .dashboard-support { gap: 16px; }
     .wallets-page-heading { margin-bottom: 22px; }
     .wallet-total-card { min-height: 144px; border-radius: 18px; }
 }
 
-@media (min-width: 1180px) {
-    .dashboard-grid { grid-template-columns: minmax(0, 1.48fr) minmax(320px, .78fr); }
-    .dashboard-support { grid-template-columns: 1fr; }
-}
-
-@media (min-width: 768px) and (max-width: 1179px) {
-    .dashboard-grid { grid-template-columns: 1fr; }
-    .dashboard-support { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 767px) {
-    #dashboard-page > header {
-        position: sticky;
-        z-index: 240;
-        height: 58px;
-        padding: 0 14px;
-        background: var(--bg-2);
-    }
-    .header-brand { gap: 8px; }
-    .brand-icon { width: 30px; height: 30px; }
-    #dashboard-page > header h2 { font-size: 14px; }
-    .header-actions { gap: 5px; }
-    #user-name, #logout-btn { display: none; }
-    .btn-gmail-hd span { display: none; } /* Solo icono en mobile */
-    .btn-gmail-hd { width: 34px; padding: 0; justify-content: center; }
-    .dashboard-shell { padding: 20px 14px 152px; }
-    .dashboard-title-row { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 14px; }
-    .dashboard-title-left h1 { max-width: 11ch; font-size: clamp(28px, 8.5vw, 34px); line-height: 1.04; }
-    .dashboard-time { margin-top: 3px; }
-    /* Period tabs: full-width en mobile */
-    .dashboard-title-right { width: 100%; align-items: stretch; }
-    .period-bar { width: 100%; }
-    .period-bar .filter { flex: 1; height: 40px; border-radius: 10px; font-size: 12px; }
-    .dashboard-overview { grid-template-columns: 1fr 1fr; gap: 9px; border: 0; background: transparent; overflow: visible; }
-    .balance-hero { grid-column: 1 / -1; min-height: 176px; padding: 20px; border: 0; border-radius: 16px; background: linear-gradient(135deg, #d0a33d, #e4bd5e); color: #171208; }
-    .balance-hero .balance-period-label,
-    .balance-hero .balance-caption { color: rgba(22,18,10,.68); }
-    .balance-hero .balance-number { color: #171208; font-size: 37px; }
-    .balance-hero .btn-balance-income { background: #171208; color: #fff7df; }
-    .balance-hero .btn-balance-expense { color: #171208; border-color: rgba(23,18,8,.36) !important; }
-    .overview-stat { min-height: 102px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); }
-    .overview-stat strong { font-size: 16px; }
-    .metrics-strip { margin-top: 9px; border-radius: 12px; }
-    .metric-item { min-height: 58px; align-items: flex-start; padding: 9px; }
-    .metric-label { font-size: 8px; }.metric-value { font-size: 11px; }
-    .dashboard-grid { gap: 12px; margin-top: 12px; }
-    .ledger-card { padding: 16px 14px 0; border-radius: 14px; }
+@media (max-width: 767px) { /* Solo icono en mobile */
     .ledger-title-group { align-items: flex-start; }
-    .filter-bar { gap: 6px; }
-    .search-input { flex-basis: 100%; }
-    .dashboard-support { gap: 12px; }
     .plan-section, .insights-section { padding: 18px 14px; border-radius: 14px; }
-    .action-bar-mobile { bottom: 64px; padding: 8px 14px; border-top: 1px solid var(--line); background: var(--bg-2); }
-    .action-bar-mobile .btn-add-action { height: 46px; border-radius: 12px; }
-    .wallets-shell { padding: 22px 14px 88px; }
     .wallets-page-heading h1 { font-size: 29px; }
     .wallet-total-card { min-height: 118px; border-radius: 16px; }
-    .wallets-list-panel, .wallet-detail-panel { border-radius: 14px; }
+    .wallets-list-panel { border-radius: 14px; }
 }
 

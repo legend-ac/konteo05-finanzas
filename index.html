@@ -32,6 +32,7 @@
     <link rel="preconnect" href="https://www.googleapis.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/workspace.css">
     <style>
         /* Run before the stylesheet loads: authenticated users must never see
            the public home while Firebase restores their saved session. */
@@ -187,10 +188,6 @@
             </div>
             <div class="header-actions">
                 <span id="user-name"></span>
-                <button id="btn-gmail-import" class="btn-gmail-hd" type="button" title="Importar desde Gmail">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                    <span>Gmail</span>
-                </button>
                 <button id="theme-toggle-btn" class="btn-icon" aria-label="Cambiar tema">&#127769;</button>
                 <button id="logout-btn" class="btn-text-hd btn-logout" type="button">Salir</button>
             </div>
@@ -201,7 +198,7 @@
                 <span class="desktop-nav-mark" aria-hidden="true">K</span>
                 <div><strong>Konteo 05</strong><small>Finanzas personales</small></div>
             </div>
-            <button class="app-nav-link active" data-view="home" type="button">
+            <button class="app-nav-link active" aria-current="page" data-view="home" type="button">
                 <span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span>
                 Inicio
             </button>
@@ -228,14 +225,14 @@
                 <div class="dashboard-title-row">
                     <div class="dashboard-title-left">
                         <p class="dashboard-eyebrow"><span id="dashboard-greeting">Control financiero</span><span id="dashboard-time" class="dashboard-time"></span></p>
-                        <h1 id="dashboard-title">Lo que importa, primero.</h1>
+                        <h1 id="dashboard-title">Resumen</h1>
                     </div>
                     <div class="dashboard-title-right">
                         <div class="period-bar" role="group" aria-label="Seleccionar período">
                             <button class="filter active" data-filter="today" type="button" aria-pressed="true">Hoy</button>
-                            <button class="filter" data-filter="week" type="button" aria-pressed="false">Semana</button>
-                            <button class="filter" data-filter="month" type="button" aria-pressed="false">Mes</button>
-                            <button class="filter" data-filter="custom" type="button" aria-pressed="false">Rango</button>
+                            <button class="filter" data-filter="week" type="button" aria-pressed="false">7 días</button>
+                            <button class="filter" data-filter="month" type="button" aria-pressed="false">Este mes</button>
+                            <button class="filter" data-filter="custom" type="button" aria-pressed="false" aria-controls="custom-range-panel" aria-expanded="false">Fechas</button>
                         </div>
                         <div id="custom-range-panel" class="custom-range-panel hidden">
                             <div class="range-row">
@@ -257,7 +254,7 @@
                         <div class="balance-hero-content">
                             <p class="balance-period-label" id="balance-period-label">Hoy</p>
                             <div id="balance" class="balance-number balance-positive" aria-live="polite">S/ 0.00</div>
-                            <p class="balance-caption">Saldo del per&iacute;odo seleccionado</p>
+                            <p class="balance-caption">Ingresos menos gastos del período</p>
                         </div>
                         <div class="balance-hero-actions">
                             <button id="btn-income-d" class="btn-balance-action btn-balance-income btn-open-income" type="button">
@@ -284,7 +281,7 @@
                 <div class="metrics-strip" id="metrics-strip">
                     <div class="metric-item"><span class="metric-label">Tasa de ahorro</span><span class="metric-value" id="metric-savings">&mdash;</span></div>
                     <div class="metric-item"><span class="metric-label">Gasto diario</span><span class="metric-value" id="metric-daily-spend">&mdash;</span></div>
-                    <div class="metric-item"><span class="metric-label">Mayor gasto</span><span class="metric-value" id="metric-top-category">&mdash;</span></div>
+                    <div class="metric-item"><span class="metric-label">Categoría con más gasto</span><span class="metric-value" id="metric-top-category">&mdash;</span></div>
                 </div>
 
             </div><!-- /dashboard-top -->
@@ -313,7 +310,8 @@
                         </div>
                         <div class="filter-bar">
                             <input type="text" id="search-input" placeholder="Buscar movimiento…" class="search-input" aria-label="Buscar">
-                            <select id="category-filter" class="category-filter" aria-label="Filtrar">
+                            <details class="ledger-filters"><summary id="ledger-filter-label">Filtrar y ordenar</summary><div class="ledger-filter-fields">
+                            <select id="category-filter" class="category-filter" aria-label="Filtrar por categoría">
                                 <option value="all">Todas las categor&iacute;as</option>
                                 <option value="income">Ingresos</option>
                                 <option value="green">Fijo</option>
@@ -333,17 +331,42 @@
                                 <option value="amount_desc">Mayor monto</option>
                                 <option value="amount_asc">Menor monto</option>
                             </select>
+                            </div></details>
                         </div>
                     </div>
                     <div id="list" role="list"></div>
 
-                    <footer class="app-footer">
-                        <p><a href="/privacy.html">Privacidad</a> &middot; <a href="/terms.html">T&eacute;rminos</a> &middot; Konteo 05 &copy; 2026</p>
-                    </footer>
+
                 </section>
 
                 <!-- RIGHT: Plan + Charts -->
                 <aside class="dashboard-support">
+
+                    <div class="plan-section" id="plan-card">
+                        <p class="plan-eyebrow">Presupuesto</p>
+                        <h2 class="plan-h2">L&iacute;mite de gasto</h2>
+                        <p class="plan-toggle-status" id="strategy-status">Sin l&iacute;mite definido</p>
+                        <div class="budget-bar"><div class="budget-bar-fill" id="budget-progress-bar" style="width:0%"></div></div>
+                        <div class="plan-kpis">
+                            <div class="plan-kpi">
+                                <span class="plan-kpi-label" id="budget-status-label">Disponible</span>
+                                <strong class="plan-kpi-value" id="budget-status">&mdash;</strong>
+                            </div>
+                        </div>
+                        <div class="plan-body" id="plan-body">
+                            <div class="plan-input-row">
+                                <div class="plan-input-wrap">
+                                    <label class="plan-input-label" for="plan-expense-limit">L&iacute;mite del per&iacute;odo</label>
+                                    <input type="number" id="plan-expense-limit" placeholder="0.00" min="0" step="0.01" class="plan-input">
+                                </div>
+                                <div class="plan-input-wrap">
+                                    <label class="plan-input-label" for="plan-income-target">Ingreso objetivo</label>
+                                    <input type="number" id="plan-income-target" placeholder="0.00" min="0" step="0.01" class="plan-input">
+                                </div>
+                            </div>
+                            <button id="btn-save-plan" class="btn-save-plan" type="button">Guardar</button>
+                        </div>
+                    </div>
 
                     <section class="insights-section" aria-labelledby="insights-title">
                         <div class="insights-heading">
@@ -375,41 +398,11 @@
                         </div>
                     </section>
 
-                    <div class="plan-section" id="plan-card">
-                        <p class="plan-eyebrow">Presupuesto</p>
-                        <h2 class="plan-h2">L&iacute;mite de gasto</h2>
-                        <p class="plan-toggle-status" id="strategy-status">Sin l&iacute;mite definido</p>
-                        <div class="budget-bar"><div class="budget-bar-fill" id="budget-progress-bar" style="width:0%"></div></div>
-                        <div class="plan-kpis">
-                            <div class="plan-kpi">
-                                <span class="plan-kpi-label" id="budget-status-label">Disponible</span>
-                                <strong class="plan-kpi-value" id="budget-status">&mdash;</strong>
-                            </div>
-                        </div>
-                        <div class="plan-body" id="plan-body">
-                            <div class="plan-input-row">
-                                <div class="plan-input-wrap">
-                                    <label class="plan-input-label">L&iacute;mite del per&iacute;odo</label>
-                                    <input type="number" id="plan-expense-limit" placeholder="0.00" min="0" step="0.01" class="plan-input">
-                                </div>
-                                <div class="plan-input-wrap">
-                                    <label class="plan-input-label">Ingreso objetivo</label>
-                                    <input type="number" id="plan-income-target" placeholder="0.00" min="0" step="0.01" class="plan-input">
-                                </div>
-                            </div>
-                            <button id="btn-save-plan" class="btn-save-plan" type="button">Guardar</button>
-                        </div>
-                    </div>
-
                 </aside>
 
             </div><!-- /dashboard-grid -->
 
-        <!-- Mobile sticky action bar -->
-        <div class="action-bar-mobile">
-            <button id="btn-income" class="btn-add-action btn-add-income btn-open-income" type="button">+ Ingreso</button>
-            <button id="btn-expense" class="btn-add-action btn-add-expense btn-open-expense" type="button">&minus; Gasto</button>
-        </div>
+        <footer class="app-footer"><p><a href="/privacy.html">Privacidad</a> · <a href="/terms.html">Términos</a> · Konteo 05</p></footer>
 
         </div><!-- /dashboard-shell -->
         </section><!-- /home-view -->
@@ -420,7 +413,7 @@
                     <div>
                         <p class="dashboard-eyebrow">Organización</p>
                         <h1 id="wallets-title">Tus billeteras</h1>
-                        <p>Administra dónde está tu dinero. Gmail solo detecta; tus billeteras organizan.</p>
+                        <p>Consulta el saldo y los movimientos de cada cuenta.</p>
                     </div>
                     <button id="btn-new-wallet" class="wallet-primary" type="button">+ Agregar cuenta</button>
                 </div>
@@ -433,7 +426,7 @@
                     <section class="wallets-list-panel" aria-labelledby="wallets-list-title">
                         <div class="wallets-panel-heading">
                             <div><h2 id="wallets-list-title">Cuentas</h2><span id="wallets-count">0 cuentas activas</span></div>
-                            <button id="btn-wallet-transfer" class="wallet-secondary" type="button">Transferir</button>
+
                         </div>
                         <div id="wallets-list" class="wallets-list"></div>
                     </section>
@@ -443,7 +436,7 @@
         </section>
 
         <nav class="mobile-nav" aria-label="Navegación móvil">
-            <button class="app-nav-link active" data-view="home" type="button">
+            <button class="app-nav-link active" aria-current="page" data-view="home" type="button">
                 <span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span>
                 <small>Inicio</small>
             </button>
@@ -457,7 +450,7 @@
             </button>
             <button class="app-nav-link" data-action="profile" type="button">
                 <span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
-                <small>Más</small>
+                <small>Perfil</small>
             </button>
         </nav>
 
@@ -665,14 +658,6 @@
             <input type="tel"    id="profile-emergency-contact" placeholder="Contacto de emergencia"    maxlength="20">
             <textarea            id="profile-bio"              placeholder="Sobre m&iacute; (opcional)"         maxlength="240"></textarea>
             <p class="account-meta">Completitud: <strong id="profile-completion">0%</strong></p>
-            <section class="profile-gmail-settings" aria-labelledby="profile-gmail-title">
-                <div>
-                    <span class="profile-section-kicker">Importaci&oacute;n Gmail</span>
-                    <h4 id="profile-gmail-title">Remitentes de Gmail</h4>
-                    <p>Agrega correos oficiales, define su billetera y activa solo los que deseas revisar.</p>
-                </div>
-                <button type="button" id="btn-gmail-entities" class="cancel">Configurar remitentes</button>
-            </section>
             <section class="profile-danger-zone" aria-labelledby="profile-danger-title">
                 <div>
                     <span class="danger-kicker">Zona de peligro</span>
@@ -681,9 +666,11 @@
                 </div>
                 <button type="button" id="btn-open-delete-data" class="btn-danger-action">Borrar todos mis datos</button>
             </section>
-            <div class="modal-buttons">
+            <div class="profile-session-options">
                 <button type="button" id="btn-open-recovery" class="cancel">Recuperar contrase&ntilde;a</button>
                 <button type="button" id="btn-logout-profile" class="cancel profile-session-action">Salir de mi cuenta</button>
+            </div>
+            <div class="modal-buttons">
                 <button type="button" class="cancel" data-modal="modal-profile">Cancelar</button>
                 <button type="submit">Guardar</button>
             </div>

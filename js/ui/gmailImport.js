@@ -18,6 +18,7 @@ import { parseAllEmails } from '../services/gmailParser.js';
 import { db, firebase }   from '../firebase/config.js';
 import { saveIncome, saveExpense, getImportedGmailIds, getWallets } from '../services/dbService.js';
 import { businessDateToDate } from './helpers.js';
+import { openModal as openDialog, closeModal as closeDialog } from './modals.js';
 
 // ─────────────────────────────────────────────
 // ESTADO
@@ -84,25 +85,10 @@ function persistImportedId(id) {
 // HEADER BADGE: muestra Gmail conectado
 // ─────────────────────────────────────────────
 function renderHeaderBadge(email) {
-    const btn = document.getElementById('btn-gmail-import');
-    if (!btn) return;
-    if (email) {
-        btn.classList.add('gmail-connected');
-        btn.title = `Gmail conectado: ${email}`;
-        btn.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-            </svg>
-            <span>Gmail ✓</span>`;
-    } else {
-        btn.classList.remove('gmail-connected');
-        btn.title = 'Conectar Gmail para auto-importar movimientos';
-        btn.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-            </svg>
-            <span>Auto-importar</span>`;
-    }
+    document.querySelectorAll('.app-nav-link[data-action="gmail"]').forEach(button => {
+        button.classList.toggle('gmail-connected', Boolean(email));
+        button.title = email ? `Gmail conectado: ${email}` : 'Importar desde Gmail';
+    });
 }
 
 // ─────────────────────────────────────────────
@@ -150,7 +136,7 @@ function walletOptionsHtml(selected = '', includeEmpty = true) {
 function renderAccountControl(tx, idx) {
     if (tx.reviewOnly || !walletOptions.some(wallet => wallet.active !== false)) return '';
     const entity = entityForTransaction(tx);
-    const accountId = tx.accountId || entity?.defaultAccountId || '';
+    const accountId = tx.accountId ?? entity?.defaultAccountId ?? '';
     return `<label class="gmail-account-control" for="gmail-account-${idx}"><span>Billetera</span><select id="gmail-account-${idx}" class="gmail-tx-account" data-idx="${idx}">${walletOptionsHtml(accountId)}</select></label>`;
 }
 
@@ -178,7 +164,7 @@ function renderTxCard(tx, idx) {
     const reason    = isReview && tx.reviewReason ? `<div class="gmail-tx-reason">${escapeHtml(tx.reviewReason)}</div>` : '';
     return `
     <article class="gmail-tx-card ${typeClass}${isReview ? ' is-review' : ''}" data-idx="${idx}" data-source="${escapeHtml(tx.source)}">
-        <input type="checkbox" class="gmail-tx-check" data-idx="${idx}" ${checked} ${disabled}>
+        <input type="checkbox" class="gmail-tx-check" aria-label="Seleccionar ${escapeHtml(tx.description)}" data-idx="${idx}" ${checked} ${disabled}>
         <div class="gmail-tx-body">
             <div class="gmail-tx-header">
                 <span class="gmail-tx-source">${icon} ${escapeHtml(label)}</span>
@@ -188,8 +174,7 @@ function renderTxCard(tx, idx) {
             <div class="gmail-tx-date">${escapeHtml(tx.date)}</div>
             ${reason}
         </div>
-        ${renderCategoryControl(tx, idx)}
-        ${renderAccountControl(tx, idx)}
+        <div class="gmail-tx-fields">${renderCategoryControl(tx, idx)}${renderAccountControl(tx, idx)}</div>
         <div class="gmail-tx-amount ${typeClass}-amount">${sign} ${fmtAmt(tx.amount, tx.currency)}</div>
     </article>`;
 }
@@ -321,6 +306,8 @@ function buildModal() {
             <button id="gmail-modal-close" class="gmail-close-btn" aria-label="Cerrar">✕</button>
         </div>
 
+        <div class="gmail-settings-link"><button id="gmail-btn-manage-entities" class="gmail-btn-sm" type="button">Configurar remitentes</button></div>
+
         <!-- Estado 1: Consentimiento (pantalla inicial) -->
         <div id="gmail-state-consent" class="gmail-state">
             <div class="gmail-consent-box">
@@ -366,7 +353,10 @@ function buildModal() {
                     <span class="gmail-dot"></span>
                     <span id="gmail-email-display">Cargando…</span>
                 </div>
-                <div class="gmail-days-row" style="margin-top:12px">
+                <button id="gmail-btn-disconnect" class="gmail-disconnect" type="button">Desconectar cuenta</button>
+            </div>
+            <div class="gmail-search-settings">
+                <div class="gmail-days-row">
                     <label for="gmail-days-select2">Período a revisar:</label>
                     <select id="gmail-days-select2">
                         <option value="7">7 días</option>
@@ -377,14 +367,13 @@ function buildModal() {
                 </div>
                 <label class="gmail-reading-rule">
                     <input id="gmail-only-configured-entities" type="checkbox">
-                    <span><strong>Usar solo mis remitentes configurados</strong><small id="gmail-reading-rule-summary"></small></span>
+                    <span><strong>Buscar solo en mis remitentes activos</strong><small id="gmail-reading-rule-summary"></small></span>
                 </label>
                 <p class="gmail-known-sources"><strong>Fuentes reconocidas:</strong> Yape, Plin, BCP, Interbank, BBVA y Scotiabank.</p>
             </div>
             <div class="gmail-consent-actions">
                 <button id="gmail-btn-sync" class="gmail-btn-primary">Revisar correos</button>
-                <button id="gmail-btn-manage-entities" class="gmail-btn-sm" type="button">Configurar remitentes</button>
-                <button id="gmail-btn-disconnect" class="gmail-btn-sm gmail-btn-danger">Desconectar</button>
+
             </div>
         </div>
 
@@ -472,6 +461,7 @@ function normalizeEntitySender(value) {
 }
 
 function renderEntitiesList() {
+    renderReadingRule();
     const list = document.getElementById('gmail-entities-list');
     if (!list) return;
     const entities = getCustomEntities();
@@ -553,34 +543,39 @@ function openEntitiesModal() {
     const modal = document.getElementById('modal-gmail-entities');
     if (!modal) return;
     renderEntitiesList();
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    openDialog('modal-gmail-entities');
 }
 
 function closeEntitiesModal() {
-    const modal = document.getElementById('modal-gmail-entities');
-    if (modal) modal.classList.add('hidden');
-    const importModal = document.getElementById('modal-gmail-import');
-    if (importModal?.classList.contains('hidden')) document.body.style.overflow = '';
+    closeDialog('modal-gmail-entities');
+    renderReadingRule();
 }
 
 // ─────────────────────────────────────────────
 // NAVEGACIÓN DE ESTADOS
 // ─────────────────────────────────────────────
 function showState(name) {
+    document.getElementById('modal-gmail-import').dataset.state = name;
     ['consent','connected','loading','results','success','error'].forEach(s => {
         const el = document.getElementById(`gmail-state-${s}`);
         if (el) el.classList.toggle('hidden', s !== name);
     });
 }
 
-function openModal()  {
-    const m = document.getElementById('modal-gmail-import');
-    if (m) { m.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-}
-function closeModal() {
-    const m = document.getElementById('modal-gmail-import');
-    if (m) { m.classList.add('hidden'); document.body.style.overflow = ''; }
+function openModal() { openDialog('modal-gmail-import'); }
+function closeModal() { closeDialog('modal-gmail-import'); }
+
+export async function openGmailImport() {
+    if (!currentUid || !document.getElementById('modal-gmail-import')) return;
+    showState(gmailPreference?.enabled ? 'connected' : 'consent');
+    const email = document.getElementById('gmail-email-display');
+    email.textContent = gmailPreference?.email || getConnectedEmail() || 'Cuenta vinculada';
+    renderReadingRule();
+    openModal();
+    // Refresh wallet choices without delaying the dialog or silently resetting a search.
+    const uid = currentUid;
+    const wallets = await getWallets(uid).catch(() => null);
+    if (uid === currentUid && wallets) walletOptions = wallets;
 }
 
 // ─────────────────────────────────────────────
@@ -705,6 +700,9 @@ function updateImportBtn() {
 }
 
 async function doImport() {
+    const modal = document.getElementById('modal-gmail-import');
+    if (modal.dataset.saving === 'true' || !selectedIds.size) return;
+    modal.dataset.saving = 'true';
     showState('loading');
     document.getElementById('gmail-loading-msg').textContent = 'Guardando movimientos en tu cuenta…';
 
@@ -723,7 +721,7 @@ async function doImport() {
                 occurredAt, actorUid: currentUid, status: 'completed',
                 source: `gmail:${tx.source}`, gmailId: tx.gmailId,
                 counterparty: tx.description,
-                accountId: tx.accountId || entityForTransaction(tx)?.defaultAccountId || ''
+                accountId: tx.accountId ?? entityForTransaction(tx)?.defaultAccountId ?? ''
             };
 
             const docId = `gmail_${tx.gmailId}`;
@@ -749,6 +747,7 @@ async function doImport() {
         fail > 0 ? `${fail} no pudieron guardarse — intenta de nuevo.` : '',
     ].filter(Boolean).join(' ');
 
+    modal.dataset.saving = 'false';
     showState('success');
 }
 
@@ -762,23 +761,18 @@ function handleError(err) {
 // ─────────────────────────────────────────────
 // LISTENERS
 // ─────────────────────────────────────────────
-function wireListeners(pref) {
+function wireListeners() {
     const modal = document.getElementById('modal-gmail-import');
     if (!modal) return;
-    const entitiesModal = document.getElementById('modal-gmail-entities');
+
 
     // Cerrar
     document.getElementById('gmail-modal-close')?.addEventListener('click', closeModal);
-    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
 
     // Entidades manuales: se guardan en el perfil del usuario y se usan en la próxima búsqueda.
     document.getElementById('gmail-entities-close')?.addEventListener('click', closeEntitiesModal);
-    entitiesModal?.addEventListener('click', e => { if (e.target === entitiesModal) closeEntitiesModal(); });
-    document.getElementById('btn-gmail-entities')?.addEventListener('click', async () => {
-        await getGmailPref();
-        document.getElementById('modal-profile')?.classList.add('hidden');
-        openEntitiesModal();
-    });
+
     document.getElementById('gmail-btn-manage-entities')?.addEventListener('click', async () => {
         await getGmailPref();
         openEntitiesModal();
@@ -918,12 +912,12 @@ function wireListeners(pref) {
 
     // Volver desde resultados
     document.getElementById('gmail-btn-back')?.addEventListener('click', () => {
-        showState(pref?.enabled ? 'connected' : 'consent');
+        showState(gmailPreference?.enabled ? 'connected' : 'consent');
     });
 
     // Reintentar error
     document.getElementById('gmail-btn-retry')?.addEventListener('click', () => {
-        showState(pref?.enabled ? 'connected' : 'consent');
+        showState(gmailPreference?.enabled ? 'connected' : 'consent');
     });
     document.getElementById('gmail-btn-err-close')?.addEventListener('click', closeModal);
 
@@ -933,19 +927,7 @@ function wireListeners(pref) {
         window.dispatchEvent(new CustomEvent('konteo:refresh'));
     });
 
-    // Botón header
-    document.getElementById('btn-gmail-import')?.addEventListener('click', async () => {
-        const fresh = await getGmailPref();
-        if (fresh?.enabled && fresh?.email) {
-            const emailEl = document.getElementById('gmail-email-display');
-            if (emailEl) emailEl.textContent = fresh.email;
-            showState('connected');
-            renderReadingRule();
-        } else {
-            showState('consent');
-        }
-        openModal();
-    });
+
 }
 
 
@@ -961,7 +943,7 @@ export async function initGmailImport(uid) {
 
     buildModal();
     buildEntitiesModal();
-    wireListeners(pref);
+    wireListeners();
 
     // Actualizar badge del header
     renderHeaderBadge(pref?.enabled ? pref.email : null);
