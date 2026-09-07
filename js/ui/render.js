@@ -125,14 +125,16 @@ export function renderTransactionList(listEl, filtered) {
     if (!filtered.length) {
         const p = document.createElement('section');
         p.className = 'empty empty-state';
+        p.style.marginTop = '32px';
         p.textContent = '';
         const icon = document.createElement('span');
         icon.className = 'empty-state-icon';
         icon.setAttribute('aria-hidden', 'true');
+        // #7 — Billetera vacía: más semántico que recibo con rayas
         icon.appendChild(makeLineIcon([
-            'M5 3h14a2 2 0 0 1 2 2v16l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2Z',
-            'M8 8h8',
-            'M8 12h8'
+            'M21 7H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1z',
+            'M2 11h20',
+            'M16 15h2'
         ]));
         const title = document.createElement('h3');
         title.textContent = 'Empieza con tu primer movimiento';
@@ -140,14 +142,15 @@ export function renderTransactionList(listEl, filtered) {
         copy.textContent = 'Registra un ingreso o gasto para convertir este panel en tu historial financiero.';
         const actions = document.createElement('div');
         actions.className = 'empty-state-actions';
+        // #1 — Mismo texto y clases que la tarjeta de saldo
         const income = document.createElement('button');
         income.type = 'button';
-        income.className = 'empty-state-action empty-state-income btn-open-income';
-        income.textContent = '+ Registrar ingreso';
+        income.className = 'btn-balance-action btn-balance-income btn-open-income';
+        income.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>+ Ingreso</span>`;
         const expense = document.createElement('button');
         expense.type = 'button';
-        expense.className = 'empty-state-action empty-state-expense btn-open-expense';
-        expense.textContent = '− Registrar gasto';
+        expense.className = 'btn-balance-action btn-balance-expense btn-open-expense';
+        expense.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg><span>− Gasto</span>`;
         actions.append(income, expense);
         p.append(icon, title, copy, actions);
         listEl.appendChild(p);

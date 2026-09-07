@@ -316,20 +316,21 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     margin-right: 4px;
 }
+/* #6 — Header buttons: height/radius/border unified */
 .btn-icon {
     width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-    border: 1px solid var(--line); border-radius: var(--r-sm); background: transparent;
+    border: 1px solid var(--line-2); border-radius: 8px; background: transparent;
     cursor: pointer; font-size: 14px; color: var(--text-2);
     transition: all var(--t) var(--ease);
 }
-.btn-icon:hover { background: var(--bg-3); color: var(--text); border-color: var(--line-2); }
+.btn-icon:hover { background: var(--bg-3); color: var(--text); border-color: var(--text-3); }
 .btn-text-hd {
-    height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-sm);
+    height: 32px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px;
     background: transparent; cursor: pointer; font-size: 12px; font-weight: 500;
     color: var(--text-2); transition: all var(--t) var(--ease); white-space: nowrap;
 }
 .btn-text-hd:hover { background: var(--bg-3); color: var(--text); }
-.btn-logout { border-color: var(--expense) !important; color: var(--expense) !important; }
+.btn-logout { border-color: rgba(244,63,94,.45) !important; color: var(--expense) !important; }
 .btn-logout:hover { background: var(--expense) !important; color: #fff !important; }
 
 /* Header CTA buttons — income & expense */
@@ -524,6 +525,11 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .balance-period-label {
     font-size: 10px; font-weight: 700; letter-spacing: .12em;
     text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
+    transition: all .15s ease;
+}
+/* #9 — Ocultar label redundante cuando el periodo es "Hoy" */
+.balance-period-label.period-label-today {
+    display: none;
 }
 .balance-number {
     font-family: 'IBM Plex Mono', monospace;
@@ -627,17 +633,24 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .ledger-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
 .ledger-toolbar h2 { font-size: 18px; font-weight: 650; letter-spacing: -.03em; margin: 0; color: var(--text); line-height: 1; }
 .transactions-count { margin-left: 5px; color: var(--text-3); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; }
-.filter-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* #5 — Filter bar: 4 equal columns on desktop */
+.filter-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    align-items: center;
+    width: 100%;
+}
 .search-input {
-    flex: 1; min-width: 120px; height: 34px; padding: 0 12px;
+    height: 34px; padding: 0 12px;
     background: var(--bg-3); border: 1px solid var(--line);
     border-radius: var(--r-sm); color: var(--text); font-size: 12px;
-    outline: none; transition: border-color var(--t) var(--ease);
+    outline: none; transition: border-color var(--t) var(--ease); width: 100%;
 }
 .search-input::placeholder { color: var(--text-3); }
 .search-input:focus { border-color: var(--gold); }
 .category-filter, #status-filter, #sort-select {
-    height: 34px; padding: 0 8px;
+    height: 34px; padding: 0 8px; width: 100%;
     background: var(--bg-3); border: 1px solid var(--line);
     border-radius: var(--r-sm); color: var(--text);
     font-size: 11px; outline: none; cursor: pointer;
@@ -714,8 +727,8 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 
 
 
-/* Footer */
-.app-footer { padding: 14px 0 8px; }
+/* Footer — #8 extra top spacing */
+.app-footer { padding: 48px 0 8px; margin-top: 12px; }
 .app-footer p { font-size: 11px; color: var(--text-3); text-align: center; }
 .app-footer a { color: var(--text-3); text-decoration: none; }
 .app-footer a:hover { color: var(--text-2); }
@@ -1089,11 +1102,13 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .btn-export-mini { height: 26px; padding: 0 8px; font-size: 10px; }
     .btn-export-mini svg { width: 12px; height: 12px; }
 
-    /* ── Filter bar: compact controls ── */
-    .filter-bar { width: 100%; gap: 4px; }
-    .search-input { flex: 0 0 100%; width: 100%; height: 34px; font-size: 12px; padding: 0 10px; }
-    .category-filter, #status-filter { height: 34px; flex: 1 1 calc(50% - 2px); font-size: 11px; padding: 0 6px; }
-    #sort-select { height: 34px; flex: 1 1 100%; font-size: 11px; padding: 0 6px; }
+    /* ── Filter bar: 2×2 grid on mobile, search spans full row ── */
+    .filter-bar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 5px;
+    }
+    .search-input { grid-column: 1 / -1; height: 36px; font-size: 12px; padding: 0 10px; }
+    .category-filter, #status-filter, #sort-select { height: 34px; font-size: 11px; padding: 0 6px; }
 
     /* ── Transaction items: tighter ── */
     .item-desc { font-size: 13px; }
@@ -1459,7 +1474,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 @media (min-width: 981px) {
     #dashboard-page > header { padding-left: 262px; }
     .desktop-nav { position: fixed; z-index: 190; top: 48px; bottom: 0; left: 0; width: 230px; display: flex; flex-direction: column; gap: 5px; padding: 22px 12px; border-right: 1px solid var(--line); background: var(--bg-2); }
-    .desktop-nav-brand { padding: 0 10px 12px; color: var(--text-3); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }.desktop-nav-new { height: 42px; margin: 0 0 14px; border: 0; border-radius: 9px; background: var(--income); color: #07150d; font-size: 13px; font-weight: 800; cursor: pointer; }.app-nav-link { min-height: 38px; display: flex; align-items: center; gap: 10px; width: 100%; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-2); font-size: 13px; text-align: left; cursor: pointer; }.app-nav-link > span { width: 16px; color: var(--text-3); text-align: center; }.app-nav-link:hover { color: var(--text); background: var(--bg-3); }.app-nav-link.active { border-color: rgba(34,197,94,.2); background: rgba(34,197,94,.12); color: var(--income); font-weight: 700; }.app-nav-link.active > span { color: var(--income); }
+    .desktop-nav-brand { padding: 0 10px 12px; color: var(--text-3); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }.desktop-nav-new { height: 42px; margin: 0 0 14px; border: 0; border-radius: 9px; background: var(--income); color: #07150d; font-size: 13px; font-weight: 800; cursor: pointer; }.app-nav-link { min-height: 38px; display: flex; align-items: center; gap: 10px; width: 100%; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-2); font-size: 13px; text-align: left; cursor: pointer; }.app-nav-link > span { width: 16px; color: var(--text-3); text-align: center; }.app-nav-link:hover { color: var(--text); background: var(--bg-3); }.app-nav-link.active { border-color: rgba(212,168,67,.25); background: var(--gold-faint); color: var(--gold); font-weight: 700; }.app-nav-link.active > span { color: var(--gold); }
     .dashboard-shell, .wallets-shell { width: calc(100% - 230px); max-width: 1430px; margin-left: 230px; margin-right: 0; }
     .wallets-shell { padding-top: 38px; }
 }
@@ -1535,10 +1550,11 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     border: 1px solid var(--line-2); background: var(--bg-3);
     color: var(--text); transition: all var(--t) var(--ease);
 }
-.btn-export-mini.btn-export-excel { border-color: rgba(34,197,94,.35); color: rgba(34,197,94,.9); }
-.btn-export-mini.btn-export-excel:hover { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.7); color: #22c55e; transform: translateY(-1px); }
-.btn-export-mini.btn-export-pdf { border-color: rgba(239,68,68,.35); color: rgba(239,68,68,.9); }
-.btn-export-mini.btn-export-pdf:hover { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.7); color: #ef4444; transform: translateY(-1px); }
+/* #3 — Export buttons: neutral blue instead of income/expense colors */
+.btn-export-mini.btn-export-excel { border-color: rgba(59,130,246,.4); color: rgba(59,130,246,.9); }
+.btn-export-mini.btn-export-excel:hover { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.7); color: #3b82f6; transform: translateY(-1px); }
+.btn-export-mini.btn-export-pdf { border-color: rgba(99,102,241,.4); color: rgba(99,102,241,.9); }
+.btn-export-mini.btn-export-pdf:hover { background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.7); color: #6366f1; transform: translateY(-1px); }
 
 /* Profile button: icon + label on desktop, icon-only on mobile */
 #profile-btn { display: inline-flex; align-items: center; gap: 5px; }
@@ -2130,8 +2146,8 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
         text-align: center;
     }
     .mobile-nav .app-nav-link.active {
-        background: rgba(34,197,94,.12) !important;
-        color: var(--income) !important;
+        background: var(--gold-faint) !important;
+        color: var(--gold) !important;
     }
     .mobile-nav .app-nav-link > span { width: auto; }
     .mobile-nav .app-nav-link small { color: inherit; font-size: 9px; font-weight: 700; }
@@ -2244,7 +2260,8 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
         color: var(--text-2);
     }
     .desktop-nav .app-nav-link:hover { background: var(--bg-3); color: var(--text); }
-    .desktop-nav .app-nav-link.active { background: rgba(34,197,94,.13); color: var(--income); }
+    .desktop-nav .app-nav-link.active { background: var(--gold-faint); color: var(--gold); font-weight: 700; }
+    .desktop-nav .app-nav-link.active > span { color: var(--gold); }
     .dashboard-shell,
     .wallets-shell {
         width: calc(100% - 232px);

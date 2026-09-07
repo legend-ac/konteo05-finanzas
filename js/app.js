@@ -14,6 +14,7 @@ import { renderTransactionList }  from './ui/render.js';
 import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
 import * as dbService             from './services/dbService.js';
+import { isPosted, sumAmounts, summarizeCashflow } from './services/financialMath.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
 import { initGmailImport, clearGmailImportCache } from './ui/gmailImport.js';
 
@@ -33,6 +34,7 @@ function applyTheme(theme) {
     if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
 }
 
+let chartSnapshot = null;
 function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme') || 'dark';
     const next    = current === 'dark' ? 'light' : 'dark';
@@ -40,7 +42,7 @@ function toggleTheme() {
     applyTheme(next);
     // Chart.js resolves colors on render, so redraw the current dashboard after
     // a theme change instead of leaving stale canvas colors behind.
-    window.dispatchEvent(new CustomEvent('konteo:refresh'));
+    if (chartSnapshot) renderCharts(chartSnapshot);
 }
 
 // ──────────────────────────────────────────────
@@ -51,17 +53,20 @@ window.addEventListener('offline', () => { state.isOnline = false; });
 
 // ──────────────────────────────────────────────
 // PERIOD LABEL
-// ──────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PERIOD_LABELS = {
     today:  'Hoy',
-    week:   'Últimos 7 días',
+    week:   '\u00daltimos 7 d\u00edas',
     month:  'Este mes',
     custom: 'Rango personalizado'
 };
 
 function updatePeriodLabel() {
     const el = document.getElementById('balance-period-label');
-    if (el) el.textContent = PERIOD_LABELS[state.currentFilter] || 'Balance';
+    if (!el) return;
+    const isToday = state.currentFilter === 'today';
+    el.textContent = PERIOD_LABELS[state.currentFilter] || 'Balance';
+    el.classList.toggle('period-label-today', isToday);
 }
 
 function updateDashboardTime() {
@@ -282,11 +287,7 @@ async function loadData() {
 
         // Transfers only redistribute money between wallets. They must never
         // make the global dashboard claim there was an income or an expense.
-        const realIncomeItems = incomeItems.filter(item => !item.isTransfer && item.operationType !== 'transfer_in');
-        const realExpenseItems = expenseItems.filter(item => !item.isTransfer && item.operationType !== 'transfer_out');
-        const totalIncome   = realIncomeItems .reduce((s, i) => s + (Number(i.amount) || 0), 0);
-        const totalExpenses = realExpenseItems.reduce((s, i) => s + (Number(i.amount) || 0), 0);
-        const balance       = totalIncome - totalExpenses;
+        const { realIncomeItems, realExpenseItems, totalIncome, totalExpenses, balance } = summarizeCashflow(incomeItems, expenseItems);
 
         const balanceEl = document.getElementById('balance');
         if (balanceEl) {
@@ -310,13 +311,14 @@ async function loadData() {
 
         updateStrategyPanel({ totalExpenses });
         renderTransactionLedger(incomeItems, expenseItems);
-        renderCharts({
+        chartSnapshot = {
             incomeItems: realIncomeItems,
             expenseItems: realExpenseItems,
             totalIncome,
             totalExpenses,
             expenseLimit: state.planConfig.expenseLimit
-        });
+        };
+        renderCharts(chartSnapshot);
 
     } catch (err) {
         console.error('loadData error:', err);
@@ -414,6 +416,7 @@ async function ensureAuthenticatedUserDocument(user) {
 }
 
 auth.onAuthStateChanged(user => {
+    chartSnapshot = null;
     // Firebase restores persisted auth asynchronously. Wait for its answer
     // before revealing the app so a signed-in user never sees the landing page.
     document.body.classList.remove('auth-pending');
@@ -768,7 +771,6 @@ document.getElementById('btn-apply-range')?.addEventListener('click', () => {
         b.setAttribute('aria-pressed', String(active));
     });
     updatePeriodLabel();
-    setPeriodPanelOpen(false);
     loadData();
 });
 
@@ -1221,8 +1223,8 @@ function renderWalletDetail() {
     const movements = walletTransactions
         .filter(item => item.accountId === wallet.id)
         .sort((a, b) => (b.date?.toMillis?.() || 0) - (a.date?.toMillis?.() || 0));
-    const income = movements.filter(item => item.type === 'income').reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    const expense = movements.filter(item => item.type === 'expense').reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const income = sumAmounts(movements.filter(item => item.type === 'income' && isPosted(item)));
+    const expense = sumAmounts(movements.filter(item => item.type === 'expense' && isPosted(item)));
     const heading = document.createElement('div');
     heading.className = 'wallet-detail-heading';
     heading.innerHTML = `<span class="wallet-detail-type">${WALLET_TYPE_LABELS[wallet.type] || 'Cuenta'}</span><h2></h2><p></p>`;
@@ -1301,9 +1303,10 @@ async function loadWallets() {
         walletBalances.clear();
         wallets.forEach(wallet => walletBalances.set(wallet.id, Number(wallet.openingBalance || 0)));
         walletTransactions.forEach(item => {
-            if (!item.accountId || !walletBalances.has(item.accountId) || item.status === 'cancelled' || item.status === 'voided') return;
+            if (!item.accountId || !walletBalances.has(item.accountId) || !isPosted(item)) return;
             const current = walletBalances.get(item.accountId) || 0;
-            walletBalances.set(item.accountId, current + (item.type === 'income' ? Number(item.amount || 0) : -Number(item.amount || 0)));
+            const cents = Math.round(current * 100) + (item.type === 'income' ? 1 : -1) * Math.round(Number(item.amount || 0) * 100);
+            walletBalances.set(item.accountId, cents / 100);
         });
         if (!state.selectedWalletId || !activeWallets().some(wallet => wallet.id === state.selectedWalletId)) {
             state.selectedWalletId = activeWallets()[0]?.id || null;
