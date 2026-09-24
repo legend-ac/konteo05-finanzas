@@ -10,6 +10,12 @@
       "GUIA_TECNICA_COMPLETA.md",
       "vercel.json",
       "_redirects",
+      ".git/**",
+      ".github/**",
+      ".vercel/**",
+      "tests/**",
+      "package*.json",
+      "eslint.config.cjs",
       "**/.*",
       "**/node_modules/**"
     ],
