@@ -723,12 +723,18 @@ async function doImport() {
         const results = await runLimited(toImport, async ({ tx }) => {
             const occurredAtDate = tx.occurredAt instanceof Date && !Number.isNaN(tx.occurredAt.getTime())
                 ? tx.occurredAt : businessDateToDate(tx.date);
+            const receiptDescription = String(tx.receiptDescription || tx.description || '').trim().slice(0, 500);
             const payload = {
-                amount: tx.amount, note: String(tx.description || '').slice(0, 100),
+                amount: tx.amount, note: receiptDescription,
+                description: receiptDescription, receiptDescription,
                 date: firebase.firestore.Timestamp.fromDate(businessDateToDate(tx.date)), operationDate: tx.date,
                 occurredAt: firebase.firestore.Timestamp.fromDate(occurredAtDate),
+                ...(tx.emailReceivedAt instanceof Date && !Number.isNaN(tx.emailReceivedAt.getTime())
+                    ? { emailReceivedAt: firebase.firestore.Timestamp.fromDate(tx.emailReceivedAt) } : {}),
+                receiptDateSource: tx.receiptDateSource || 'email_received_fallback',
+                sourceRawText: String(tx.rawText || '').slice(0, 4000),
                 actorUid: uid, status: 'completed', source: `gmail:${tx.source}`, gmailId: tx.gmailId,
-                counterparty: String(tx.description || '').slice(0, 100),
+                counterparty: receiptDescription,
                 accountId: resolveWalletAccount(tx, walletOptions, getCustomEntities())
             };
             if (!tx.gmailId) throw new Error('Un movimiento no tiene identificador de correo; no se guardó.');

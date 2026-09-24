@@ -389,7 +389,11 @@ export function getEmailSender(message) {
 export function getEmailDate(message) {
     const headers = message.payload?.headers || [];
     const date = headers.find(h => h.name.toLowerCase() === 'date');
-    return date ? new Date(date.value) : new Date(message.internalDate * 1);
+    const headerDate = date ? new Date(date.value) : null;
+    if (headerDate instanceof Date && Number.isFinite(headerDate.getTime())) return headerDate;
+    const internalDate = Number(message.internalDate);
+    const fallback = Number.isFinite(internalDate) ? new Date(internalDate) : null;
+    return fallback instanceof Date && Number.isFinite(fallback.getTime()) ? fallback : null;
 }
 
 export function getEmailSubject(message) {

@@ -2,7 +2,7 @@
 // Parsers de emails de movimientos financieros peruanos
 // Cubre: bancos tradicionales, cajas municipales, billeteras digitales y neobancos
 
-import { businessDateString } from '../ui/helpers.js';
+import { businessDateString, businessDateToDate } from '../ui/helpers.js';
 
 // ─────────────────────────────────────────────
 // HELPERS COMUNES
@@ -61,6 +61,72 @@ function extractField(text, labels) {
     return inline ? cleanName(inline[1]) : '';
 }
 
+// Los bancos suelen enviar la fecha real de la operación dentro del recibo.
+// La fecha del header de Gmail representa la entrega del correo y no debe
+// convertirse silenciosamente en la fecha financiera.
+const MONTHS = {
+    enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
+    julio: 7, agosto: 8, septiembre: 9, setiembre: 9, octubre: 10,
+    noviembre: 11, diciembre: 12
+};
+
+function validDate(date) {
+    return date instanceof Date && Number.isFinite(date.getTime());
+}
+
+function buildReceiptDate(day, month, year, hour = 12, minute = 0) {
+    const normalizedYear = year < 100 ? 2000 + year : year;
+    if (day < 1 || day > 31 || month < 1 || month > 12 || normalizedYear < 2000 || normalizedYear > 2100) return null;
+    const date = new Date(`${normalizedYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00-05:00`);
+    return validDate(date) && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : null;
+}
+
+function parseReceiptDateValue(raw) {
+    const value = String(raw || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (!value) return null;
+
+    const time = value.match(/(?:a\s+las?|hora\s*)?(\d{1,2}):(\d{2})\s*(a\.?\s*m\.?|p\.?\s*m\.?)?/i);
+    let hour = time ? Math.min(23, Number(time[1])) : 12;
+    const minute = time ? Math.min(59, Number(time[2])) : 0;
+    if (time?.[3] && /p/i.test(time[3]) && hour < 12) hour += 12;
+    if (time?.[3] && /a/i.test(time[3]) && hour === 12) hour = 0;
+
+    let match = value.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\b/);
+    if (match) return buildReceiptDate(Number(match[1]), Number(match[2]), Number(match[3]), hour, minute);
+
+    match = value.match(/\b(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})\b/);
+    if (match) return buildReceiptDate(Number(match[3]), Number(match[2]), Number(match[1]), hour, minute);
+
+    match = value.match(/\b(\d{1,2})\s+de\s+([a-z]+)(?:\s+de)?\s+(\d{4})\b/i);
+    if (match) return buildReceiptDate(Number(match[1]), MONTHS[match[2].toLowerCase()], Number(match[3]), hour, minute);
+    return null;
+}
+
+function extractReceiptDate(text) {
+    const labels = [
+        'fecha\\s+(?:de\\s+)?(?:operaci[oó]n|transacci[oó]n|movimiento|compra|pago|dep[oó]sito)',
+        'fecha\\s+y\\s+hora', 'fecha', 'realizado\\s+el', 'efectuado\\s+el'
+    ];
+    const labelPattern = labels.join('|');
+    const labelled = text.match(new RegExp(`(?:${labelPattern})\\s*[:\\-]?\\s*([^\\n\\r]{1,80})`, 'i'));
+    const labelledDate = parseReceiptDateValue(labelled?.[1]);
+    if (labelledDate) return labelledDate;
+
+    const candidates = text.match(/\b(?:\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2}|\d{1,2}\s+de\s+[a-z]+(?:\s+de)?\s+\d{4})\b/gi) || [];
+    return candidates.map(parseReceiptDateValue).find(validDate) || null;
+}
+
+function extractReceiptDescription(text) {
+    const labels = [
+        'motivo', 'descripci[oó]n', 'concepto', 'detalle', 'glosa',
+        'referencia', 'mensaje', 'comercio', 'establecimiento',
+        'beneficiario', 'destinatario', 'empresa'
+    ];
+    const value = extractField(text, labels);
+    if (!value) return '';
+    return value.replace(/^[|:–—-]+|[|:–—-]+$/g, '').trim().slice(0, 500);
+}
+
 function displayName(raw) {
     const value = cleanName(raw).replace(/[_|]+/g, ' ').replace(/\s+/g, ' ');
     if (!value) return '';
@@ -80,15 +146,18 @@ function todayStr(date) {
 }
 
 function genericExpense(amount, label, source, date, gmailId, text) {
-    return { type: 'expense', amount, source, description: label, category: 'yellow', date: todayStr(date), gmailId, rawText: text.slice(0, 300) };
+    const receiptDescription = extractReceiptDescription(text);
+    return { type: 'expense', amount, source, description: receiptDescription || label, sourceLabel: label, receiptDescription, category: 'yellow', date: todayStr(date), gmailId, rawText: text.slice(0, 4000) };
 }
 function genericIncome(amount, label, source, date, gmailId, text) {
-    return { type: 'income', amount, source, description: label, category: 'otros', date: todayStr(date), gmailId, rawText: text.slice(0, 300) };
+    const receiptDescription = extractReceiptDescription(text);
+    return { type: 'income', amount, source, description: receiptDescription || label, sourceLabel: label, receiptDescription, category: 'otros', date: todayStr(date), gmailId, rawText: text.slice(0, 4000) };
 }
 function reviewTransaction(amount, label, source, date, gmailId, text, { currency = 'PEN', reason } = {}) {
+    const receiptDescription = extractReceiptDescription(text);
     return {
-        type: 'review', amount, source, description: label, currency, reviewOnly: true,
-        reviewReason: reason, date: todayStr(date), gmailId, rawText: text.slice(0, 300),
+        type: 'review', amount, source, description: receiptDescription || label, sourceLabel: label, receiptDescription, currency, reviewOnly: true,
+        reviewReason: reason, date: todayStr(date), gmailId, rawText: text.slice(0, 4000),
     };
 }
 
@@ -616,10 +685,22 @@ export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, ge
     for (const msg of rawMessages) {
         if (!msg.id || seenIds.has(msg.id)) continue;
         seenIds.add(msg.id);
-        const sender = getSender(msg), date = getDate(msg);
-        const tx = parseEmail({ message: msg, bodyText: decodeBody(msg), sender, date, subject: getSubject(msg), customEntities });
+        const sender = getSender(msg);
+        const emailReceivedAt = getDate(msg);
+        const subject = getSubject(msg);
+        const bodyText = decodeBody(msg);
+        const receiptText = `${subject}\n${bodyText}`;
+        const receiptDate = extractReceiptDate(receiptText);
+        // The receipt date is authoritative. The email header is retained only
+        // as provenance and fallback when the receipt has no readable date.
+        const transactionDate = receiptDate || emailReceivedAt;
+        const tx = parseEmail({ message: msg, bodyText, sender, date: transactionDate, subject, customEntities });
         if (!tx || !(tx.amount > 0 && tx.amount < 1_000_000)) continue;
-        if (date instanceof Date && !Number.isNaN(date.getTime())) tx.occurredAt = date;
+        tx.receiptDateSource = receiptDate ? 'receipt' : 'email_received_fallback';
+        tx.emailReceivedAt = validDate(emailReceivedAt) ? emailReceivedAt : null;
+        // Do not use delivery time as operation time. When the receipt only has
+        // a calendar day, anchor the timestamp to that day in Peru.
+        tx.occurredAt = receiptDate || businessDateToDate(tx.date);
         const key = `${tx.type}|${tx.date}|${Number(tx.amount).toFixed(2)}`;
         // Amount + date is not an identity: two real purchases can match.
         // Keep ambiguous emails for explicit review instead of silently deleting them.

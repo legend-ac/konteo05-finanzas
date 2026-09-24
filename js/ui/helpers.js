@@ -114,7 +114,9 @@ export function escapeHtml(value) {
 
 export function sortTransactions(items, currentSort) {
     const toDateMs = (item) => {
-        const d = item?.occurredAt?.toDate?.() || item?.date?.toDate?.() || item?.createdAt?.toDate?.();
+        const d = isBusinessDate(item?.operationDate)
+            ? businessDateToDate(item.operationDate)
+            : item?.date?.toDate?.() || item?.occurredAt?.toDate?.() || item?.createdAt?.toDate?.();
         return d instanceof Date && !Number.isNaN(d.getTime()) ? d.getTime() : 0;
     };
     const toAmount = (item) => {

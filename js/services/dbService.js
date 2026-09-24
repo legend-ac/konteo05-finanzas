@@ -363,9 +363,10 @@ function validateMovement(data) {
         throw new Error('El monto debe ser mayor que cero y estar dentro del límite permitido.');
     }
     const date = data.date?.toDate?.();
-    // Bug 10: tolerancia de +24h para emails de bancos con reloj del servidor desfasado.
-    // Sin esto, un email con fecha de mañana (error del banco) rechazaba todo el lote.
-    if (!(date instanceof Date) || !Number.isFinite(date.getTime()) || date.getTime() > Date.now() + 86_400_000) {
+    // La fecha del comprobante es la fuente de verdad. No la sustituimos ni
+    // rechazamos por estar adelantada respecto al reloj del servidor: algunos
+    // emisores usan otra zona horaria o corrigen la fecha después del envío.
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) {
         throw new Error('La fecha del movimiento no es válida.');
     }
 }

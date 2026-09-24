@@ -41,7 +41,7 @@ async function ensureJsPDF() {
 // FILTRO POR PERÍODO — soporta todos los modos
 // ─────────────────────────────────────────────
 function txDate(item) {
-    return item?.occurredAt?.toDate?.() || item?.date?.toDate?.() || item?.createdAt?.toDate?.() || new Date(0);
+    return item?.date?.toDate?.() || item?.occurredAt?.toDate?.() || item?.createdAt?.toDate?.() || new Date(0);
 }
 
 function safeNum(value) {
