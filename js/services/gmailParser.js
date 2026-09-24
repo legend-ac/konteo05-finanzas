@@ -19,7 +19,7 @@ function extractAmount(text) {
         const m = text.match(pat);
         if (m) {
             const val = parseMoney(m[1]);
-            if (!isNaN(val) && val > 0) return val;
+            if (!isNaN(val) && val >= 0.01) return val;
         }
     }
     return null;
@@ -97,7 +97,14 @@ function detectTypeAndBuild(text, source, label, date, gmailId) {
     if (!amount) return null;
     const isExpense = /cargo|pago|compra|débito|debito|retiro|consumo|gasto|enviaste?|transferiste?/i.test(text);
     const isIncome  = /abono|depósito|deposito|crédito|credito|recibiste?|transferencia recibida|ingreso/i.test(text);
-    if (!isExpense && !isIncome) return null;
+    // Si hay monto pero no se detecta tipo, marcar para revisión en lugar de
+    // descartar silenciosamente. Afecta a BanBif, Pichincha, Ripley, Oh!, Bim,
+    // cajas municipales y neobancos cuando el email no contiene palabras clave.
+    if (!isExpense && !isIncome) {
+        return reviewTransaction(amount, label, source, date, gmailId, text, {
+            reason: 'No se pudo determinar si es ingreso o gasto. Revisa el correo original antes de registrarlo.',
+        });
+    }
     return isExpense
         ? genericExpense(amount, label, source, date, gmailId, text)
         : genericIncome(amount, label, source, date, gmailId, text);
@@ -300,7 +307,8 @@ function parseNacion({ body, subject, date, gmailId }) {
     const amount = extractLabeledAmount(text, ['importe(?:\\s+transferido)?', 'monto(?:\\s+y\\s+moneda)?', 'total']) || extractAmount(text);
     if (!amount) return null;
 
-    if (/transferencia\s+a\s+contacto|transferencia\s+enviada|env[i.]o\s+de\s+dinero/i.test(text)) {
+    // Detección rápida en el texto completo (subject + body) antes de extraer campos
+    if (/transferencia\s+a\s+contacto|transferencia\s+enviada|env[ií]o\s+de\s+dinero/i.test(text)) {
         const recipient = text.match(/nombre\s+del\s+beneficiario[\s:]*([^\n\r]+)/i)?.[1];
         const destination = text.match(/banco\s+destino[\s:]*([^\n\r]+)/i)?.[1] || '';
         const person = displayName(recipient || destination || 'contacto');
@@ -308,21 +316,23 @@ function parseNacion({ body, subject, date, gmailId }) {
         return genericExpense(amount, `Banco de la Nación · Transferencia a ${person}${via}`, 'nacion', date, gmailId, text);
     }
 
-    const operation = extractField(text, ['tipo\\s+de\\s+operaci.n']);
-    const channel = extractField(text, ['canal\\s+de\\s+atenci.n']);
-    const recipient = extractField(text, ['nombre\\s+del\\s+beneficiario', 'beneficiario', 'destinatario']);
-    const destination = extractField(text, ['banco\\s+destino', 'destino']);
+    // Los labels se pasan como strings que se compilan con new RegExp() dentro de
+    // extractField: usar \s (un backslash) no \\ (que en RegExp sería \\s literal).
+    const operation   = extractField(text, ['tipo\s+de\s+operaci[oó]n']);
+    const channel     = extractField(text, ['canal\s+de\s+atenci[oó]n']);
+    const recipient   = extractField(text, ['nombre\s+del\s+beneficiario', 'beneficiario', 'destinatario']);
+    const destination = extractField(text, ['banco\s+destino', 'destino']);
     const operationText = `${operation}\n${channel}\n${subject}`;
 
-    if (/retiro|cajero\\s+autom[aá]tico|atm/i.test(operationText)) {
+    if (/retiro|cajero\s+autom[aá]tico|atm/i.test(operationText)) {
         return genericExpense(amount, 'Banco de la Nación · Retiro de cajero', 'nacion', date, gmailId, text);
     }
-    if (/transferencia\\s+a\\s+contacto|transferencia\\s+enviada|env[ií]o\\s+de\\s+dinero/i.test(operationText)) {
+    if (/transferencia\s+a\s+contacto|transferencia\s+enviada|env[ií]o\s+de\s+dinero/i.test(operationText)) {
         const person = displayName(recipient || destination || 'contacto');
         const via = /yape|plin/i.test(destination) ? ` · ${displayName(destination)}` : '';
         return genericExpense(amount, `Banco de la Nación · Transferencia a ${person}${via}`, 'nacion', date, gmailId, text);
     }
-    if (/abono|dep[oó]sito|transferencia\\s+recibida|pago\\s+recibido/i.test(operationText)) {
+    if (/abono|dep[oó]sito|transferencia\s+recibida|pago\s+recibido/i.test(operationText)) {
         return genericIncome(amount, 'Banco de la Nación · Abono recibido', 'nacion', date, gmailId, text);
     }
     return detectTypeAndBuild(text, 'nacion', 'Banco de la Nación · Operación', date, gmailId)
@@ -486,13 +496,13 @@ function parseMaximo({ body, subject, date, gmailId }) {
 // ─────────────────────────────────────────────
 function parseMiBanco({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
-    const amount = extractLabeledAmount(text, ['monto\s+(?:enviado|operaci.n|y\s+moneda)?', 'importe', 'total']) || extractAmount(text);
+    const amount = extractLabeledAmount(text, ['monto\s+(?:enviado|operaci[oó]n|y\s+moneda)?', 'importe', 'total']) || extractAmount(text);
     if (!amount) return null;
 
     const recipient = text.match(/(?:titular\s+de\s+la\s+cuenta\s+destino|destinatario|beneficiario)\s*[:\n]\s*([^\n\r]+)/i);
     const recipientName = cleanName(recipient?.[1] || 'Transferencia');
 
-    if (/transferencia.*exitosa|enviar\s+a\s+contacto|monto\s+enviado|pago.*realizado|operaci.n\s+exitosa/i.test(text)) {
+    if (/transferencia.*exitosa|enviar\s+a\s+contacto|monto\s+enviado|pago.*realizado|operaci[oó]n\s+exitosa/i.test(text)) {
         return genericExpense(amount, `MiBanco - ${recipientName}`, 'mibanco', date, gmailId, text);
     }
     if (/abono|dep[oó]sito|monto\s+recibido|recibiste|ingreso/i.test(text)) {
@@ -600,77 +610,26 @@ export function parseEmail({ message, bodyText, sender, date, subject, customEnt
 }
 
 export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, getSubject, existingIds = new Set(), existingTxKeys = new Set(), customEntities = [] }) {
-    const results  = [];
-    const seenIds  = new Set(existingIds);
-
+    const results = [];
+    const seenIds = new Set(existingIds);
+    const candidates = new Set(existingTxKeys);
     for (const msg of rawMessages) {
-        if (seenIds.has(msg.id)) continue;
-        const sender   = getSender(msg);
-        const date     = getDate(msg);
-        const subject  = getSubject(msg);
-        const bodyText = decodeBody(msg);
-        const tx = parseEmail({ message: msg, bodyText, sender, date, subject, customEntities });
-        if (tx && tx.amount > 0 && tx.amount < 1_000_000) {
-            // Keep the original message instant for the movement audit. `date`
-            // remains the business calendar date used by filters and reports.
-            if (date instanceof Date && !Number.isNaN(date.getTime())) {
-                tx.occurredAt = date;
-            }
-            // Omitir si la transacción ya está registrada en Firestore por fecha, tipo y monto
-            const key = `${tx.type}|${tx.date}|${Number(tx.amount).toFixed(2)}`;
-            if (existingTxKeys.has(key)) {
-                console.info('[gmailParser] Omitiendo transacción ya existente en Firestore:', key);
-                seenIds.add(msg.id);
-                continue;
-            }
-            seenIds.add(msg.id);
-            results.push(tx);
+        if (!msg.id || seenIds.has(msg.id)) continue;
+        seenIds.add(msg.id);
+        const sender = getSender(msg), date = getDate(msg);
+        const tx = parseEmail({ message: msg, bodyText: decodeBody(msg), sender, date, subject: getSubject(msg), customEntities });
+        if (!tx || !(tx.amount > 0 && tx.amount < 1_000_000)) continue;
+        if (date instanceof Date && !Number.isNaN(date.getTime())) tx.occurredAt = date;
+        const key = `${tx.type}|${tx.date}|${Number(tx.amount).toFixed(2)}`;
+        // Amount + date is not an identity: two real purchases can match.
+        // Keep ambiguous emails for explicit review instead of silently deleting them.
+        if (candidates.has(key)) {
+            tx.possibleDuplicate = true;
+            tx.reviewReason = 'Hay otro movimiento del mismo monto y fecha. Compara los comprobantes antes de seleccionarlo.';
         }
+        candidates.add(key);
+        results.push(tx);
     }
-
-    // Deduplicar notificaciones redundantes del mismo movimiento físico
-    // Ejemplo: cargo de Interbank + comprobante de Plin/Yape del mismo monto
-    const CROSS_PAIRS = [
-        // billetera → banco emisor (prefer billetera = tiene nombre del destinatario)
-        ['plin',        'interbank'],
-        ['plin',        'bcp'],
-        ['plin',        'bbva'],
-        ['plin',        'scotiabank'],
-        ['yape',        'bcp'],
-        ['yape',        'interbank'],
-        ['yape',        'bbva'],
-        ['yape',        'mibanco'],
-        ['yape',        'nacion'],
-        ['yape',        'scotiabank'],
-        ['mercadopago', 'bcp'],
-        ['izipay',      'interbank'],
-    ];
-    const isCrossDuplicate = (s1, s2) => CROSS_PAIRS.some(([w, b]) => (s1 === w && s2 === b) || (s1 === b && s2 === w));
-
-    const deduplicated = [];
-    for (const tx of results) {
-        const isDuplicate = deduplicated.find(existing => {
-            if (existing.date !== tx.date) return false;
-            if (Math.abs(existing.amount - tx.amount) > 0.01) return false;  // tolerancia de 1 centavo
-            if (existing.type !== tx.type) return false;
-            return existing.source === tx.source || isCrossDuplicate(existing.source, tx.source);
-        });
-
-        if (isDuplicate) {
-            // Preferir el recibo con nombre específico (ej. 'Plin a X' o 'Yape a Y') sobre la notificación genérica del banco
-            const wallets = ['plin', 'yape', 'mercadopago', 'izipay'];
-            const txIsWallet = wallets.includes(tx.source);
-            const existingIsBank = !wallets.includes(isDuplicate.source);
-            if (txIsWallet && existingIsBank) {
-                isDuplicate.description = tx.description;
-                isDuplicate.source = tx.source;
-                if (tx.sourceLabel) isDuplicate.sourceLabel = tx.sourceLabel;
-            }
-        } else {
-            deduplicated.push(tx);
-        }
-    }
-
-    deduplicated.sort((a, b) => b.date.localeCompare(a.date));
-    return deduplicated;
+    results.sort((a, b) => b.date.localeCompare(a.date));
+    return results;
 }

@@ -146,11 +146,11 @@ export function renderTransactionList(listEl, filtered) {
         const income = document.createElement('button');
         income.type = 'button';
         income.className = 'btn-balance-action btn-balance-income btn-open-income';
-        income.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>+ Ingreso</span>`;
+        income.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Ingreso</span>`;
         const expense = document.createElement('button');
         expense.type = 'button';
         expense.className = 'btn-balance-action btn-balance-expense btn-open-expense';
-        expense.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg><span>− Gasto</span>`;
+        expense.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Gasto</span>`;
         actions.append(income, expense);
         p.append(icon, title, copy, actions);
         listEl.appendChild(p);

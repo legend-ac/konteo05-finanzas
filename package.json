@@ -4,13 +4,20 @@
     "description": "Konteo 05 — Tu app personal de finanzas",
     "private": true,
     "scripts": {
-        "dev": "npx -y serve .",
-        "lint": "npx -y eslint js/"
+        "dev": "serve .",
+        "lint": "eslint js/ service-worker.js",
+        "test": "npm run test:backend",
+        "test:backend": "node --experimental-vm-modules --test tests/backend.test.cjs",
+        "check": "npm run lint && npm test"
     },
     "keywords": [
         "finanzas",
         "pwa",
         "firebase"
     ],
-    "license": "MIT"
+    "license": "MIT",
+    "devDependencies": {
+        "eslint": "^9.39.1",
+        "serve": "^14.2.4"
+    }
 }

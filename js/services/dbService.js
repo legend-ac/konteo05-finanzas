@@ -2,10 +2,23 @@
 
 import { db, firebase } from '../firebase/config.js';
 import { businessDateString, transactionBusinessDate } from '../ui/helpers.js';
+import { withDeadline } from './asyncControl.js';
 
 const planCache = new Map();
 const transactionSchemaMode = new Map();
 const PLAN_CACHE_TTL_MS = 60_000;
+const pendingReads = new Map();
+
+function sharedRead(key, operation) {
+    if (pendingReads.has(key)) return pendingReads.get(key);
+    const pending = withDeadline(operation, 20000).finally(() => pendingReads.delete(key));
+    pendingReads.set(key, pending);
+    return pending;
+}
+
+function isMissingIndex(error) {
+    return String(error?.code || '').replace('firestore/', '') === 'failed-precondition';
+}
 
 function transactionSchemaStorageKey(uid) {
     return `konteo.transaction-schema.${uid}`;
@@ -118,19 +131,8 @@ function walletsRef(uid) {
     return db.collection('users').doc(uid).collection('wallets');
 }
 
-// These are the six financial entities that the parser already understands
-// out of the box. They are wallet suggestions, not Gmail rules: the user can
-// rename, archive or leave them at a zero balance.
-const DEFAULT_WALLETS = [
-    { sourceKey: 'yape', name: 'Yape', institution: 'Yape', type: 'wallet', color: 'purple' },
-    { sourceKey: 'plin', name: 'Plin', institution: 'Plin', type: 'wallet', color: 'blue' },
-    { sourceKey: 'bcp', name: 'Cuenta BCP', institution: 'BCP', type: 'bank', color: 'gold' },
-    { sourceKey: 'interbank', name: 'Cuenta Interbank', institution: 'Interbank', type: 'bank', color: 'green' },
-    { sourceKey: 'bbva', name: 'Cuenta BBVA', institution: 'BBVA', type: 'bank', color: 'blue' },
-    { sourceKey: 'scotiabank', name: 'Cuenta Scotiabank', institution: 'Scotiabank', type: 'bank', color: 'red' }
-];
-
 export async function getWallets(uid) {
+    return sharedRead(`wallets:${uid}`, async () => {
     const snapshot = await walletsRef(uid).get();
     return snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -138,26 +140,7 @@ export async function getWallets(uid) {
             if ((a.active !== false) !== (b.active !== false)) return a.active === false ? 1 : -1;
             return String(a.name || '').localeCompare(String(b.name || ''), 'es');
         });
-}
-
-export async function seedDefaultWallets(uid) {
-    const current = await getWallets(uid);
-    const existingKeys = new Set(current.map(wallet => wallet.sourceKey).filter(Boolean));
-    const missing = DEFAULT_WALLETS.filter(wallet => !existingKeys.has(wallet.sourceKey));
-    if (!missing.length) return current;
-    const batch = db.batch();
-    missing.forEach(wallet => {
-        const ref = walletsRef(uid).doc(`system-${wallet.sourceKey}`);
-        batch.set(ref, {
-            ...wallet,
-            currency: 'PEN', openingBalance: 0, includeInTotal: true,
-            active: true, systemDefault: true,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
     });
-    await batch.commit();
-    return getWallets(uid);
 }
 
 export async function saveWallet(uid, wallet, editId = null) {
@@ -171,6 +154,9 @@ export async function saveWallet(uid, wallet, editId = null) {
         color: wallet.color || 'gold',
         includeInTotal: wallet.includeInTotal !== false,
         active: wallet.active !== false,
+        userConfirmed: true,
+        sourceKey: wallet.sourceKey,
+        linkSource: wallet.linkSource,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     if (!editId) payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -194,8 +180,9 @@ export async function saveTransfer(uid, data, requestId = null) {
     const transferId = requestId || db.collection('_ids').doc().id;
     const outRef = db.collection('transactions').doc(uid).collection('expenses').doc(`transfer_out_${transferId}`);
     const inRef = db.collection('transactions').doc(uid).collection('income').doc(`transfer_in_${transferId}`);
-    const [outCurrent, inCurrent] = await Promise.all([outRef.get(), inRef.get()]);
-    if (outCurrent.exists || inCurrent.exists) return transferId;
+    validateMovement(data);
+    if (!data.fromAccountId || !data.toAccountId || data.fromAccountId === data.toAccountId) throw new Error('Selecciona dos cuentas distintas.');
+    const deadline = Date.now() + 30000;
 
     const amount = Number(data.amount || 0);
     const operationDate = data.operationDate || businessDateString(data.date?.toDate?.() || new Date());
@@ -212,7 +199,17 @@ export async function saveTransfer(uid, data, requestId = null) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    const batch = db.batch();
+    return withDeadline(() => db.runTransaction(async batch => {
+    if (Date.now() >= deadline) throw new Error('Se agotó el tiempo de transferencia.');
+    const [outCurrent, inCurrent, fromWallet, toWallet] = await Promise.all([
+        batch.get(outRef), batch.get(inRef),
+        batch.get(walletsRef(uid).doc(data.fromAccountId)), batch.get(walletsRef(uid).doc(data.toAccountId))
+    ]);
+    if (outCurrent.exists && inCurrent.exists) return transferId;
+    if (outCurrent.exists || inCurrent.exists) throw new Error('Transferencia incompleta existente. Revisa sus movimientos antes de reintentar.');
+    if (!fromWallet.exists || !toWallet.exists || fromWallet.data().active === false || toWallet.data().active === false) throw new Error('Ambas cuentas deben existir y estar activas.');
+    if ((fromWallet.data().currency || 'PEN') !== (toWallet.data().currency || 'PEN')) throw new Error('No se admite transferir entre monedas distintas sin conversión.');
+    if (Date.now() >= deadline) throw new Error('Se agotó el tiempo de transferencia.');
     batch.set(outRef, {
         ...common, accountId: data.fromAccountId, operationType: 'transfer_out',
         category: 'yellow', method: 'transferencia', note: data.note || 'Transferencia entre billeteras',
@@ -223,8 +220,8 @@ export async function saveTransfer(uid, data, requestId = null) {
         source: 'transferencia', note: data.note || 'Transferencia entre billeteras',
         counterparty: data.fromName || '', reference: `TRF-${transferId}`
     });
-    await batch.commit();
     return transferId;
+    }), 30000, 'commit-unconfirmed');
 }
 
 /**
@@ -273,8 +270,9 @@ export async function getTransactions(uid, startTs, endTs = null) {
             incomeItems: incomeDocs.map(doc => ({ id: doc.id, type: 'income', ...doc.data() })),
             expenseItems: expenseDocs.map(doc => ({ id: doc.id, type: 'expense', ...doc.data() }))
         };
-    } catch (_) {
-        // Safe fallback if indexed queries are not available yet.
+    } catch (error) {
+        if (!isMissingIndex(error)) throw error;
+        // Only an unavailable index justifies a compatibility scan.
         const [incomeSnap, expenseSnap] = await Promise.all([
             incomeRef.get(),
             expenseRef.get()
@@ -292,9 +290,10 @@ export async function getTransactions(uid, startTs, endTs = null) {
  * el día operativo oficial de Konteo (America/Lima).
  */
 export async function getImportedGmailIds(uid) {
-    // Limitar a 90 días — mismo máximo que fetchTransactionEmails
+    // Bug 9: cutoff de 95 días (en vez de 90) para dar margen y evitar que emails
+    // del día 91 reaparezcan como nuevos porque su ID ya no está en Firestore.
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 90);
+    cutoff.setDate(cutoff.getDate() - 95);
     const cutoffTs = firebase.firestore.Timestamp.fromDate(cutoff);
 
     let incDocs = [];
@@ -308,8 +307,9 @@ export async function getImportedGmailIds(uid) {
         ]);
         incDocs = incSnap.docs;
         expDocs = expSnap.docs;
-    } catch (_) {
-        // Fallback sin filtro si el índice no está disponible
+    } catch (error) {
+        if (!isMissingIndex(error)) throw error;
+        // Fallback sin filtro solo si el índice no está disponible
         const [incSnap, expSnap] = await Promise.all([
             db.collection('transactions').doc(uid).collection('income').get(),
             db.collection('transactions').doc(uid).collection('expenses').get(),
@@ -358,55 +358,80 @@ function auditRef(uid) {
     return db.collection('users').doc(uid).collection('auditLogs');
 }
 
+function validateMovement(data) {
+    if (!Number.isFinite(Number(data.amount)) || Number(data.amount) <= 0 || Number(data.amount) > 999999999) {
+        throw new Error('El monto debe ser mayor que cero y estar dentro del límite permitido.');
+    }
+    const date = data.date?.toDate?.();
+    // Bug 10: tolerancia de +24h para emails de bancos con reloj del servidor desfasado.
+    // Sin esto, un email con fecha de mañana (error del banco) rechazaba todo el lote.
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime()) || date.getTime() > Date.now() + 86_400_000) {
+        throw new Error('La fecha del movimiento no es válida.');
+    }
+}
+
 async function saveTransaction(uid, type, data, editId = null, requestId = null) {
+    if (!uid) throw new Error('Inicia sesión para guardar.');
+    validateMovement(data);
+    if (type === 'expense' && !['green', 'yellow', 'red'].includes(data.category)) throw new Error('Categoría de gasto no válida.');
     const collection = type === 'income' ? 'income' : 'expenses';
     const txRef = db.collection('transactions').doc(uid).collection(collection)
         .doc(editId || requestId || db.collection('_ids').doc().id);
-    const current = await txRef.get();
-
-    // A repeated click/network retry must be a no-op, never an extra movement
-    // nor a second audit event.
-    if (!editId && current.exists) return txRef.id;
-
-    const operationDate = data.operationDate || businessDateString(data.date?.toDate?.() || new Date());
+    const createAudit = auditRef(uid).doc(`create_${txRef.id}`);
+    // Stable for every automatic retry of this transaction.
+    const newAudit = auditRef(uid).doc();
+    const deadline = Date.now() + 30000;
+    const operationDate = data.operationDate || businessDateString(data.date.toDate());
     const reference = data.reference || `${type === 'income' ? 'ING' : 'GAS'}-${txRef.id}`;
     const base = cleanObject({
-        ...data,
-        operationDate,
-        reference,
-        operationType: data.operationType || type,
-        status: data.status || 'completed',
+        ...data, amount: Number(data.amount), operationDate, reference,
+        accountAssignmentExplicit: Object.prototype.hasOwnProperty.call(data, 'accountId') ? true : data.accountAssignmentExplicit,
+        operationType: data.operationType || type, status: data.status || 'completed',
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    const batch = db.batch();
 
-    if (current.exists) {
-        // occurredAt describes the original operation, not the time someone
-        // corrected a note/category later. Updates are tracked by updatedAt.
-        delete base.occurredAt;
-        batch.update(txRef, base);
-        const eventRef = auditRef(uid).doc(`update_${txRef.id}_${Date.now()}`);
-        batch.set(eventRef, cleanObject({
-            eventType: 'updated', movementId: txRef.id, operationType: type,
-            operationDate, reference, actorUid: data.actorUid || uid,
-            recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            before: auditSnapshot(current.data()), after: auditSnapshot(base)
-        }));
-    } else {
-        const created = { ...base, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-        batch.set(txRef, created);
-        batch.set(auditRef(uid).doc(`create_${txRef.id}`), cleanObject({
-            eventType: 'created', movementId: txRef.id, operationType: type,
-            operationDate, reference, actorUid: data.actorUid || uid,
-            actorEmail: data.actorEmail || '',
-            occurredAt: data.occurredAt || firebase.firestore.Timestamp.fromDate(new Date()),
-            recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            snapshot: auditSnapshot(created)
-        }));
-    }
-
-    await batch.commit();
-    return txRef.id;
+    return withDeadline(() => db.runTransaction(async transaction => {
+        // Firestore can retry the callback; never start a new attempt after our deadline.
+        if (Date.now() >= deadline) throw new Error('Se agotó el tiempo de guardado.');
+        const current = await transaction.get(txRef);
+        if (!editId && current.exists) return txRef.id;
+        if (editId && !current.exists) throw new Error('Este movimiento ya no existe. Actualiza la lista.');
+        let originalAudit = null;
+        if (!editId) {
+            if (data.gmailId) {
+                const otherCollection = type === 'income' ? 'expenses' : 'income';
+                const other = await transaction.get(db.collection('transactions').doc(uid).collection(otherCollection).doc(txRef.id));
+                if (other.exists) return txRef.id;
+            }
+            originalAudit = await transaction.get(createAudit);
+        }
+        if (Date.now() >= deadline) throw new Error('Se agotó el tiempo de guardado.');
+        if (editId) {
+            const update = { ...base };
+            delete update.occurredAt;
+            transaction.update(txRef, update);
+            transaction.set(newAudit, cleanObject({
+                eventType: 'updated', movementId: txRef.id, operationType: type,
+                operationDate, reference, actorUid: data.actorUid || uid,
+                recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                before: auditSnapshot(current.data()), after: auditSnapshot(update)
+            }));
+        } else {
+            const created = { ...base, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+            transaction.set(txRef, created);
+            // Account cleanup deliberately retains immutable audit logs. Reimporting
+            // must append an event, never overwrite create_<id> (which rules deny).
+            transaction.set(originalAudit.exists ? newAudit : createAudit, cleanObject({
+                eventType: 'created', movementId: txRef.id, operationType: type,
+                operationDate, reference, actorUid: data.actorUid || uid,
+                actorEmail: data.actorEmail || '',
+                occurredAt: data.occurredAt || firebase.firestore.Timestamp.fromDate(new Date()),
+                recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                snapshot: auditSnapshot(created)
+            }));
+        }
+        return txRef.id;
+    }), 30000, 'commit-unconfirmed');
 }
 
 /** Guarda o actualiza un ingreso con trazabilidad inmutable. */
@@ -509,7 +534,8 @@ export async function getTransactionAudit(uid, movementId) {
             .orderBy('recordedAt', 'desc')
             .limit(50)
             .get();
-    } catch (_) {
+    } catch (error) {
+        if (!isMissingIndex(error)) throw error;
         // Existing projects can continue working while Firestore builds the
         // composite index declared below.
         snapshot = await auditRef(uid).where('movementId', '==', movementId).get();
@@ -527,6 +553,7 @@ export async function getTransactionAudit(uid, movementId) {
  * Obtiene todas las transacciones ordenadas por fecha (para exportación).
  */
 export async function getAllTransactionsOrdered(uid) {
+    return sharedRead(`history:${uid}`, async () => {
     const [incSnap, expSnap] = await Promise.all([
         db.collection('transactions').doc(uid).collection('income').get(),
         db.collection('transactions').doc(uid).collection('expenses').get()
@@ -537,4 +564,5 @@ export async function getAllTransactionsOrdered(uid) {
     const toMs = (item) => item.occurredAt?.toDate?.()?.getTime?.() || item.date?.toDate?.()?.getTime?.() || item.createdAt?.toDate?.()?.getTime?.() || 0;
     txs.sort((a, b) => toMs(b) - toMs(a));
     return txs;
+    });
 }

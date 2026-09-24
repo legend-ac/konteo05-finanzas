@@ -2210,7 +2210,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
         background: color-mix(in srgb, var(--bg) 94%, transparent);
         backdrop-filter: blur(14px);
     }
-    /* En PC el header muestra solo nombre + tema + salir. Gmail y Perfil viven en el nav lateral. */
+    /* En PC el encabezado concentra las acciones contextuales y el nav las vistas. */
     #dashboard-page > header .header-brand { display: none; }
     #dashboard-page > header .header-actions { margin-left: auto; gap: 8px; }
     #dashboard-page > header #btn-gmail-import { display: none; }
@@ -2377,3 +2377,51 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .wallets-list-panel, .wallet-detail-panel { border-radius: 14px; }
 }
 
+
+.wallet-choices { margin: 0 0 20px; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); }
+.wallet-choices h2 { font-size: 18px; margin: 0 0 8px; }
+.wallet-choices > p { font-size: 13px; line-height: 1.5; margin: 0 0 12px; }
+.wallet-choice-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+.wallet-choice-row > div { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.wallet-choice-row strong, .wallet-choice-row small { display: block; }
+.wallet-choice-row small { margin-top: 5px; line-height: 1.5; }
+
+/* Navigation and wallet information architecture.
+   Views stay in the navigator; contextual tools live in the header. */
+#profile-btn {
+    min-height: 34px;
+    padding: 0 11px;
+    border-color: var(--line-2);
+    color: var(--text-2);
+}
+#profile-btn:hover { color: var(--text); border-color: var(--gold); }
+
+@media (min-width: 768px) {
+    #dashboard-page > header #btn-gmail-import { display: inline-flex; }
+    #dashboard-page > header #profile-btn { display: inline-flex; }
+    .desktop-nav { align-content: start; }
+
+    .wallets-page-heading { align-items: center; }
+    .wallets-page-heading > div > p:last-child { max-width: 46ch; }
+    .wallet-total-card {
+        grid-template-columns: minmax(130px, .5fr) minmax(180px, 1fr) auto;
+        align-items: center;
+        min-height: 96px;
+        padding: 18px 24px;
+        border-radius: 16px;
+    }
+    .wallet-total-card > strong { margin: 0; font-size: clamp(28px, 3.2vw, 40px); }
+    .wallet-total-card small { text-align: right; white-space: nowrap; }
+    .wallets-layout { grid-template-columns: minmax(300px, .78fr) minmax(0, 1.22fr); gap: 16px; }
+    .wallets-list-panel { padding: 16px; }
+    .wallet-detail-panel { position: sticky; top: 84px; min-height: 0; padding: 26px; }
+    .wallet-list { max-height: calc(100vh - 390px); overflow: auto; padding-right: 3px; }
+}
+
+@media (max-width: 767px) {
+    .mobile-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #profile-btn { width: 34px; padding: 0; justify-content: center; }
+    #profile-btn .profile-btn-label { display: none; }
+    .wallet-total-card { min-height: 104px; }
+    .wallet-total-card > strong { margin-block: 4px; }
+}

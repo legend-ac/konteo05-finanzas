@@ -14,9 +14,10 @@ import { renderTransactionList }  from './ui/render.js';
 import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
 import * as dbService             from './services/dbService.js';
+import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount } from './services/walletPolicy.js';
 import { isPosted, sumAmounts, summarizeCashflow } from './services/financialMath.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
-import { initGmailImport, clearGmailImportCache } from './ui/gmailImport.js';
+import { openGmailImport, openGmailEntities, clearGmailImportCache } from './ui/gmailImport.js';
 
 // ──────────────────────────────────────────────
 // THEME
@@ -155,10 +156,10 @@ window.setInterval(updateDashboardTime, 60_000);
 
 // PROFILE
 // ──────────────────────────────────────────────
-async function loadUserProfile() {
+async function loadUserProfile(profile = null) {
     if (!state.currentUser) return;
     try {
-        const data = await dbService.getUserProfile(state.currentUser.uid) || {};
+        const data = profile || await dbService.getUserProfile(state.currentUser.uid) || {};
         state.userProfile = {
             name:             data.name             || state.currentUser.displayName || '',
             phone:            data.phone            || '',
@@ -396,9 +397,9 @@ async function ensureAuthenticatedUserDocument(user) {
     try {
         const ref = db.collection('users').doc(user.uid);
         const existing = await ref.get();
-        if (existing.exists) return;
+        if (existing.exists) return existing.data();
 
-        await ref.set({
+        const profile = {
             name: user.displayName || '',
             email: user.email || '',
             photoURL: user.photoURL || '',
@@ -408,7 +409,9 @@ async function ensureAuthenticatedUserDocument(user) {
             bio: '',
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        };
+        await ref.set(profile, { merge: true });
+        return profile;
     } catch (error) {
         // Authentication must still work when a first profile write is rejected.
         console.warn('No se pudo crear el perfil inicial:', error);
@@ -423,7 +426,11 @@ auth.onAuthStateChanged(user => {
     if (user) {
         state.dashboardData = null;
         state.currentUser = user;
-        ensureAuthenticatedUserDocument(user);
+        ensureAuthenticatedUserDocument(user).then(profile => {
+            // Reuse the authentication read instead of immediately reading
+            // /users/{uid} again just to populate the profile form.
+            if (state.currentUser?.uid === user.uid) loadUserProfile(profile);
+        });
         showPage('dashboard');
         document.getElementById('user-name').textContent = user.displayName || '';
 
@@ -443,19 +450,10 @@ auth.onAuthStateChanged(user => {
         toggleCustomRangePanel(state.currentFilter);
         updatePeriodLabel();
         loadPlanConfigToUi();
-        loadUserProfile();
-
         const recoveryEl = document.getElementById('recovery-email');
         if (recoveryEl) recoveryEl.value = user.email || '';
 
         loadData();
-        loadWallets();
-
-        // Gmail auto-import feature
-        initGmailImport(user.uid);
-
-        // Refresh dashboard when gmail import completes
-        window.addEventListener('konteo:refresh', refreshFinancialViews, { once: false });
     } else {
         state.currentUser = null;
         state.dashboardData = null;
@@ -828,7 +826,7 @@ document.addEventListener('click', e => {
 });
 
 function openWalletModal(wallet = null) {
-    document.getElementById('modal-wallet-title').textContent = wallet ? 'Editar billetera' : 'Nueva billetera';
+    document.getElementById('modal-wallet-title').textContent = wallet?.id ? 'Editar billetera' : 'Nueva billetera';
     document.getElementById('wallet-edit-id').value = wallet?.id || '';
     document.getElementById('wallet-name').value = wallet?.name || '';
     document.getElementById('wallet-institution').value = wallet?.institution || '';
@@ -836,6 +834,9 @@ function openWalletModal(wallet = null) {
     document.getElementById('wallet-color').value = wallet?.color || 'gold';
     document.getElementById('wallet-opening-balance').value = wallet ? Number(wallet.openingBalance || 0) : '';
     document.getElementById('wallet-include-total').checked = wallet?.includeInTotal !== false;
+    document.getElementById('wallet-source-key').value = wallet?.sourceKey || '';
+    document.getElementById('wallet-link-source').checked = wallet?.linkSource === true;
+    document.getElementById('wallet-link-source-row').classList.toggle('hidden', !wallet?.sourceKey);
     openModal('modal-wallet');
 }
 
@@ -859,9 +860,27 @@ document.querySelectorAll('.app-nav-link').forEach(button => {
     button.addEventListener('click', () => {
         if (button.dataset.view) changeAppView(button.dataset.view);
         // Gmail: delegar al botón del header que ya tiene el listener de initGmailImport
-        if (button.dataset.action === 'gmail') document.getElementById('btn-gmail-import')?.click();
+        if (button.dataset.action === 'gmail') openGmailImport(state.currentUser?.uid).catch(error => {
+            showToast(error.message || 'No se pudo abrir Gmail', 'error');
+        });
         // Perfil: llamar directamente al modal sin delegación indirecta
         if (button.dataset.action === 'profile') openModal('modal-profile');
+    });
+});
+
+document.getElementById('btn-gmail-import')?.addEventListener('click', () => {
+    openGmailImport(state.currentUser?.uid).catch(error => {
+        showToast(error.message || 'No se pudo abrir Gmail', 'error');
+    });
+});
+
+document.getElementById('profile-btn')?.addEventListener('click', () => {
+    openModal('modal-profile');
+});
+
+document.getElementById('btn-gmail-entities')?.addEventListener('click', () => {
+    openGmailEntities(state.currentUser?.uid).catch(error => {
+        showToast(error.message || 'No se pudo abrir los remitentes', 'error');
     });
 });
 
@@ -887,7 +906,7 @@ document.getElementById('wallet-detail')?.addEventListener('click', async event 
             await dbService.archiveWallet(state.currentUser.uid, wallet.id);
             showToast('Cuenta archivada', 'success');
             state.selectedWalletId = null;
-            await loadWallets();
+            await loadWallets({ force: true });
         } catch (error) { showToast('No se pudo archivar: ' + error.message, 'error'); }
     }
 });
@@ -907,12 +926,14 @@ document.getElementById('form-wallet')?.addEventListener('submit', async event =
             type: document.getElementById('wallet-type').value,
             color: document.getElementById('wallet-color').value,
             openingBalance,
+            sourceKey: document.getElementById('wallet-source-key').value || undefined,
+            linkSource: document.getElementById('wallet-link-source').checked,
             includeInTotal: document.getElementById('wallet-include-total').checked
         }, document.getElementById('wallet-edit-id').value || null);
         state.selectedWalletId = id;
         closeModal('modal-wallet');
         showToast('Billetera guardada', 'success');
-        await loadWallets();
+        await loadWallets({ force: true });
     } catch (error) { showToast('No se pudo guardar: ' + error.message, 'error'); }
 });
 
@@ -1152,9 +1173,28 @@ const WALLET_TYPE_LABELS = {
 };
 const walletBalances = new Map();
 let walletTransactions = [];
+let suggestedWallets = [];
+let walletLoadToken = 0;
+let walletCache = { uid: null, loadedAt: 0 };
+const WALLET_CACHE_TTL_MS = 30_000;
 
 function activeWallets() {
-    return state.wallets.filter(wallet => wallet.active !== false);
+    return state.wallets.filter(isActiveWallet);
+}
+
+function walletLabel(wallet) {
+    const name = String(wallet?.name || 'Cuenta').trim();
+    const institution = String(wallet?.institution || '').trim();
+    return institution && !name.toLocaleLowerCase('es').includes(institution.toLocaleLowerCase('es'))
+        ? `${institution} · ${name}`
+        : name;
+}
+
+function walletSubtitle(wallet) {
+    const name = String(wallet?.name || '').trim();
+    const institution = String(wallet?.institution || '').trim();
+    if (institution && !name.toLocaleLowerCase('es').includes(institution.toLocaleLowerCase('es'))) return institution;
+    return WALLET_TYPE_LABELS[wallet?.type] || 'Cuenta';
 }
 
 function setAccountOptions(selectId, selected = '') {
@@ -1171,7 +1211,7 @@ function setAccountOptions(selectId, selected = '') {
     activeWallets().forEach(wallet => {
         const option = document.createElement('option');
         option.value = wallet.id;
-        option.textContent = `${wallet.institution ? `${wallet.institution} · ` : ''}${wallet.name}`;
+        option.textContent = walletLabel(wallet);
         select.appendChild(option);
     });
     select.value = selected || (allowEmpty ? '' : (activeWallets()[0]?.id || ''));
@@ -1179,7 +1219,7 @@ function setAccountOptions(selectId, selected = '') {
 
 function walletName(id) {
     const wallet = state.wallets.find(item => item.id === id);
-    return wallet ? `${wallet.institution ? `${wallet.institution} · ` : ''}${wallet.name}` : 'Sin asignar';
+    return wallet ? walletLabel(wallet) : 'Sin asignar';
 }
 
 function accountBalance(wallet) {
@@ -1199,7 +1239,7 @@ function createWalletItem(wallet) {
     const name = document.createElement('strong');
     name.textContent = wallet.name;
     const meta = document.createElement('small');
-    meta.textContent = wallet.institution || WALLET_TYPE_LABELS[wallet.type] || 'Cuenta';
+    meta.textContent = walletSubtitle(wallet);
     copy.append(name, meta);
     const amount = document.createElement('span');
     amount.className = 'wallet-list-amount';
@@ -1212,7 +1252,7 @@ function renderWalletDetail() {
     const panel = document.getElementById('wallet-detail');
     if (!panel) return;
     panel.textContent = '';
-    const wallet = state.wallets.find(item => item.id === state.selectedWalletId && item.active !== false);
+    const wallet = state.wallets.find(item => item.id === state.selectedWalletId && isActiveWallet(item));
     if (!wallet) {
         const empty = document.createElement('div');
         empty.className = 'wallet-detail-empty';
@@ -1229,7 +1269,7 @@ function renderWalletDetail() {
     heading.className = 'wallet-detail-heading';
     heading.innerHTML = `<span class="wallet-detail-type">${WALLET_TYPE_LABELS[wallet.type] || 'Cuenta'}</span><h2></h2><p></p>`;
     heading.querySelector('h2').textContent = wallet.name;
-    heading.querySelector('p').textContent = wallet.institution || 'Sin institución definida';
+    heading.querySelector('p').textContent = walletSubtitle(wallet);
     const balance = document.createElement('strong');
     balance.className = 'wallet-detail-balance';
     balance.textContent = `S/ ${fmt(accountBalance(wallet))}`;
@@ -1263,6 +1303,71 @@ function renderWalletDetail() {
     panel.append(heading, balance, actions, stats, recent, management);
 }
 
+function renderWalletChoices() {
+    const panel = document.getElementById('wallet-choices');
+    panel.replaceChildren();
+    const review = state.wallets.filter(walletNeedsReview);
+    const archived = state.wallets.filter(w => w.active === false);
+    panel.classList.toggle('hidden', !review.length && !suggestedWallets.length && !archived.length);
+    if (!review.length && !suggestedWallets.length && !archived.length) return;
+    const heading = document.createElement('h2');
+    heading.textContent = 'Elige tus cuentas';
+    const description = document.createElement('p');
+    description.textContent = 'Solo tú decides qué cuentas usar. Las cuentas automáticas pendientes de revisión no se incluyen en el saldo. Tus movimientos se conservan en Inicio.';
+    panel.append(heading, description);
+    const addRow = (name, detail, actions) => {
+        const row = document.createElement('div');
+        row.className = 'wallet-choice-row';
+        const copy = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = name;
+        const text = document.createElement('small');
+        text.textContent = detail;
+        copy.append(title, text);
+        row.append(copy);
+        actions.forEach(([label, action, id]) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'wallet-secondary';
+            button.textContent = label;
+            button.dataset.walletChoice = action;
+            button.dataset.choiceId = id;
+            row.append(button);
+        });
+        panel.append(row);
+    };
+    suggestedWallets.forEach(w => addRow(w.name,
+        `${w.configured ? 'Entidad configurada' : 'Detectada en tus movimientos'} · ${w.count} movimientos sin asignar`,
+        [['Agregar cuenta', 'add', w.sourceKey]]));
+    review.forEach(w => addRow(w.name, 'Creada automáticamente por una versión anterior. Pendiente de tu elección.',
+        [['Revisar y conservar', 'keep', w.id], ['Archivar', 'archive', w.id]]));
+    archived.forEach(w => addRow(w.name, 'Cuenta archivada', [['Reactivar', 'keep', w.id]]));
+}
+
+document.getElementById('wallet-choices')?.addEventListener('click', async event => {
+    const button = event.target.closest('[data-wallet-choice]');
+    if (!button || !state.currentUser) return;
+    const id = button.dataset.choiceId;
+    if (button.dataset.walletChoice === 'add') {
+        const suggestion = suggestedWallets.find(w => w.sourceKey === id);
+        if (suggestion) openWalletModal({
+            ...suggestion, institution: suggestion.name, openingBalance: 0,
+            type: ['yape', 'plin'].includes(suggestion.sourceKey) ? 'wallet' : 'bank'
+        });
+    } else if (button.dataset.walletChoice === 'keep') {
+        const wallet = state.wallets.find(w => w.id === id);
+        if (wallet) openWalletModal(wallet);
+    } else {
+        button.disabled = true;
+        try {
+            await dbService.archiveWallet(state.currentUser.uid, id);
+            await loadWallets({ force: true });
+        } catch (error) {
+            showToast(error.message || 'No se pudo archivar la cuenta', 'error');
+        } finally { button.disabled = false; }
+    }
+});
+
 function renderWallets() {
     const list = document.getElementById('wallets-list');
     const active = activeWallets();
@@ -1270,6 +1375,7 @@ function renderWallets() {
     const count = `${active.length} cuenta${active.length !== 1 ? 's' : ''} activa${active.length !== 1 ? 's' : ''}`;
     document.getElementById('wallets-total').textContent = `S/ ${fmt(total)}`;
     document.getElementById('wallets-total-detail').textContent = count;
+    renderWalletChoices();
     document.getElementById('wallets-count').textContent = count;
     if (!list) return;
     list.textContent = '';
@@ -1285,21 +1391,29 @@ function renderWallets() {
     setAccountOptions('transfer-to', '');
 }
 
-async function loadWallets() {
+async function loadWallets({ force = false } = {}) {
     if (!state.currentUser) return;
+    const uid = state.currentUser.uid;
+    if (!force && walletCache.uid === uid && Date.now() - walletCache.loadedAt < WALLET_CACHE_TTL_MS) {
+        renderWallets();
+        return;
+    }
+    const token = ++walletLoadToken;
     try {
-        const [wallets, transactions] = await Promise.all([
-            dbService.seedDefaultWallets(state.currentUser.uid),
-            dbService.getAllTransactionsOrdered(state.currentUser.uid)
+        const [wallets, transactions, profile] = await Promise.all([
+            dbService.getWallets(uid),
+            dbService.getAllTransactionsOrdered(uid),
+            dbService.getUserProfile(uid)
         ]);
+        if (state.currentUser?.uid !== uid || token !== walletLoadToken) return;
+        const entities = profile?.gmailImport?.customEntities || [];
         state.wallets = wallets;
-        const walletBySource = new Map(wallets.filter(wallet => wallet.sourceKey).map(wallet => [wallet.sourceKey, wallet.id]));
-        walletTransactions = transactions.map(item => {
-            if (item.accountId) return item;
-            const sourceKey = String(item.source || '').replace(/^gmail:/, '').toLowerCase();
-            const inheritedWalletId = walletBySource.get(sourceKey);
-            return inheritedWalletId ? { ...item, accountId: inheritedWalletId, inheritedAccount: true } : item;
-        });
+        walletCache = { uid, loadedAt: Date.now() };
+        suggestedWallets = walletSuggestions(wallets, transactions, entities);
+        walletTransactions = transactions.map(item => ({
+            ...item, accountId: resolveWalletAccount(item, wallets, entities)
+        }));
+        window.dispatchEvent(new CustomEvent('konteo:wallets-changed', { detail: { uid, wallets } }));
         walletBalances.clear();
         wallets.forEach(wallet => walletBalances.set(wallet.id, Number(wallet.openingBalance || 0)));
         walletTransactions.forEach(item => {
@@ -1323,15 +1437,24 @@ function changeAppView(view) {
     document.getElementById('home-view')?.classList.toggle('hidden', isWallets);
     document.getElementById('wallets-view')?.classList.toggle('hidden', !isWallets);
     document.querySelectorAll('.app-nav-link[data-view]').forEach(button => {
-        button.classList.toggle('active', button.dataset.view === view);
+        const active = button.dataset.view === view;
+        button.classList.toggle('active', active);
+        button.toggleAttribute('aria-current', active);
     });
     if (isWallets) loadWallets();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function refreshFinancialViews() {
-    await Promise.all([loadData(), loadWallets()]);
+    const walletViewIsOpen = !document.getElementById('wallets-view')?.classList.contains('hidden');
+    const tasks = [loadData()];
+    if (walletViewIsOpen) tasks.push(loadWallets({ force: true }));
+    await Promise.all(tasks);
 }
+
+// Keep one refresh subscription for the lifetime of the page. Registering it
+// inside auth.onAuthStateChanged caused duplicate reads after a new session.
+window.addEventListener('konteo:refresh', refreshFinancialViews);
 
 // ──────────────────────────────────────────────
 // EVENT DELEGATION

@@ -17,7 +17,9 @@ import {
 import { parseAllEmails } from '../services/gmailParser.js';
 import { db, firebase }   from '../firebase/config.js';
 import { saveIncome, saveExpense, getImportedGmailIds, getWallets } from '../services/dbService.js';
+import { isActiveWallet, resolveWalletAccount } from '../services/walletPolicy.js';
 import { businessDateToDate } from './helpers.js';
+import { runLimited, withDeadline } from '../services/asyncControl.js';
 
 // ─────────────────────────────────────────────
 // ESTADO
@@ -28,13 +30,23 @@ let selectedIds       = new Set();
 let importedGmailIds  = new Set();
 let gmailPreference   = null;
 let walletOptions     = [];
+let initializedUid    = null;
+let initialization    = null;
+window.addEventListener('konteo:wallets-changed', event => {
+    if (event.detail?.uid !== currentUid) return;
+    walletOptions = event.detail.wallets;
+    const select = document.getElementById('gmail-entity-account');
+    if (select) select.innerHTML = walletOptionsHtml(select.value);
+});
+
+let isSearching       = false;  // guard: evita búsquedas paralelas por doble-click
 
 // ─────────────────────────────────────────────
 // FIRESTORE: preferencia del usuario
 // ─────────────────────────────────────────────
 async function getGmailPref() {
     try {
-        const doc = await db.collection('users').doc(currentUid).get();
+        const doc = await withDeadline(() => db.collection('users').doc(currentUid).get());
         gmailPreference = doc.exists ? (doc.data().gmailImport || null) : null;
         return gmailPreference;
     } catch {
@@ -57,7 +69,6 @@ async function disconnectGmail() {
     revokeGmailToken();
     await saveGmailPref({ enabled: false, email: null });
     importedGmailIds.clear();
-    // Limpiar AMBAS claves de sessionStorage (actual uid-específica + clave heredada)
     try { sessionStorage.removeItem(`konteo_gmail_${currentUid}`); } catch {}
     try { sessionStorage.removeItem('konteo_gmail_imported'); } catch {}
     renderHeaderBadge(null);
@@ -81,7 +92,7 @@ function persistImportedId(id) {
 }
 
 // ─────────────────────────────────────────────
-// HEADER BADGE: muestra Gmail conectado
+// HEADER BADGE
 // ─────────────────────────────────────────────
 function renderHeaderBadge(email) {
     const btn = document.getElementById('btn-gmail-import');
@@ -131,26 +142,17 @@ function sourceLabel(source) {
     return SOURCE_LABELS[source] || source;
 }
 
-function entitySourceId(entity) {
-    return `custom-${String(entity?.id || entity?.sender || '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
-}
-
-function entityForTransaction(tx) {
-    return getCustomEntities().find(entity => entitySourceId(entity) === tx.source);
-}
-
 function walletOptionsHtml(selected = '', includeEmpty = true) {
     const empty = includeEmpty ? '<option value="">Sin asignar por ahora</option>' : '';
     return empty + walletOptions
-        .filter(wallet => wallet.active !== false)
+        .filter(isActiveWallet)
         .map(wallet => `<option value="${escapeHtml(wallet.id)}" ${wallet.id === selected ? 'selected' : ''}>${escapeHtml(wallet.institution ? `${wallet.institution} · ${wallet.name}` : wallet.name)}</option>`)
         .join('');
 }
 
 function renderAccountControl(tx, idx) {
-    if (tx.reviewOnly || !walletOptions.some(wallet => wallet.active !== false)) return '';
-    const entity = entityForTransaction(tx);
-    const accountId = tx.accountId || entity?.defaultAccountId || '';
+    if (tx.reviewOnly || !walletOptions.some(isActiveWallet)) return '';
+    const accountId = resolveWalletAccount(tx, walletOptions, getCustomEntities());
     return `<label class="gmail-account-control" for="gmail-account-${idx}"><span>Billetera</span><select id="gmail-account-${idx}" class="gmail-tx-account" data-idx="${idx}">${walletOptionsHtml(accountId)}</select></label>`;
 }
 
@@ -175,7 +177,7 @@ function renderTxCard(tx, idx) {
     const sign      = tx.type === 'income' ? '+' : (isReview ? '' : '−');
     const checked   = selectedIds.has(idx) ? 'checked' : '';
     const disabled  = isReview ? 'disabled' : '';
-    const reason    = isReview && tx.reviewReason ? `<div class="gmail-tx-reason">${escapeHtml(tx.reviewReason)}</div>` : '';
+    const reason    = (isReview || tx.possibleDuplicate) && tx.reviewReason ? `<div class="gmail-tx-reason">${escapeHtml(tx.reviewReason)}</div>` : '';
     return `
     <article class="gmail-tx-card ${typeClass}${isReview ? ' is-review' : ''}" data-idx="${idx}" data-source="${escapeHtml(tx.source)}">
         <input type="checkbox" class="gmail-tx-check" data-idx="${idx}" ${checked} ${disabled}>
@@ -206,12 +208,9 @@ function getSourceEntries() {
         entry.indexes.push(index);
         counts.set(tx.source, entry);
     });
-
-    // Mantiene visibles las fuentes que el usuario excluyó para poder activarlas de nuevo.
     getIgnoredSources().forEach(source => {
         if (!counts.has(source)) counts.set(source, { source, label: sourceLabel(source), indexes: [] });
     });
-
     return [...counts.values()].sort((a, b) => a.label.localeCompare(b.label, 'es'));
 }
 
@@ -220,13 +219,11 @@ function renderSourceControls() {
     if (!container) return;
     const ignored = getIgnoredSources();
     const sources = getSourceEntries();
-
     if (!sources.length) {
         container.classList.add('hidden');
         container.innerHTML = '';
         return;
     }
-
     container.classList.remove('hidden');
     container.innerHTML = `
         <div class="gmail-source-heading">
@@ -278,7 +275,7 @@ function applySourceSelection(source, include) {
         if (tx.reviewOnly || tx.source !== source) return;
         if (include) selectedIds.add(index); else selectedIds.delete(index);
     });
-    document.querySelectorAll(`.gmail-tx-check`).forEach(check => {
+    document.querySelectorAll('.gmail-tx-check').forEach(check => {
         const index = Number.parseInt(check.dataset.idx, 10);
         if (pendingTxs[index]?.source === source && !check.disabled) check.checked = include;
     });
@@ -301,7 +298,6 @@ async function persistSourceChoices() {
 function buildModal() {
     const old = document.getElementById('modal-gmail-import');
     if (old) old.remove();
-
     const el = document.createElement('div');
     el.id        = 'modal-gmail-import';
     el.className = 'modal hidden';
@@ -311,8 +307,6 @@ function buildModal() {
     el.innerHTML = `
     <div class="modal-content gmail-modal-content">
         <div class="modal-handle"></div>
-
-        <!-- HEADER del modal -->
         <div class="gmail-modal-header">
             <div>
                 <h3 id="gmail-modal-title">Importar desde Gmail</h3>
@@ -320,8 +314,6 @@ function buildModal() {
             </div>
             <button id="gmail-modal-close" class="gmail-close-btn" aria-label="Cerrar">✕</button>
         </div>
-
-        <!-- Estado 1: Consentimiento (pantalla inicial) -->
         <div id="gmail-state-consent" class="gmail-state">
             <div class="gmail-consent-box">
                 <div class="gmail-consent-icon">🔒</div>
@@ -357,8 +349,6 @@ function buildModal() {
                 </button>
             </div>
         </div>
-
-        <!-- Estado 2: Ya conectado — acción rápida -->
         <div id="gmail-state-connected" class="gmail-state hidden">
             <div class="gmail-connected-box">
                 <span class="gmail-connected-kicker">Cuenta conectada</span>
@@ -387,16 +377,12 @@ function buildModal() {
                 <button id="gmail-btn-disconnect" class="gmail-btn-sm gmail-btn-danger">Desconectar</button>
             </div>
         </div>
-
-        <!-- Estado 3: Cargando -->
         <div id="gmail-state-loading" class="gmail-state hidden">
             <div class="gmail-spinner-wrap">
                 <div class="gmail-spinner"></div>
                 <p id="gmail-loading-msg">Conectando con Gmail…</p>
             </div>
         </div>
-
-        <!-- Estado 4: Resultados / preview -->
         <div id="gmail-state-results" class="gmail-state gmail-results-state hidden">
             <div class="gmail-results-toolbar">
                 <div class="gmail-results-summary">
@@ -416,8 +402,6 @@ function buildModal() {
                 <button id="gmail-btn-import" class="gmail-btn-primary" disabled>Importar seleccionados</button>
             </div>
         </div>
-
-        <!-- Estado 5: Éxito -->
         <div id="gmail-state-success" class="gmail-state hidden">
             <div class="gmail-success-wrap">
                 <div class="gmail-success-icon">✅</div>
@@ -426,8 +410,6 @@ function buildModal() {
                 <button id="gmail-btn-done" class="gmail-btn-primary" style="align-self:center;width:auto;padding:0 32px">Ver movimientos</button>
             </div>
         </div>
-
-        <!-- Estado 6: Error -->
         <div id="gmail-state-error" class="gmail-state hidden">
             <div class="gmail-error-wrap">
                 <div class="gmail-error-icon">⚠️</div>
@@ -452,7 +434,7 @@ function getActiveCustomEntities() {
 }
 
 function isRestrictedToConfiguredEntities() {
-    return gmailPreference?.onlyConfiguredEntities === true && getActiveCustomEntities().length > 0;
+    return gmailPreference?.onlyConfiguredEntities === true;
 }
 
 function renderReadingRule() {
@@ -460,7 +442,7 @@ function renderReadingRule() {
     const summary = document.getElementById('gmail-reading-rule-summary');
     if (!checkbox || !summary) return;
     const active = getActiveCustomEntities();
-    checkbox.disabled = active.length === 0;
+    checkbox.disabled = active.length === 0 && !isRestrictedToConfiguredEntities();
     checkbox.checked = isRestrictedToConfiguredEntities();
     summary.textContent = active.length
         ? `${active.length} remitente${active.length !== 1 ? 's' : ''} activo${active.length !== 1 ? 's' : ''}: ${active.map(entity => entity.name).join(', ')}`
@@ -497,7 +479,6 @@ function renderEntitiesList() {
 function buildEntitiesModal() {
     const existing = document.getElementById('modal-gmail-entities');
     if (existing) existing.remove();
-
     const modal = document.createElement('div');
     modal.id = 'modal-gmail-entities';
     modal.className = 'modal hidden';
@@ -580,6 +561,7 @@ function openModal()  {
 }
 function closeModal() {
     const m = document.getElementById('modal-gmail-import');
+    if (m?.dataset.saving === 'true') return;
     if (m) { m.classList.add('hidden'); document.body.style.overflow = ''; }
 }
 
@@ -587,46 +569,58 @@ function closeModal() {
 // FLUJO: conectar y buscar
 // ─────────────────────────────────────────────
 async function connectAndSearch(daysBack) {
+    if (isSearching) return;
+    isSearching = true;
+    const btnConnect = document.getElementById('gmail-btn-connect');
+    const btnSync    = document.getElementById('gmail-btn-sync');
+    if (btnConnect) btnConnect.disabled = true;
+    if (btnSync)    btnSync.disabled    = true;
     showState('loading');
     try {
         document.getElementById('gmail-loading-msg').textContent = 'Iniciando conexión con Google…';
-
-        // Garantizar que Google Identity Services esté cargado antes de pedir el token
         await initGmailService();
-
         document.getElementById('gmail-loading-msg').textContent = 'Esperando autorización de Google…';
         await requestGmailToken();
-
         const connectedEmail = getConnectedEmail();
         await saveGmailPref({ enabled: true, email: connectedEmail });
         renderHeaderBadge(connectedEmail);
-
         await doSearch(daysBack);
     } catch (err) {
         handleError(err);
+    } finally {
+        isSearching = false;
+        if (btnConnect) btnConnect.disabled = false;
+        if (btnSync)    btnSync.disabled    = false;
     }
 }
 
 async function doSearch(daysBack) {
+    // Si se llama directamente (ej. desde btn-sync), aplicar guard también
+    if (!isSearching) {
+        isSearching = true;
+        const btnSync = document.getElementById('gmail-btn-sync');
+        if (btnSync) btnSync.disabled = true;
+    }
     try {
         document.getElementById('gmail-loading-msg').textContent = `Buscando emails de los últimos ${daysBack} días…`;
         const customEntities = getActiveCustomEntities();
-        
-        // Consultar transacciones registradas e IDs de Gmail guardados previamente en Firestore
-        const { gmailIds: dbGmailIds, existingTxKeys } = await getImportedGmailIds(currentUid).catch(() => ({ gmailIds: new Set(), existingTxKeys: new Set() }));
 
-        // Si Firestore está vacío (usuario limpió su cuenta), limpiar también el caché local de sessionStorage
-        // para evitar falsos positivos que bloquean la reimportación
+        const { gmailIds: dbGmailIds, existingTxKeys } = await withDeadline(() => getImportedGmailIds(currentUid));
+
+        // Si Firestore está vacío (usuario limpió su cuenta), limpiar también el caché local
         if (dbGmailIds.size === 0 && existingTxKeys.size === 0 && importedGmailIds.size > 0) {
             console.info('[gmailImport] Firestore vacío — limpiando caché local para permitir reimportación completa');
             importedGmailIds = new Set();
             try { sessionStorage.removeItem(`konteo_gmail_${currentUid}`); } catch {}
         }
 
+        // allExistingIds se usa en parseAllEmails para deduplicación visual en pantalla.
         const allExistingIds = new Set([...importedGmailIds, ...dbGmailIds]);
 
+        // BUG 7 FIX: fetchTransactionEmails solo excluye dbGmailIds (lo ya guardado en Firestore).
+        // Así, emails vistos pero no importados en sesión anterior reaparecen al ampliar el período.
         const rawMessages = await fetchTransactionEmails(daysBack, customEntities, {
-            onlyConfiguredEntities: isRestrictedToConfiguredEntities()
+            onlyConfiguredEntities: isRestrictedToConfiguredEntities(), existingIds: dbGmailIds
         });
 
         document.getElementById('gmail-loading-msg').textContent = `Analizando ${rawMessages.length} email${rawMessages.length !== 1 ? 's' : ''}…`;
@@ -645,6 +639,10 @@ async function doSearch(daysBack) {
         showResults(txs);
     } catch (err) {
         handleError(err);
+    } finally {
+        isSearching = false;
+        const btnSync = document.getElementById('gmail-btn-sync');
+        if (btnSync) btnSync.disabled = false;
     }
 }
 
@@ -652,11 +650,11 @@ function showResults(txs) {
     pendingTxs  = txs;
     const ignoredSources = getIgnoredSources();
     selectedIds = new Set(txs.flatMap((tx, i) => (
-        tx.reviewOnly || ignoredSources.has(tx.source) ? [] : [i]
+        tx.reviewOnly || tx.possibleDuplicate || ignoredSources.has(tx.source) ? [] : [i]
     )));
 
-    const countEl  = document.getElementById('gmail-found-count');
-    const listEl   = document.getElementById('gmail-tx-list');
+    const countEl   = document.getElementById('gmail-found-count');
+    const listEl    = document.getElementById('gmail-tx-list');
     const importBtn = document.getElementById('gmail-btn-import');
 
     if (txs.length === 0) {
@@ -681,7 +679,7 @@ function showResults(txs) {
             ? `${importableText} · ${reviewCount} para revisar`
             : importableText;
     }
-    if (listEl)   listEl.innerHTML    = txs.map((tx, i) => renderTxCard(tx, i)).join('');
+    if (listEl)   listEl.innerHTML = txs.map((tx, i) => renderTxCard(tx, i)).join('');
     renderSourceControls();
     updateImportBtn();
     showState('results');
@@ -705,51 +703,80 @@ function updateImportBtn() {
 }
 
 async function doImport() {
-    showState('loading');
-    document.getElementById('gmail-loading-msg').textContent = 'Guardando movimientos en tu cuenta…';
-
-    const toImport = pendingTxs.filter((tx, i) => selectedIds.has(i) && !tx.reviewOnly);
-    let ok = 0, fail = 0;
-
-    for (const tx of toImport) {
-        try {
-            const occurredAtDate = tx.occurredAt instanceof Date && !Number.isNaN(tx.occurredAt.getTime())
-                ? tx.occurredAt
-                : new Date();
-            const occurredAt = firebase.firestore.Timestamp.fromDate(occurredAtDate);
-            const dateTs  = firebase.firestore.Timestamp.fromDate(businessDateToDate(tx.date));
-            const payload = {
-                amount: tx.amount, note: tx.description, date: dateTs, operationDate: tx.date,
-                occurredAt, actorUid: currentUid, status: 'completed',
-                source: `gmail:${tx.source}`, gmailId: tx.gmailId,
-                counterparty: tx.description,
-                accountId: tx.accountId || entityForTransaction(tx)?.defaultAccountId || ''
-            };
-
-            const docId = `gmail_${tx.gmailId}`;
-
-            if (tx.type === 'income') {
-                await saveIncome(currentUid, { ...payload, category: tx.category || 'otros' }, null, docId);
-            } else {
-                await saveExpense(currentUid, { ...payload, category: tx.category || 'yellow', method: 'otro' }, null, docId);
-            }
-            persistImportedId(tx.gmailId);
-            ok++;
-        } catch (e) { console.error('[gmailImport] Error al guardar:', e); fail++; }
+    const modal = document.getElementById('modal-gmail-import');
+    if (modal.dataset.saving === 'true' || !selectedIds.size) return;
+    if (navigator.onLine === false) {
+        handleError(new Error('No hay conexión. Conéctate a internet y vuelve a intentar; tu selección se conserva.'));
+        return;
     }
-
-    // Refrescar el dashboard
-    window.dispatchEvent(new CustomEvent('konteo:refresh'));
-
-    const title = document.getElementById('gmail-success-title');
-    const msg   = document.getElementById('gmail-success-msg');
-    if (title) title.textContent = ok > 0 ? '¡Importación completa!' : 'Sin cambios';
-    if (msg)   msg.textContent   = [
-        ok   > 0 ? `${ok} movimiento${ok !== 1 ? 's' : ''} importado${ok !== 1 ? 's' : ''} correctamente.`   : '',
-        fail > 0 ? `${fail} no pudieron guardarse — intenta de nuevo.` : '',
-    ].filter(Boolean).join(' ');
-
-    showState('success');
+    const uid = currentUid;
+    const toImport = pendingTxs.flatMap((tx, index) => selectedIds.has(index) && !tx.reviewOnly ? [{ tx, index }] : []);
+    let confirmed = 0;
+    modal.dataset.saving = 'true';
+    showState('loading');
+    const message = document.getElementById('gmail-loading-msg');
+    const updateProgress = () => { message.textContent = `Confirmados ${confirmed} de ${toImport.length}. Guardando hasta 4 a la vez…`; };
+    updateProgress();
+    try {
+        // BUG 8 FIX: stopOnError:false — un error de Firestore en una transacción no
+        // cancela el guardado de las demás. Cada error se reporta individualmente.
+        const results = await runLimited(toImport, async ({ tx }) => {
+            const occurredAtDate = tx.occurredAt instanceof Date && !Number.isNaN(tx.occurredAt.getTime())
+                ? tx.occurredAt : businessDateToDate(tx.date);
+            const payload = {
+                amount: tx.amount, note: String(tx.description || '').slice(0, 100),
+                date: firebase.firestore.Timestamp.fromDate(businessDateToDate(tx.date)), operationDate: tx.date,
+                occurredAt: firebase.firestore.Timestamp.fromDate(occurredAtDate),
+                actorUid: uid, status: 'completed', source: `gmail:${tx.source}`, gmailId: tx.gmailId,
+                counterparty: String(tx.description || '').slice(0, 100),
+                accountId: resolveWalletAccount(tx, walletOptions, getCustomEntities())
+            };
+            if (!tx.gmailId) throw new Error('Un movimiento no tiene identificador de correo; no se guardó.');
+            const save = tx.type === 'income' ? saveIncome : saveExpense;
+            return withDeadline(() => save(uid, {
+                ...payload, category: tx.category || (tx.type === 'income' ? 'otros' : 'yellow'),
+                ...(tx.type === 'income' ? {} : { method: 'otro' })
+            }, null, `gmail_${tx.gmailId}`), 32000, 'commit-unconfirmed');
+        }, {
+            concurrency: 4,
+            stopOnError: false,
+            onProgress: (result, index) => {
+                if (result.status === 'fulfilled') {
+                    confirmed++;
+                    if (currentUid === uid) {
+                        persistImportedId(toImport[index].tx.gmailId);
+                        selectedIds.delete(toImport[index].index);
+                    }
+                }
+                updateProgress();
+            }
+        });
+        if (currentUid !== uid) return;
+        updateImportBtn();
+        modal.querySelectorAll('.gmail-tx-check').forEach(check => { check.checked = selectedIds.has(Number(check.dataset.idx)); });
+        syncSourceControls();
+        const failed = results.find(result => result?.status === 'rejected');
+        if (failed) {
+            const code = String(failed.reason?.code || '');
+            const detail = code.includes('permission-denied')
+                ? 'Firebase rechazó el guardado. Revisa las reglas publicadas y la sesión.'
+                : code.includes('commit-unconfirmed')
+                    ? 'No llegó la confirmación de Firebase. Algunos envíos podrían completarse; el reintento verifica sus identificadores antes de guardar.'
+                    : code.includes('unavailable')
+                        ? 'Firebase no está disponible. Comprueba la conexión.'
+                        : failed.reason?.message || 'No se pudo completar el guardado.';
+            handleError(new Error(`${confirmed} de ${toImport.length} confirmados. ${detail} Tu selección pendiente se conserva.`));
+        } else {
+            document.getElementById('gmail-success-title').textContent = 'Importación confirmada';
+            document.getElementById('gmail-success-msg').textContent = `${confirmed} movimiento${confirmed === 1 ? '' : 's'} confirmado${confirmed === 1 ? '' : 's'} en tu cuenta. Los ya existentes no se duplican.`;
+            showState('success');
+        }
+    } catch (error) {
+        if (currentUid === uid) handleError(error);
+    } finally {
+        modal.dataset.saving = 'false';
+        if (currentUid === uid && confirmed) window.dispatchEvent(new CustomEvent('konteo:refresh'));
+    }
 }
 
 function handleError(err) {
@@ -767,18 +794,11 @@ function wireListeners(pref) {
     if (!modal) return;
     const entitiesModal = document.getElementById('modal-gmail-entities');
 
-    // Cerrar
     document.getElementById('gmail-modal-close')?.addEventListener('click', closeModal);
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-    // Entidades manuales: se guardan en el perfil del usuario y se usan en la próxima búsqueda.
     document.getElementById('gmail-entities-close')?.addEventListener('click', closeEntitiesModal);
     entitiesModal?.addEventListener('click', e => { if (e.target === entitiesModal) closeEntitiesModal(); });
-    document.getElementById('btn-gmail-entities')?.addEventListener('click', async () => {
-        await getGmailPref();
-        document.getElementById('modal-profile')?.classList.add('hidden');
-        openEntitiesModal();
-    });
     document.getElementById('gmail-btn-manage-entities')?.addEventListener('click', async () => {
         await getGmailPref();
         openEntitiesModal();
@@ -801,7 +821,6 @@ function wireListeners(pref) {
         const defaultCategory = document.getElementById('gmail-entity-category')?.value || 'yellow';
         const defaultAccountId = document.getElementById('gmail-entity-account')?.value || '';
         const feedback = document.getElementById('gmail-entity-feedback');
-
         if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sender)) {
             if (feedback) feedback.textContent = 'Ingresa un nombre y un correo oficial válido.';
             return;
@@ -810,7 +829,6 @@ function wireListeners(pref) {
             if (feedback) feedback.textContent = 'Ese correo ya está registrado.';
             return;
         }
-
         const entity = { id: `entity-${Date.now().toString(36)}`, name, sender, defaultType, defaultCategory, defaultAccountId, active: true };
         await saveGmailPref({ customEntities: [...getCustomEntities(), entity] });
         e.target.reset();
@@ -836,18 +854,14 @@ function wireListeners(pref) {
         renderEntitiesList();
     });
 
-    // Consentimiento
     document.getElementById('gmail-btn-decline')?.addEventListener('click', async () => {
         await saveGmailPref({ enabled: false, email: null });
         closeModal();
     });
-
     document.getElementById('gmail-btn-connect')?.addEventListener('click', () => {
         const days = parseInt(document.getElementById('gmail-days-select')?.value || '30', 10);
         connectAndSearch(days);
     });
-
-    // Ya conectado → sincronizar
     document.getElementById('gmail-btn-sync')?.addEventListener('click', async () => {
         const days = parseInt(document.getElementById('gmail-days-select2')?.value || '30', 10);
         showState('loading');
@@ -857,14 +871,10 @@ function wireListeners(pref) {
             await doSearch(days);
         }
     });
-
-    // Desconectar
     document.getElementById('gmail-btn-disconnect')?.addEventListener('click', async () => {
         await disconnectGmail();
         showState('consent');
     });
-
-    // Selección
     document.getElementById('gmail-select-all')?.addEventListener('click', () => {
         selectedIds = new Set(pendingTxs.flatMap((tx, i) => tx.reviewOnly ? [] : [i]));
         modal.querySelectorAll('.gmail-tx-check').forEach(cb => { if (!cb.disabled) cb.checked = true; });
@@ -887,7 +897,10 @@ function wireListeners(pref) {
         const accountSelect = e.target.closest('.gmail-tx-account');
         if (accountSelect) {
             const idx = Number.parseInt(accountSelect.dataset.idx, 10);
-            if (pendingTxs[idx]) pendingTxs[idx].accountId = accountSelect.value;
+            if (pendingTxs[idx]) {
+                pendingTxs[idx].accountAssignmentExplicit = true;
+                pendingTxs[idx].accountId = accountSelect.value;
+            }
             return;
         }
         const cb = e.target.closest('.gmail-tx-check');
@@ -898,7 +911,6 @@ function wireListeners(pref) {
         syncSourceControls();
         updateImportBtn();
     });
-
     document.getElementById('gmail-source-controls')?.addEventListener('change', async e => {
         const sourceCheck = e.target.closest('.gmail-source-check');
         if (sourceCheck) {
@@ -906,68 +918,73 @@ function wireListeners(pref) {
             if (document.getElementById('gmail-remember-sources')?.checked) await persistSourceChoices();
             return;
         }
-
         if (e.target.id === 'gmail-remember-sources') {
             if (e.target.checked) await persistSourceChoices();
             else await saveGmailPref({ ignoredSources: [], rememberSources: false });
         }
     });
-
-    // Importar
     document.getElementById('gmail-btn-import')?.addEventListener('click', doImport);
-
-    // Volver desde resultados
     document.getElementById('gmail-btn-back')?.addEventListener('click', () => {
         showState(pref?.enabled ? 'connected' : 'consent');
     });
-
-    // Reintentar error
     document.getElementById('gmail-btn-retry')?.addEventListener('click', () => {
-        showState(pref?.enabled ? 'connected' : 'consent');
+        showState(pendingTxs.length && selectedIds.size ? 'results' : gmailPreference?.enabled ? 'connected' : 'consent');
     });
     document.getElementById('gmail-btn-err-close')?.addEventListener('click', closeModal);
-
-    // Listo (éxito)
     document.getElementById('gmail-btn-done')?.addEventListener('click', () => {
         closeModal();
-        window.dispatchEvent(new CustomEvent('konteo:refresh'));
-    });
-
-    // Botón header
-    document.getElementById('btn-gmail-import')?.addEventListener('click', async () => {
-        const fresh = await getGmailPref();
-        if (fresh?.enabled && fresh?.email) {
-            const emailEl = document.getElementById('gmail-email-display');
-            if (emailEl) emailEl.textContent = fresh.email;
-            showState('connected');
-            renderReadingRule();
-        } else {
-            showState('consent');
-        }
-        openModal();
     });
 }
-
 
 // ─────────────────────────────────────────────
 // EXPORT: punto de entrada
 // ─────────────────────────────────────────────
 export async function initGmailImport(uid) {
+    if (!uid) return;
+    if (initializedUid === uid && document.getElementById('modal-gmail-import')) return;
+    if (initialization?.uid === uid) return initialization.promise;
+
+    const promise = (async () => {
     currentUid = uid;
     loadImportedIds();
-
     const pref = await getGmailPref();
     walletOptions = await getWallets(uid).catch(() => []);
-
     buildModal();
     buildEntitiesModal();
     wireListeners(pref);
-
-    // Actualizar badge del header
     renderHeaderBadge(pref?.enabled ? pref.email : null);
-
-    // Pre-cargar Google Identity Services en background
     initGmailService().catch(() => {});
+    initializedUid = uid;
+    })();
+    initialization = { uid, promise };
+    try {
+        await promise;
+    } finally {
+        if (initialization?.promise === promise) initialization = null;
+    }
+}
+
+// Gmail reads are intentionally deferred until the person opens this feature.
+// A normal dashboard visit does not need its preferences or wallet list.
+export async function openGmailImport(uid) {
+    await initGmailImport(uid);
+    if (!uid || currentUid !== uid) return;
+    const emailEl = document.getElementById('gmail-email-display');
+    if (gmailPreference?.enabled && gmailPreference?.email) {
+        if (emailEl) emailEl.textContent = gmailPreference.email;
+        showState('connected');
+        renderReadingRule();
+    } else {
+        showState('consent');
+    }
+    openModal();
+}
+
+export async function openGmailEntities(uid) {
+    await initGmailImport(uid);
+    if (!uid || currentUid !== uid) return;
+    document.getElementById('modal-profile')?.classList.add('hidden');
+    openEntitiesModal();
 }
 
 /**
@@ -979,6 +996,5 @@ export function clearGmailImportCache() {
     if (currentUid) {
         try { sessionStorage.removeItem(`konteo_gmail_${currentUid}`); } catch {}
     }
-    // Limpiar también la clave genérica heredada de versiones anteriores
     try { sessionStorage.removeItem('konteo_gmail_imported'); } catch {}
 }

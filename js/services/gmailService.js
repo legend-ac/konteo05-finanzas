@@ -1,6 +1,7 @@
 // js/services/gmailService.js
 // Gmail API integration via Google Identity Services (GIS) OAuth 2.0
 // Scope: gmail.readonly — SOLO lectura, nunca envía ni modifica emails
+import { withDeadline } from './asyncControl.js';
 
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
@@ -18,7 +19,7 @@ let tokenExpiry = 0;
 // INIT: Carga Google Identity Services
 // ─────────────────────────────────────────────
 export function initGmailService() {
-    return new Promise((resolve, reject) => {
+    return withDeadline(() => new Promise((resolve, reject) => {
         // Ya está listo
         if (window.google?.accounts?.oauth2) { resolve(); return; }
 
@@ -53,14 +54,14 @@ export function initGmailService() {
             'Verifica tu conexión a internet o desactiva extensiones de bloqueo.'
         ));
         document.head.appendChild(script);
-    });
+    }), 10000);
 }
 
 // ─────────────────────────────────────────────
 // AUTH: Solicita token OAuth Gmail readonly
 // ─────────────────────────────────────────────
 export function requestGmailToken() {
-    return new Promise((resolve, reject) => {
+    return withDeadline(() => new Promise((resolve, reject) => {
         const clientId = getClientId();
         if (!clientId) {
             reject(new Error('Gmail Client ID no configurado. Agrega gmailClientId en runtime-config.js'));
@@ -71,6 +72,7 @@ export function requestGmailToken() {
             tokenClient = window.google.accounts.oauth2.initTokenClient({
                 client_id: clientId,
                 scope: GMAIL_SCOPE,
+                error_callback: error => reject(new Error(error.type === 'popup_closed' ? 'Cerraste la autorización de Gmail.' : 'Google no pudo abrir la autorización. Permite las ventanas emergentes.')),
                 callback: async (response) => {
                     if (response.error) {
                         reject(new Error(`OAuth error: ${response.error}`));
@@ -80,14 +82,8 @@ export function requestGmailToken() {
                     tokenExpiry = Date.now() + (response.expires_in - 60) * 1000;
                     // Obtener email del usuario autenticado
                     try {
-                        const profileRes = await fetch(
-                            'https://gmail.googleapis.com/gmail/v1/users/me/profile',
-                            { headers: { Authorization: `Bearer ${accessToken}` } }
-                        );
-                        if (profileRes.ok) {
-                            const profile = await profileRes.json();
-                            connectedEmail = profile.emailAddress || null;
-                        }
+                        const profile = await gmailFetch('users/me/profile');
+                        connectedEmail = profile.emailAddress || null;
                     } catch { connectedEmail = null; }
                     resolve(accessToken);
                 },
@@ -100,7 +96,7 @@ export function requestGmailToken() {
         } else {
             reject(new Error('Google Identity Services no está disponible. Actualiza la página y vuelve a intentarlo.'));
         }
-    });
+    }), 120000);
 }
 
 let connectedEmail = null;
@@ -129,14 +125,32 @@ async function gmailFetch(path, params = {}) {
     if (!isTokenValid()) throw new Error('Token de Gmail expirado. Reconecta tu cuenta.');
     const url = new URL(`https://gmail.googleapis.com/gmail/v1/${path}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    const res = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `Gmail API error ${res.status}`);
+    const token = accessToken;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const controller = new window.AbortController();
+        const timeout = setTimeout(() => controller.abort(), 25000); // Bug 6: 15s era insuficiente para emails pesados (BCP/IBK HTML+imágenes)
+        try {
+            const res = await fetch(url.toString(), {
+                headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
+            });
+            if ([429, 500, 502, 503, 504].includes(res.status) && attempt < 2) {
+                clearTimeout(timeout);
+                await new Promise(resolve => setTimeout(resolve, Math.min(3000, 500 * 2 ** attempt)));
+                continue;
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                const failure = new Error(err.error?.message || `Gmail API error ${res.status}`);
+                failure.code = `gmail-${res.status}`;
+                if (res.status === 401 && accessToken === token) tokenExpiry = 0;
+                throw failure;
+            }
+            return await res.json();
+        } catch (error) {
+            if (error.name === 'AbortError') throw new Error('Gmail no respondió en 15 segundos. Comprueba la conexión y reintenta.');
+            throw error;
+        } finally { clearTimeout(timeout); }
     }
-    return res.json();
 }
 
 // ─────────────────────────────────────────────
@@ -281,11 +295,19 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [],
     const results = [];
     for (const batch of chunk(queries, 4)) {
         const batchResults = await Promise.all(batch.map(async ({ label, query }) => {
-            const result = await gmailFetch('users/me/messages', {
-                q: query,
-                maxResults: 200,
-            });
-            return { label, result };
+            const messages = [];
+            const pages = new Set();
+            let pageToken = '';
+            do {
+                const result = await gmailFetch('users/me/messages', {
+                    q: query, maxResults: 500, ...(pageToken ? { pageToken } : {})
+                });
+                messages.push(...(result.messages || []));
+                pageToken = result.nextPageToken || '';
+                if (pageToken && pages.has(pageToken)) throw new Error('Gmail repitió una página de resultados. Vuelve a intentar.');
+                pages.add(pageToken);
+            } while (pageToken);
+            return { label, result: { messages } };
         }));
         console.info('[gmailImport] Resultados de búsqueda', batchResults.map(({ label, result }) => ({
             fuente: label,
@@ -296,13 +318,14 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [],
 
     const messages = [...new Map(
         results.flatMap(result => result.messages || []).map(message => [message.id, message])
-    ).values()];
+    ).values()].filter(message => !options.existingIds?.has(message.id));
     if (messages.length === 0) return [];
 
-    // Obtener contenido de cada mensaje en paralelo (lotes de 10)
+    // Obtener contenido de cada mensaje en paralelo (lotes de 5)
+    // Bug 6: reducir de 10 a 5 para evitar que los emails pesados agoten el timeout de red
     const rawMessages = [];
-    for (let i = 0; i < messages.length; i += 10) {
-        const batch = messages.slice(i, i + 10);
+    for (let i = 0; i < messages.length; i += 5) {
+        const batch = messages.slice(i, i + 5);
         const fetched = await Promise.all(
             batch.map(m => gmailFetch(`users/me/messages/${m.id}`, { format: 'full' }))
         );
@@ -332,7 +355,14 @@ export function decodeEmailBody(message) {
             return tmp.innerText || tmp.textContent || '';
         }
         if (part.parts) {
-            return part.parts.map(extractText).join('\n');
+            // Bug 5: en multipart/alternative anidado, priorizar text/plain para evitar que
+            // se concatenen el texto y el HTML (que incluye tags basura) en el mismo body.
+            const plain = part.parts.find(p => p.mimeType === 'text/plain');
+            if (plain) return extractText(plain);
+            const html = part.parts.find(p => p.mimeType === 'text/html');
+            if (html) return extractText(html);
+            // Otros sub-tipos (embedded, adjuntos): recursivo pero sin duplicar contenido
+            return part.parts.map(extractText).filter(Boolean).join('\n');
         }
         return '';
     };

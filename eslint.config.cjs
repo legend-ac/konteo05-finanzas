@@ -21,6 +21,7 @@ module.exports = [
                 clearTimeout: 'readonly',
                 Chart: 'readonly',
                 XLSX: 'readonly',
+                Response: 'readonly',
                 caches: 'readonly',
                 self: 'readonly',
                 clients: 'readonly'
