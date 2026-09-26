@@ -97,7 +97,7 @@ function parseReceiptDateValue(raw) {
     match = value.match(/\b(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})\b/);
     if (match) return buildReceiptDate(Number(match[3]), Number(match[2]), Number(match[1]), hour, minute);
 
-    match = value.match(/\b(\d{1,2})\s+de\s+([a-z]+)(?:\s+de)?\s+(\d{4})\b/i);
+    match = value.match(/\b(\d{1,2})\s+de\s+([a-z]+)(?:\s+de)?\s*,?\s*(\d{4})\b/i);
     if (match) return buildReceiptDate(Number(match[1]), MONTHS[match[2].toLowerCase()], Number(match[3]), hour, minute);
     return null;
 }
@@ -314,6 +314,22 @@ function parseInterbank({ body, subject, date, gmailId }) {
 // ─────────────────────────────────────────────
 function parseBBVA({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
+
+    // BBVA sends PLIN QR receipts from procesos@bbva.com.pe. They are
+    // outgoing PLIN payments, not generic BBVA card consumption.
+    const plinQrReceipt = /constancia\s+de\s+operaci[oó]n\s+transferencia\s+plin|plineaste\s+S\//i.test(text);
+    if (plinQrReceipt) {
+        const payment = text.match(/plineaste\s+S\/\.?\s*([\d,.]+)\s+a\s+([^\n\r]+)/i);
+        const amount = payment ? parseMoney(payment[1]) : extractLabeledAmount(text, ['monto', 'importe']) || extractAmount(text);
+        if (amount) {
+            const recipient = displayName(payment?.[2] || extractField(text, ['destinatario', 'beneficiario']) || 'contacto');
+            const tx = genericExpense(amount, `Plin a ${recipient}`, 'plin', date, gmailId, text);
+            tx.description = `Plin a ${recipient}`;
+            tx.receiptDescription = tx.description;
+            tx.sourceLabel = 'Plin · BBVA';
+            return tx;
+        }
+    }
 
     // Cargo / consumo — extraer monto con label primero, más preciso
     const chargeAmt = extractLabeledAmount(text, ['monto\\s+(?:del\\s+)?(?:consumo|cargo|pago)', 'importe', 'monto', 'cargo', 'consumo']) || null;
@@ -618,7 +634,7 @@ const PARSER_MAP = [
     // Bancos tradicionales
     { pattern: /viabcp\.com|bcp\.com\.pe/i,     fn: parseBCP },
     { pattern: /interbank\.com\.pe|ibk@/i,      fn: parseInterbank },
-    { pattern: /bbva\.pe|bbvacontinental/i,     fn: parseBBVA },
+    { pattern: /bbva\.com\.pe|bbva\.pe|bbvacontinental/i, fn: parseBBVA },
     { pattern: /scotiabank\.com\.pe/i,          fn: parseScotiabank },
     { pattern: /banbif\.com\.pe/i,              fn: parseBanBif },
     { pattern: /pichincha\.com\.pe/i,           fn: parsePichincha },

@@ -1372,6 +1372,52 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 }
 .gmail-tx-card.is-review .gmail-tx-check { cursor: not-allowed; }
 
+/* Compact review workspace: the list is the primary surface. */
+.gmail-modal-content {
+    width: min(760px, calc(100vw - 40px));
+    max-width: 760px;
+    max-height: min(820px, calc(100dvh - 40px));
+    padding: 24px;
+}
+.gmail-modal-header { margin-bottom: 14px; padding-bottom: 14px; }
+.gmail-modal-header h3 { font-size: 20px; }
+.gmail-results-state { gap: 12px; overflow: hidden; }
+.gmail-results-toolbar { align-items: flex-end; padding: 0; }
+.gmail-found-count { max-width: 510px; font-size: 15px; }
+.gmail-source-controls { flex: 0 0 auto; padding: 11px 13px; border-radius: 10px; background: var(--bg-3); }
+.gmail-source-heading p { margin: 3px 0 8px; font-size: 11px; }
+.gmail-source-options { gap: 6px; }
+.gmail-source-option { flex: 0 1 auto; min-height: 31px; padding: 0 8px; gap: 5px; border-radius: 7px; background: var(--bg-2); }
+.gmail-source-option > span { font-size: 11px; }
+.gmail-source-option small { font-size: 10px; }
+.gmail-remember-sources { margin-top: 8px; font-size: 10px; }
+.gmail-tx-list { gap: 7px; padding: 1px 7px 1px 1px; }
+.gmail-tx-card { grid-template-columns: 20px minmax(0, 1fr) max-content; align-items: center; min-height: 84px; padding: 11px 13px; gap: 11px; }
+.gmail-tx-card .gmail-tx-check { grid-column: 1; grid-row: 1; }
+.gmail-tx-card .gmail-tx-body { grid-column: 2; grid-row: 1; }
+.gmail-tx-card .gmail-tx-amount { grid-column: 3; grid-row: 1; }
+.gmail-tx-header { margin-bottom: 3px; }
+.gmail-tx-desc { font-size: 13px; }
+.gmail-tx-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 5px; }
+.gmail-tx-date { margin: 0; }
+.gmail-category-control, .gmail-account-control { display: inline-flex; grid-column: auto; align-items: center; gap: 5px; color: var(--text-3); font-size: 9px; }
+.gmail-category-control span, .gmail-account-control span { font-size: 9px; }
+.gmail-modal-content .gmail-category-control select, .gmail-modal-content .gmail-account-control select { width: auto; max-width: 168px; height: 27px; min-height: 27px; padding: 0 22px 0 7px; border-radius: 6px; font-size: 10px; }
+.gmail-actions-row { padding-top: 14px; }
+
+@media (max-width: 599px) {
+    .gmail-modal-content { max-height: 92dvh; padding: 14px 16px 16px; }
+    .gmail-source-heading p { display: none; }
+    .gmail-source-option { flex: 1 1 calc(50% - 3px); }
+    .gmail-tx-card { grid-template-columns: 20px minmax(0, 1fr); min-height: 0; align-items: start; padding: 12px; }
+    .gmail-tx-card .gmail-tx-check { grid-column: 1; grid-row: 1; margin-top: 4px; }
+    .gmail-tx-card .gmail-tx-body { grid-column: 2; grid-row: 1; }
+    .gmail-tx-card .gmail-tx-amount { grid-column: 2; grid-row: 2; justify-self: start; margin-top: 3px; }
+    .gmail-tx-meta { gap: 6px; }
+    .gmail-category-control, .gmail-account-control { width: 100%; justify-content: space-between; }
+    .gmail-modal-content .gmail-category-control select, .gmail-modal-content .gmail-account-control select { width: min(100%, 180px); }
+}
+
 /* Elección de fuentes y categoría antes de la importación. */
 .gmail-source-controls {
     flex: 0 0 auto;
@@ -2424,4 +2470,81 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     #profile-btn .profile-btn-label { display: none; }
     .wallet-total-card { min-height: 104px; }
     .wallet-total-card > strong { margin-block: 4px; }
+}
+
+/* Wallet setup is a review queue, separate from the accounts in use. */
+.wallet-choices {
+    margin: 0 0 16px;
+    padding: 16px 18px;
+    border-color: rgba(212, 168, 67, .34);
+    background: linear-gradient(105deg, rgba(212, 168, 67, .08), var(--bg-2) 42%);
+}
+.wallet-choices h2 { margin: 0; font-size: 16px; }
+.wallet-choices > p { max-width: 660px; margin: 5px 0 0; color: var(--text-2); font-size: 12px; }
+.wallet-choice-group { margin-top: 14px; border-top: 1px solid var(--line); }
+.wallet-choice-group summary {
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+    list-style: none;
+}
+.wallet-choice-group summary::-webkit-details-marker { display: none; }
+.wallet-choice-group summary::after { content: '+'; margin-left: auto; color: var(--text-3); font-size: 17px; font-weight: 400; }
+.wallet-choice-group[open] summary::after { content: '−'; }
+.wallet-choice-group h3 { margin: 12px 0 4px; color: var(--text-3); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.wallet-choice-rows { display: grid; }
+.wallet-choice-row { padding: 11px 0; }
+.wallet-choice-row small { color: var(--text-3); }
+.wallet-choice-row .wallet-secondary { min-height: 32px; font-size: 11px; }
+
+@media (max-width: 599px) {
+    .wallet-choices { padding: 14px; }
+    .wallet-choice-row { gap: 8px; }
+    .wallet-choice-row > div { flex-basis: 100%; }
+    .wallet-choice-row .wallet-secondary { flex: 1; }
+}
+
+/* Gmail importer, final responsive layer. */
+.gmail-source-controls { padding: 11px 13px; border-radius: 10px; background: var(--bg-3); }
+.gmail-source-heading p { margin: 3px 0 8px; font-size: 11px; }
+.gmail-source-options { gap: 6px; }
+.gmail-source-option { flex: 0 1 auto; min-height: 31px; padding: 0 8px; gap: 5px; border-radius: 7px; background: var(--bg-2); }
+.gmail-source-option > span { font-size: 11px; }
+.gmail-source-option small { font-size: 10px; }
+.gmail-remember-sources { margin-top: 8px; font-size: 10px; }
+.gmail-modal-content { width: min(760px, calc(100vw - 40px)); max-width: 760px; max-height: min(820px, calc(100dvh - 40px)); padding: 24px; }
+.gmail-modal-header { margin-bottom: 14px; padding-bottom: 14px; }
+.gmail-modal-header h3 { font-size: 20px; }
+.gmail-results-state { gap: 12px; overflow: hidden; }
+.gmail-results-toolbar { align-items: flex-end; padding: 0; }
+.gmail-found-count { max-width: 510px; font-size: 15px; }
+.gmail-tx-list { gap: 7px; padding: 1px 7px 1px 1px; }
+.gmail-tx-card { grid-template-columns: 20px minmax(0, 1fr) max-content; align-items: center; min-height: 84px; padding: 11px 13px; gap: 11px; }
+.gmail-tx-card .gmail-tx-check { grid-column: 1; grid-row: 1; }
+.gmail-tx-card .gmail-tx-body { grid-column: 2; grid-row: 1; }
+.gmail-tx-card .gmail-tx-amount { grid-column: 3; grid-row: 1; }
+.gmail-tx-header { margin-bottom: 3px; }
+.gmail-tx-desc { font-size: 13px; }
+.gmail-tx-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 5px; }
+.gmail-tx-date { margin: 0; }
+.gmail-category-control, .gmail-account-control { display: inline-flex; grid-column: auto; align-items: center; gap: 5px; color: var(--text-3); font-size: 9px; }
+.gmail-category-control span, .gmail-account-control span { font-size: 9px; }
+.gmail-modal-content .gmail-category-control select, .gmail-modal-content .gmail-account-control select { width: auto; max-width: 168px; height: 27px; min-height: 27px; padding: 0 22px 0 7px; border-radius: 6px; font-size: 10px; }
+.gmail-actions-row { padding-top: 14px; }
+
+@media (max-width: 599px) {
+    .gmail-modal-content { max-height: 92dvh; padding: 14px 16px 16px; }
+    .gmail-source-heading p { display: none; }
+    .gmail-source-option { flex: 1 1 calc(50% - 3px); }
+    .gmail-tx-card { grid-template-columns: 20px minmax(0, 1fr); min-height: 0; align-items: start; padding: 12px; }
+    .gmail-tx-card .gmail-tx-check { grid-column: 1; grid-row: 1; margin-top: 4px; }
+    .gmail-tx-card .gmail-tx-body { grid-column: 2; grid-row: 1; }
+    .gmail-tx-card .gmail-tx-amount { grid-column: 2; grid-row: 2; justify-self: start; margin-top: 3px; }
+    .gmail-tx-meta { gap: 6px; }
+    .gmail-category-control, .gmail-account-control { width: 100%; justify-content: space-between; }
+    .gmail-modal-content .gmail-category-control select, .gmail-modal-content .gmail-account-control select { width: min(100%, 180px); }
 }

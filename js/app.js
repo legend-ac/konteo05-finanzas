@@ -36,6 +36,22 @@ function applyTheme(theme) {
 }
 
 let chartSnapshot = null;
+// Avoid repeating the same Firestore reads when a person changes a control,
+// returns to the dashboard, or two UI events request the same period together.
+const dashboardReadCache = new Map();
+const DASHBOARD_CACHE_TTL_MS = 45_000;
+
+function dashboardCacheKey(uid, startDate, endDate) {
+    return `${uid}:${startDate.toISOString()}:${endDate.toISOString()}`;
+}
+
+function pruneDashboardCache() {
+    if (dashboardReadCache.size <= 8) return;
+    const oldest = [...dashboardReadCache.entries()]
+        .sort(([, a], [, b]) => a.loadedAt - b.loadedAt)
+        .slice(0, dashboardReadCache.size - 8);
+    oldest.forEach(([key]) => dashboardReadCache.delete(key));
+}
 function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme') || 'dark';
     const next    = current === 'dark' ? 'light' : 'dark';
@@ -236,7 +252,7 @@ async function saveUserProfile() {
 // ──────────────────────────────────────────────
 // LOAD DATA
 // ──────────────────────────────────────────────
-async function loadData() {
+async function loadData({ force = false } = {}) {
     if (!state.currentUser) return;
 
     const myToken = ++state.currentLoadToken;
@@ -267,11 +283,32 @@ async function loadData() {
     const endTs = firebase.firestore.Timestamp.fromDate(endDate);
 
     try {
-        // Ambas solicitudes en paralelo: transacciones y plan de presupuesto
-        const [{ incomeItems: rawIncome, expenseItems: rawExpense }, plan] = await Promise.all([
-            dbService.getTransactions(state.currentUser.uid, startTs, endTs),
-            dbService.getPlan(state.currentUser.uid).catch(() => null)
-        ]);
+        const cacheKey = dashboardCacheKey(state.currentUser.uid, startDate, endDate);
+        const cached = dashboardReadCache.get(cacheKey);
+        const cacheIsFresh = cached?.value && Date.now() - cached.loadedAt < DASHBOARD_CACHE_TTL_MS;
+        let result;
+        if (!force && cacheIsFresh) {
+            result = cached.value;
+        } else if (!force && cached?.pending) {
+            result = await cached.pending;
+        } else {
+            const pending = Promise.all([
+                dbService.getTransactions(state.currentUser.uid, startTs, endTs),
+                dbService.getPlan(state.currentUser.uid).catch(() => null)
+            ]);
+            dashboardReadCache.set(cacheKey, { pending, loadedAt: Date.now() });
+            try {
+                result = await pending;
+                if (dashboardReadCache.get(cacheKey)?.pending === pending) {
+                    dashboardReadCache.set(cacheKey, { value: result, loadedAt: Date.now() });
+                }
+                pruneDashboardCache();
+            } catch (error) {
+                if (dashboardReadCache.get(cacheKey)?.pending === pending) dashboardReadCache.delete(cacheKey);
+                throw error;
+            }
+        }
+        const [{ incomeItems: rawIncome, expenseItems: rawExpense }, plan] = result;
 
         if (myToken !== state.currentLoadToken) return;
 
@@ -1176,7 +1213,7 @@ let walletTransactions = [];
 let suggestedWallets = [];
 let walletLoadToken = 0;
 let walletCache = { uid: null, loadedAt: 0 };
-const WALLET_CACHE_TTL_MS = 30_000;
+const WALLET_CACHE_TTL_MS = 120_000;
 
 function activeWallets() {
     return state.wallets.filter(isActiveWallet);
@@ -1311,9 +1348,13 @@ function renderWalletChoices() {
     panel.classList.toggle('hidden', !review.length && !suggestedWallets.length && !archived.length);
     if (!review.length && !suggestedWallets.length && !archived.length) return;
     const heading = document.createElement('h2');
-    heading.textContent = 'Elige tus cuentas';
+    heading.textContent = review.length
+        ? `${review.length} cuenta${review.length === 1 ? '' : 's'} pendiente${review.length === 1 ? '' : 's'} de revisar`
+        : 'Cuentas sugeridas';
     const description = document.createElement('p');
-    description.textContent = 'Solo tú decides qué cuentas usar. Las cuentas automáticas pendientes de revisión no se incluyen en el saldo. Tus movimientos se conservan en Inicio.';
+    description.textContent = review.length
+        ? 'Estas cuentas fueron creadas automaticamente por una version anterior. No se usan en tu saldo ni cambian tus movimientos.'
+        : 'Detectamos movimientos sin cuenta asignada. Puedes crear una cuenta para organizarlos.';
     panel.append(heading, description);
     const addRow = (name, detail, actions) => {
         const row = document.createElement('div');
@@ -1334,14 +1375,39 @@ function renderWalletChoices() {
             button.dataset.choiceId = id;
             row.append(button);
         });
-        panel.append(row);
+        return row;
     };
-    suggestedWallets.forEach(w => addRow(w.name,
+    const appendGroup = (title, rows, { collapsible = false, open = false } = {}) => {
+        if (!rows.length) return;
+        const group = document.createElement(collapsible ? 'details' : 'section');
+        group.className = 'wallet-choice-group';
+        if (collapsible) {
+            group.open = open;
+            const summary = document.createElement('summary');
+            summary.textContent = title;
+            group.appendChild(summary);
+        } else {
+            const titleEl = document.createElement('h3');
+            titleEl.textContent = title;
+            group.appendChild(titleEl);
+        }
+        const rowsEl = document.createElement('div');
+        rowsEl.className = 'wallet-choice-rows';
+        rows.forEach(row => rowsEl.appendChild(row));
+        group.appendChild(rowsEl);
+        panel.appendChild(group);
+    };
+    appendGroup(
+        `Ver ${review.length} cuenta${review.length === 1 ? '' : 's'} antigua${review.length === 1 ? '' : 's'}`,
+        review.map(w => addRow(w.name, 'No se esta usando ni afecta tu saldo actual.',
+            [['Revisar cuenta', 'keep', w.id], ['Ocultar', 'archive', w.id]])),
+        { collapsible: true, open: review.length <= 2 }
+    );
+    appendGroup('Cuentas sugeridas', suggestedWallets.map(w => addRow(w.name,
         `${w.configured ? 'Entidad configurada' : 'Detectada en tus movimientos'} · ${w.count} movimientos sin asignar`,
-        [['Agregar cuenta', 'add', w.sourceKey]]));
-    review.forEach(w => addRow(w.name, 'Creada automáticamente por una versión anterior. Pendiente de tu elección.',
-        [['Revisar y conservar', 'keep', w.id], ['Archivar', 'archive', w.id]]));
-    archived.forEach(w => addRow(w.name, 'Cuenta archivada', [['Reactivar', 'keep', w.id]]));
+        [['Agregar cuenta', 'add', w.sourceKey]])));
+    appendGroup('Cuentas archivadas', archived.map(w => addRow(w.name,
+        'Esta cuenta esta oculta de tus saldos.', [['Reactivar', 'keep', w.id]])));
 }
 
 document.getElementById('wallet-choices')?.addEventListener('click', async event => {
@@ -1441,13 +1507,19 @@ function changeAppView(view) {
         button.classList.toggle('active', active);
         button.toggleAttribute('aria-current', active);
     });
-    if (isWallets) loadWallets();
+    if (isWallets) {
+        const list = document.getElementById('wallets-list');
+        if (!state.wallets.length && list) {
+            list.innerHTML = '<div class="wallet-list-empty"><strong>Cargando tus cuentas...</strong><span>Preparando saldos y movimientos.</span></div>';
+        }
+        loadWallets();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function refreshFinancialViews() {
     const walletViewIsOpen = !document.getElementById('wallets-view')?.classList.contains('hidden');
-    const tasks = [loadData()];
+    const tasks = [loadData({ force: true })];
     if (walletViewIsOpen) tasks.push(loadWallets({ force: true }));
     await Promise.all(tasks);
 }

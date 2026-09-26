@@ -153,7 +153,7 @@ function walletOptionsHtml(selected = '', includeEmpty = true) {
 function renderAccountControl(tx, idx) {
     if (tx.reviewOnly || !walletOptions.some(isActiveWallet)) return '';
     const accountId = resolveWalletAccount(tx, walletOptions, getCustomEntities());
-    return `<label class="gmail-account-control" for="gmail-account-${idx}"><span>Billetera</span><select id="gmail-account-${idx}" class="gmail-tx-account" data-idx="${idx}">${walletOptionsHtml(accountId)}</select></label>`;
+    return `<label class="gmail-account-control" for="gmail-account-${idx}"><span>Billetera</span><select id="gmail-account-${idx}" class="gmail-tx-account" data-idx="${idx}" aria-label="Billetera para este movimiento">${walletOptionsHtml(accountId)}</select></label>`;
 }
 
 function renderCategoryControl(tx, idx) {
@@ -178,6 +178,7 @@ function renderTxCard(tx, idx) {
     const checked   = selectedIds.has(idx) ? 'checked' : '';
     const disabled  = isReview ? 'disabled' : '';
     const reason    = (isReview || tx.possibleDuplicate) && tx.reviewReason ? `<div class="gmail-tx-reason">${escapeHtml(tx.reviewReason)}</div>` : '';
+    const controls  = `${renderCategoryControl(tx, idx)}${renderAccountControl(tx, idx)}`;
     return `
     <article class="gmail-tx-card ${typeClass}${isReview ? ' is-review' : ''}" data-idx="${idx}" data-source="${escapeHtml(tx.source)}">
         <input type="checkbox" class="gmail-tx-check" data-idx="${idx}" ${checked} ${disabled}>
@@ -187,11 +188,12 @@ function renderTxCard(tx, idx) {
                 <span class="gmail-tx-badge gmail-badge-${tx.type}">${typeLabel}</span>
             </div>
             <div class="gmail-tx-desc">${escapeHtml(tx.description)}</div>
-            <div class="gmail-tx-date">${escapeHtml(tx.date)}</div>
+            <div class="gmail-tx-meta">
+                <span class="gmail-tx-date">${escapeHtml(tx.date)}</span>
+                ${controls}
+            </div>
             ${reason}
         </div>
-        ${renderCategoryControl(tx, idx)}
-        ${renderAccountControl(tx, idx)}
         <div class="gmail-tx-amount ${typeClass}-amount">${sign} ${fmtAmt(tx.amount, tx.currency)}</div>
     </article>`;
 }

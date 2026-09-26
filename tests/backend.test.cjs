@@ -241,6 +241,29 @@ test('parser prioritizes receipt date and preserves the receipt reason', async (
     assert.equal(results[0].emailReceivedAt.toISOString(), '2026-02-20T23:45:00.000Z');
     assert.equal(results[0].occurredAt.toISOString(), '2026-02-14T23:30:00.000Z');
 });
+test('BBVA PLIN QR receipts from procesos are imported as outgoing PLIN payments', async () => {
+    const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
+    const results = parseAllEmails({
+        rawMessages: [{ id: 'bbva-plin-1' }],
+        decodeBody: () => [
+            'Plineaste S/ 16.00 a Liz N Poma M',
+            'Tipo de operacion: Pago con QR',
+            'Destino: Yape',
+            'Fecha y hora: 26 de septiembre, 2026 00:43'
+        ].join('\n'),
+        getSender: () => 'BBVA <procesos@bbva.com.pe>',
+        getDate: () => new Date('2026-09-26T05:43:00Z'),
+        getSubject: () => 'Constancia de operacion transferencia PLIN con QR'
+    });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].type, 'expense');
+    assert.equal(results[0].source, 'plin');
+    assert.equal(results[0].sourceLabel, 'Plin · BBVA');
+    assert.equal(results[0].amount, 16);
+    assert.equal(results[0].description, 'Plin a Liz N Poma M');
+    assert.equal(results[0].date, '2026-09-26');
+    assert.equal(results[0].receiptDateSource, 'receipt');
+});
 test('Gmail follows page tokens and avoids downloading previously imported messages', async () => {
     const h = harness();
     const urls = [];

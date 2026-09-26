@@ -192,6 +192,7 @@ const SENDERS = [
     'from:alertas@bbva.pe',
     'from:bbva@bbvacontinental.com',
     'from:notificaciones@bbva.pe',
+    'from:procesos@bbva.com.pe',
     // ── Scotiabank ──
     'from:notificaciones@scotiabank.com.pe',
     'from:alertas@scotiabank.com.pe',
