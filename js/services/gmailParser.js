@@ -286,7 +286,7 @@ function parseInterbank({ body, subject, date, gmailId }) {
         const destination = extractField(text, ['destino']);
         if (amount) {
             const name = displayName(recipient || destination || 'contacto');
-            const tx = genericExpense(amount, `Plin a ${name}`, 'plin', date, gmailId, text);
+            const tx = genericExpense(amount, `Plin a ${name}`, 'plin-interbank', date, gmailId, text);
             tx.sourceLabel = 'Plin · Interbank';
             return tx;
         }
@@ -315,15 +315,26 @@ function parseInterbank({ body, subject, date, gmailId }) {
 function parseBBVA({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
 
-    // BBVA sends PLIN QR receipts from procesos@bbva.com.pe. They are
-    // outgoing PLIN payments, not generic BBVA card consumption.
-    const plinQrReceipt = /constancia\s+de\s+operaci[oó]n\s+transferencia\s+plin|plineaste\s+S\//i.test(text);
+    // BBVA sends PLIN / QR receipts from procesos@bbva.com.pe. They are
+    // PLIN operations, not generic BBVA card consumption. Keep their source
+    // separate from Interbank PLIN so accounts and reports stay understandable.
+    const plinQrReceipt = /constancia\s+de\s+operaci[oó]n\s+transferencia\s+plin|plineaste\s+S\/|\bplin\b.{0,80}(?:pago\s+con\s+qr|c[oó]digo\s+qr)/i.test(text);
     if (plinQrReceipt) {
+        const received = text.match(/(?:recibiste|te\s+enviaron)\s+(?:un\s+)?(?:plin\s+de\s+)?S\/\.?\s*([\d,.]+)(?:\s+de\s+([^\n\r]+))?/i);
+        if (received) {
+            const amount = parseMoney(received[1]);
+            if (amount) {
+                const sender = displayName(received[2] || extractField(text, ['ordenante', 'remitente', 'beneficiario']) || 'contacto');
+                const tx = genericIncome(amount, `Plin de ${sender}`, 'plin-bbva', date, gmailId, text);
+                tx.sourceLabel = 'Plin · BBVA';
+                return tx;
+            }
+        }
         const payment = text.match(/plineaste\s+S\/\.?\s*([\d,.]+)\s+a\s+(.+?)(?=\s+(?:detalles\s+de\s+tu\s+plineo|tipo\s+de\s+operaci[oó]n|destino|itf|fecha\s+y\s+hora)\b|[\n\r]|$)/i);
-        const amount = payment ? parseMoney(payment[1]) : extractLabeledAmount(text, ['monto', 'importe']) || extractAmount(text);
+        const amount = payment ? parseMoney(payment[1]) : extractLabeledAmount(text, ['monto', 'importe', 'monto\s+y\s+moneda']) || extractAmount(text);
         if (amount) {
             const recipient = displayName(payment?.[2] || extractField(text, ['destinatario', 'beneficiario']) || 'contacto');
-            const tx = genericExpense(amount, `Plin a ${recipient}`, 'plin', date, gmailId, text);
+            const tx = genericExpense(amount, `Plin a ${recipient}`, 'plin-bbva', date, gmailId, text);
             tx.description = `Plin a ${recipient}`;
             tx.receiptDescription = tx.description;
             tx.sourceLabel = 'Plin · BBVA';
@@ -634,7 +645,7 @@ const PARSER_MAP = [
     // Bancos tradicionales
     { pattern: /viabcp\.com|bcp\.com\.pe/i,     fn: parseBCP },
     { pattern: /interbank\.com\.pe|ibk@/i,      fn: parseInterbank },
-    { pattern: /bbva\.com\.pe|bbva\.pe|bbvacontinental/i, fn: parseBBVA },
+    { pattern: /bbva\.com\.pe|bbva\.pe|bbvacontinental|procesos@bbva|notificaciones-gateway[^@]*@[^@]*bbva/i, fn: parseBBVA },
     { pattern: /scotiabank\.com\.pe/i,          fn: parseScotiabank },
     { pattern: /banbif\.com\.pe/i,              fn: parseBanBif },
     { pattern: /pichincha\.com\.pe/i,           fn: parsePichincha },

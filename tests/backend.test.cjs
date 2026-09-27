@@ -257,12 +257,31 @@ test('BBVA PLIN QR receipts from procesos are imported as outgoing PLIN payments
     });
     assert.equal(results.length, 1);
     assert.equal(results[0].type, 'expense');
-    assert.equal(results[0].source, 'plin');
+    assert.equal(results[0].source, 'plin-bbva');
     assert.equal(results[0].sourceLabel, 'Plin · BBVA');
     assert.equal(results[0].amount, 16);
     assert.equal(results[0].description, 'Plin a Liz N Poma M');
     assert.equal(results[0].date, '2026-09-26');
     assert.equal(results[0].receiptDateSource, 'receipt');
+});
+test('Interbank PLIN receipts remain separate from BBVA PLIN receipts', async () => {
+    const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
+    const results = parseAllEmails({
+        rawMessages: [{ id: 'interbank-plin-1' }],
+        decodeBody: () => [
+            'Constancia de Pago Plin',
+            'Monto y moneda: S/ 23.50',
+            'Destinatario: Ana Ruiz',
+            'Fecha y hora: 25/09/2026 13:45'
+        ].join('\n'),
+        getSender: () => 'Interbank <servicioalcliente@interbank.com.pe>',
+        getDate: () => new Date('2026-09-25T18:45:00Z'),
+        getSubject: () => 'Constancia de Pago Plin'
+    });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].source, 'plin-interbank');
+    assert.equal(results[0].sourceLabel, 'Plin · Interbank');
+    assert.equal(results[0].amount, 23.5);
 });
 test('Gmail follows page tokens and avoids downloading previously imported messages', async () => {
     const h = harness();

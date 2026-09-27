@@ -5,6 +5,9 @@ const SOURCE_NAMES = {
     banbif: 'BanBif', sip: 'SIP', binance: 'Binance', pagoefectivo: 'PagoEfectivo'
 };
 
+SOURCE_NAMES['plin-bbva'] = 'Plin · BBVA';
+SOURCE_NAMES['plin-interbank'] = 'Plin · Interbank';
+
 export function entitySourceKey(entity) {
     return `custom-${String(entity.id || entity.sender || '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
 }

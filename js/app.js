@@ -1266,13 +1266,37 @@ function accountBalance(wallet) {
     return walletBalances.get(wallet.id) || 0;
 }
 
+function walletBankKey(wallet) {
+    const identity = `${wallet?.institution || ''} ${wallet?.name || ''} ${wallet?.sourceKey || ''}`.toLowerCase();
+    if (/plin.*bbva|bbva/.test(identity)) return 'bbva';
+    if (/plin.*interbank|interbank|ibk/.test(identity)) return 'interbank';
+    if (/bcp|credito del peru|banco de credito/.test(identity)) return 'bcp';
+    if (/scotiabank/.test(identity)) return 'scotiabank';
+    if (/naci[oó]n|\bbn\b/.test(identity)) return 'nacion';
+    if (/mibanco/.test(identity)) return 'mibanco';
+    if (/yape/.test(identity)) return 'yape';
+    if (/banbif/.test(identity)) return 'banbif';
+    return 'default';
+}
+
+function walletVisualColor(wallet) {
+    // Existing accounts often have the old generic gold default. Give those
+    // a bank identity without overwriting a colour explicitly chosen later.
+    if (wallet?.color && wallet.color !== 'gold') return wallet.color;
+    const defaults = {
+        bbva: 'blue', bcp: 'cyan', interbank: 'green', scotiabank: 'red',
+        nacion: 'gold', mibanco: 'orange', yape: 'purple', banbif: 'pink'
+    };
+    return defaults[walletBankKey(wallet)] || wallet?.color || 'gold';
+}
+
 function createWalletItem(wallet) {
     const item = document.createElement('button');
     item.type = 'button';
-    item.className = `wallet-list-item ${state.selectedWalletId === wallet.id ? 'is-selected' : ''}`;
+    item.className = `wallet-list-item wallet-bank-${walletBankKey(wallet)} ${state.selectedWalletId === wallet.id ? 'is-selected' : ''}`;
     item.dataset.walletId = wallet.id;
     const identity = document.createElement('span');
-    identity.className = `wallet-list-icon wallet-color-${wallet.color || 'gold'}`;
+    identity.className = `wallet-list-icon wallet-color-${walletVisualColor(wallet)}`;
     identity.textContent = wallet.type === 'wallet' ? '◉' : wallet.type === 'cash' ? 'S/' : wallet.type === 'credit' ? '▤' : '▣';
     const copy = document.createElement('span');
     copy.className = 'wallet-list-copy';
@@ -1293,6 +1317,7 @@ function renderWalletDetail() {
     if (!panel) return;
     panel.textContent = '';
     const wallet = state.wallets.find(item => item.id === state.selectedWalletId && isActiveWallet(item));
+    panel.className = `wallet-detail-panel wallet-bank-${wallet ? walletBankKey(wallet) : 'default'}`;
     if (!wallet) {
         const empty = document.createElement('div');
         empty.className = 'wallet-detail-empty';
