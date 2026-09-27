@@ -1418,6 +1418,242 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .gmail-modal-content .gmail-category-control select, .gmail-modal-content .gmail-account-control select { width: min(100%, 180px); }
 }
 
+/* Gmail import review: separate safe imports from messages needing a decision. */
+.gmail-source-controls {
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--bg-3) 84%, transparent);
+}
+.gmail-source-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.gmail-source-heading p { margin: 3px 0 0; }
+.gmail-source-options { margin-top: 10px; }
+.gmail-source-option {
+    position: relative;
+    min-height: 34px;
+    border-color: var(--line);
+    transition: border-color var(--t) var(--ease), background var(--t) var(--ease);
+}
+.gmail-source-option:has(input:checked) { border-color: rgba(212, 168, 67, .52); background: var(--gold-faint); color: var(--text); }
+.gmail-source-option small { padding-left: 2px; }
+.gmail-review-queue {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    border: 1px dashed rgba(212, 168, 67, .46);
+    border-radius: 12px;
+    background: rgba(212, 168, 67, .045);
+}
+.gmail-review-queue > summary {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 14px;
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+    list-style: none;
+}
+.gmail-review-queue > summary::-webkit-details-marker { display: none; }
+.gmail-review-queue > summary::after { content: '+'; margin-left: auto; color: var(--text-3); font-size: 18px; font-weight: 400; }
+.gmail-review-queue[open] > summary::after { content: '−'; }
+.gmail-review-queue > p { margin: 0; padding: 0 14px 12px; color: var(--text-2); font-size: 11px; line-height: 1.5; }
+.gmail-review-list { display: grid; gap: 7px; padding: 0 8px 8px; }
+.gmail-review-list .gmail-tx-card { background: var(--bg-2); }
+.gmail-review-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.gmail-review-actions > span { width: 100%; color: var(--text-3); font-size: 10px; }
+.gmail-review-choice {
+    height: 27px;
+    padding: 0 9px;
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
+    background: var(--bg-3);
+    color: var(--text-2);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.gmail-review-choice:hover { border-color: var(--gold); color: var(--gold); }
+
+@media (max-width: 599px) {
+    .gmail-source-heading { align-items: flex-start; }
+    .gmail-review-queue > summary { min-height: 46px; padding: 0 12px; }
+    .gmail-review-queue > p { padding: 0 12px 10px; }
+    .gmail-review-actions { margin-top: 7px; }
+    .gmail-review-choice { flex: 1; }
+}
+
+/* ========================================================================
+   KONTEO 2026 — focused finance workspace
+   The interface favours fast scanning and decisive actions over decoration.
+   ======================================================================== */
+:root {
+    --bg: #0b0e0f;
+    --bg-2: #101416;
+    --bg-3: #161c1e;
+    --bg-4: #1c2426;
+    --line: #263033;
+    --line-2: #344144;
+    --text: #f4f7f5;
+    --text-2: #a6b1ad;
+    --text-3: #71807a;
+    --gold: #e3b341;
+    --gold-dim: rgba(227,179,65,.13);
+    --gold-faint: rgba(227,179,65,.07);
+    --income: #37d487;
+    --income-dim: rgba(55,212,135,.12);
+    --expense: #ff607d;
+    --expense-dim: rgba(255,96,125,.12);
+    --r: 12px;
+    --r-lg: 18px;
+}
+
+body { background: var(--bg); }
+.app-header { border-bottom-color: var(--line); }
+.dashboard-eyebrow, .ledger-eyebrow, .plan-eyebrow { color: var(--gold); }
+
+@media (min-width: 768px) {
+    #dashboard-page > header {
+        left: 256px;
+        height: 68px;
+        padding: 0 clamp(28px, 4vw, 56px);
+        border-bottom: 1px solid var(--line);
+        background: color-mix(in srgb, var(--bg) 88%, transparent);
+    }
+    #dashboard-page > header #btn-gmail-import { display: inline-flex; }
+    .desktop-nav {
+        width: 256px;
+        padding: 18px 14px;
+        border-right-color: var(--line);
+        background: #0d1112;
+    }
+    .desktop-nav-logo { margin: 0 8px 30px; }
+    .desktop-nav-mark { background: var(--gold); }
+    .desktop-nav .app-nav-link {
+        min-height: 44px;
+        padding: 0 12px;
+        margin-bottom: 5px;
+        border-radius: 10px;
+    }
+    .desktop-nav .app-nav-link.active {
+        border: 1px solid rgba(227,179,65,.34);
+        background: rgba(227,179,65,.09);
+    }
+    .dashboard-shell,
+    .wallets-shell {
+        width: calc(100% - 256px);
+        max-width: 1600px;
+        margin-left: 256px;
+        margin-right: 0;
+        padding-right: clamp(28px, 4vw, 64px);
+        padding-left: clamp(28px, 4vw, 64px);
+    }
+    .dashboard-shell { padding-top: 110px; }
+    .wallets-shell { padding-top: 112px; }
+    .dashboard-title-row { margin-bottom: 28px; }
+    .dashboard-title-left h1 { font-size: clamp(32px, 3.2vw, 46px); letter-spacing: -.055em; }
+    .dashboard-overview { grid-template-columns: minmax(310px, 1.25fr) repeat(2, minmax(190px, .72fr)); gap: 14px; }
+    .balance-hero, .overview-stat { min-height: 192px; }
+    .dashboard-grid { grid-template-columns: minmax(0, 1.58fr) minmax(330px, .82fr); gap: 18px; margin-top: 18px; }
+}
+
+.period-bar {
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg-2);
+}
+.filter { height: 34px; border-radius: 8px; color: var(--text-2); }
+.filter:hover { background: var(--bg-3); }
+.filter.active { background: var(--gold); color: #19160d; box-shadow: none; }
+
+.dashboard-overview { border: 0; background: transparent; overflow: visible; }
+.balance-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #2f5d46;
+    border-radius: var(--r-lg);
+    background:
+        radial-gradient(circle at 92% 14%, rgba(55,212,135,.16), transparent 30%),
+        linear-gradient(135deg, #173025 0%, #102018 56%, #0e1613 100%);
+    color: var(--text);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.balance-hero::before, .balance-hero::after { display: none; }
+.balance-hero .balance-period-label { color: #8acba7; }
+.balance-hero .balance-caption { color: #b2c2b9; }
+.balance-hero .balance-number { color: var(--text); letter-spacing: -.06em; }
+.balance-hero .balance-negative { color: #ff9bad; }
+.balance-hero .btn-balance-income { background: var(--income); color: #082012; }
+.balance-hero .btn-balance-expense { border-color: rgba(244,247,245,.35) !important; color: var(--text); }
+.balance-hero .btn-balance-expense:hover { border-color: var(--expense) !important; background: var(--expense); }
+.balance-hero-actions { gap: 8px; }
+.btn-balance-action { height: 40px; padding: 0 15px; border-radius: 9px; font-size: 12px; }
+
+.overview-stat {
+    position: relative;
+    overflow: hidden;
+    justify-content: space-between;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--bg-2);
+}
+.overview-stat::before { content: ''; width: 30px; height: 3px; border-radius: 99px; background: var(--line-2); }
+.income-stat::before { background: var(--income); }.expense-stat::before { background: var(--expense); }
+.overview-stat > span { margin: 0; font-size: 10px; color: var(--text-3); }
+.overview-stat strong { font-size: clamp(20px, 1.9vw, 29px); letter-spacing: -.055em; }
+
+.metrics-strip { gap: 10px; margin-top: 14px; border: 0; background: transparent; overflow: visible; }
+.metric-item { align-items: flex-start; min-height: 66px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); }
+.metric-item:not(:last-child) { border-right: 1px solid var(--line); }
+.metric-label { font-size: 9px; }.metric-value { font-size: 14px; }
+
+.ledger-card, .plan-section, .insights-section { border-color: var(--line); border-radius: var(--r-lg); background: var(--bg-2); }
+.ledger-card { padding: 24px 26px 0; }
+.ledger-toolbar { gap: 16px; padding-bottom: 16px; }
+.ledger-toolbar h2 { font-size: 20px; }.ledger-eyebrow { margin-bottom: 5px; }
+.filter-bar { grid-template-columns: minmax(190px, 1.45fr) repeat(3, minmax(125px, .8fr)); gap: 8px; }
+.search-input, .category-filter, #status-filter, #sort-select {
+    height: 38px;
+    border-radius: 9px;
+    border-color: var(--line);
+    background: var(--bg-3);
+    font-size: 12px;
+}
+.search-input:focus, .category-filter:focus, #status-filter:focus, #sort-select:focus { border-color: var(--income); box-shadow: 0 0 0 3px rgba(55,212,135,.10); }
+.item { min-height: 68px; padding: 13px 4px; border-bottom-color: var(--line); }
+.item:hover { margin-inline: -8px; padding-inline: 12px; border-radius: 10px; background: var(--bg-3); border-bottom-color: transparent; }
+.item-info { min-width: 0; flex: 1; }
+.item-desc { max-width: 100%; font-size: 13px; font-weight: 650; }
+.item-meta { margin-top: 2px; }.item-amount { font-size: 13px; }
+.item-actions { opacity: .55; transition: opacity var(--t) var(--ease); }.item:hover .item-actions { opacity: 1; }
+
+.plan-section { border-color: rgba(227,179,65,.28); background: linear-gradient(145deg, rgba(227,179,65,.08), var(--bg-2) 46%); }
+.plan-h2, .insights-h2 { font-size: 20px; }.plan-toggle-status { color: var(--gold); }
+.budget-bar { height: 5px; background: rgba(255,255,255,.08); }.budget-bar-fill { background: linear-gradient(90deg, var(--income), #a8e05f); }
+.plan-input { height: 40px; border-radius: 9px; background: rgba(8,11,12,.4); }.plan-input:focus { border-color: var(--gold); }
+.btn-save-plan { height: 42px; border-radius: 9px; background: var(--gold); color: #19160d; }
+.insights-section { background: var(--bg-2); }.chart-block { border-top-color: var(--line); }
+
+.wallet-total-card { border-color: #2f5d46; background: linear-gradient(105deg, #13271d, #101416 58%); }
+.wallet-total-card > strong { letter-spacing: -.06em; }.wallets-list-panel, .wallet-detail-panel { border-color: var(--line); }
+.wallet-list-item { border-radius: 10px; }.wallet-list-item.is-selected { border-color: rgba(55,212,135,.35); background: rgba(55,212,135,.07); box-shadow: inset 3px 0 0 var(--income); }
+.wallet-detail-type { color: var(--income); }
+
+@media (max-width: 767px) {
+    .dashboard-shell { padding-top: 22px; }
+    .dashboard-title-left h1 { max-width: none; font-size: 32px; }
+    .period-bar { width: 100%; }.period-bar .filter { height: 38px; }
+    .balance-hero { min-height: 190px; border-radius: 16px; background: linear-gradient(135deg, #173025, #102018); }
+    .balance-hero .balance-number { color: var(--text); font-size: 35px; }
+    .overview-stat { min-height: 110px; border-radius: 14px; }
+    .metrics-strip { gap: 7px; }.metric-item { min-height: 62px; padding: 10px; border-radius: 11px; }
+    .metric-value { font-size: 11px; }
+    .ledger-card { padding: 18px 14px 0; }
+    .filter-bar { grid-template-columns: 1fr 1fr; }.search-input { grid-column: 1 / -1; }
+    .item:hover { margin-inline: 0; padding-inline: 4px; background: transparent; }
+    .dashboard-support { gap: 12px; }.plan-section, .insights-section { border-radius: 14px; }
+}
+
 /* Elección de fuentes y categoría antes de la importación. */
 .gmail-source-controls {
     flex: 0 0 auto;

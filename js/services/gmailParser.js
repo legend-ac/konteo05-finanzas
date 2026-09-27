@@ -319,7 +319,7 @@ function parseBBVA({ body, subject, date, gmailId }) {
     // outgoing PLIN payments, not generic BBVA card consumption.
     const plinQrReceipt = /constancia\s+de\s+operaci[oó]n\s+transferencia\s+plin|plineaste\s+S\//i.test(text);
     if (plinQrReceipt) {
-        const payment = text.match(/plineaste\s+S\/\.?\s*([\d,.]+)\s+a\s+([^\n\r]+)/i);
+        const payment = text.match(/plineaste\s+S\/\.?\s*([\d,.]+)\s+a\s+(.+?)(?=\s+(?:detalles\s+de\s+tu\s+plineo|tipo\s+de\s+operaci[oó]n|destino|itf|fecha\s+y\s+hora)\b|[\n\r]|$)/i);
         const amount = payment ? parseMoney(payment[1]) : extractLabeledAmount(text, ['monto', 'importe']) || extractAmount(text);
         if (amount) {
             const recipient = displayName(payment?.[2] || extractField(text, ['destinatario', 'beneficiario']) || 'contacto');

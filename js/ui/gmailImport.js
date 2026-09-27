@@ -179,6 +179,12 @@ function renderTxCard(tx, idx) {
     const disabled  = isReview ? 'disabled' : '';
     const reason    = (isReview || tx.possibleDuplicate) && tx.reviewReason ? `<div class="gmail-tx-reason">${escapeHtml(tx.reviewReason)}</div>` : '';
     const controls  = `${renderCategoryControl(tx, idx)}${renderAccountControl(tx, idx)}`;
+    const reviewActions = isReview ? `
+        <div class="gmail-review-actions" aria-label="Clasificar movimiento pendiente">
+            <span>Si no es una transferencia entre tus cuentas:</span>
+            <button type="button" class="gmail-review-choice" data-review-classification="income" data-idx="${idx}">Es un ingreso</button>
+            <button type="button" class="gmail-review-choice" data-review-classification="expense" data-idx="${idx}">Es un gasto</button>
+        </div>` : '';
     return `
     <article class="gmail-tx-card ${typeClass}${isReview ? ' is-review' : ''}" data-idx="${idx}" data-source="${escapeHtml(tx.source)}">
         <input type="checkbox" class="gmail-tx-check" data-idx="${idx}" ${checked} ${disabled}>
@@ -193,6 +199,7 @@ function renderTxCard(tx, idx) {
                 ${controls}
             </div>
             ${reason}
+            ${reviewActions}
         </div>
         <div class="gmail-tx-amount ${typeClass}-amount">${sign} ${fmtAmt(tx.amount, tx.currency)}</div>
     </article>`;
@@ -206,7 +213,7 @@ function getSourceEntries() {
     const counts = new Map();
     pendingTxs.forEach((tx, index) => {
         if (tx.reviewOnly) return;
-        const entry = counts.get(tx.source) || { source: tx.source, label: tx.sourceLabel || sourceLabel(tx.source), indexes: [] };
+        const entry = counts.get(tx.source) || { source: tx.source, label: sourceLabel(tx.source), indexes: [] };
         entry.indexes.push(index);
         counts.set(tx.source, entry);
     });
@@ -648,6 +655,35 @@ async function doSearch(daysBack) {
     }
 }
 
+function updateResultsSummary() {
+    const countEl = document.getElementById('gmail-found-count');
+    const importableCount = pendingTxs.filter(tx => !tx.reviewOnly).length;
+    const reviewCount = pendingTxs.length - importableCount;
+    if (!countEl) return;
+    const importableText = importableCount > 0
+        ? `${importableCount} movimiento${importableCount !== 1 ? '' : 's'} listo${importableCount !== 1 ? '' : 's'} para importar`
+        : 'No hay movimientos listos para importar';
+    countEl.textContent = reviewCount > 0
+        ? `${importableText} · ${reviewCount} necesita${reviewCount === 1 ? '' : 'n'} una decisión`
+        : importableText;
+}
+
+function renderTransactionResults() {
+    const listEl = document.getElementById('gmail-tx-list');
+    if (!listEl) return;
+    const ready = pendingTxs.flatMap((tx, index) => tx.reviewOnly ? [] : [{ tx, index }]);
+    const review = pendingTxs.flatMap((tx, index) => tx.reviewOnly ? [{ tx, index }] : []);
+    const readyCards = ready.map(({ tx, index }) => renderTxCard(tx, index)).join('');
+    const reviewCards = review.map(({ tx, index }) => renderTxCard(tx, index)).join('');
+    listEl.innerHTML = `
+        ${readyCards}
+        ${review.length ? `<details class="gmail-review-queue">
+            <summary>Revisar ${review.length} movimiento${review.length === 1 ? '' : 's'} pendiente${review.length === 1 ? '' : 's'}</summary>
+            <p>Los dejamos sin seleccionar porque el correo no confirma si es ingreso, gasto o una transferencia propia. Las transferencias entre tus cuentas no se importan como gasto ni ingreso.</p>
+            <div class="gmail-review-list">${reviewCards}</div>
+        </details>` : ''}`;
+}
+
 function showResults(txs) {
     pendingTxs  = txs;
     const ignoredSources = getIgnoredSources();
@@ -671,17 +707,8 @@ function showResults(txs) {
         return;
     }
 
-    const importableCount = txs.filter(tx => !tx.reviewOnly).length;
-    const reviewCount = txs.length - importableCount;
-    if (countEl) {
-        const importableText = importableCount > 0
-            ? `${importableCount} movimiento${importableCount !== 1 ? 's' : ''} listo${importableCount !== 1 ? 's' : ''} para importar`
-            : 'No hay movimientos en soles listos para importar';
-        countEl.textContent = reviewCount > 0
-            ? `${importableText} · ${reviewCount} para revisar`
-            : importableText;
-    }
-    if (listEl)   listEl.innerHTML = txs.map((tx, i) => renderTxCard(tx, i)).join('');
+    updateResultsSummary();
+    renderTransactionResults();
     renderSourceControls();
     updateImportBtn();
     showState('results');
@@ -916,6 +943,24 @@ function wireListeners(pref) {
         const idx = parseInt(cb.dataset.idx, 10);
         if (pendingTxs[idx]?.reviewOnly) return;
         if (cb.checked) selectedIds.add(idx); else selectedIds.delete(idx);
+        syncSourceControls();
+        updateImportBtn();
+    });
+    document.getElementById('gmail-tx-list')?.addEventListener('click', e => {
+        const button = e.target.closest('[data-review-classification]');
+        if (!button) return;
+        const idx = Number.parseInt(button.dataset.idx, 10);
+        const tx = pendingTxs[idx];
+        const type = button.dataset.reviewClassification;
+        if (!tx?.reviewOnly || !['income', 'expense'].includes(type)) return;
+        tx.type = type;
+        tx.reviewOnly = false;
+        tx.reviewReason = '';
+        tx.category = type === 'expense' ? 'yellow' : 'otros';
+        selectedIds.add(idx);
+        updateResultsSummary();
+        renderTransactionResults();
+        renderSourceControls();
         syncSourceControls();
         updateImportBtn();
     });

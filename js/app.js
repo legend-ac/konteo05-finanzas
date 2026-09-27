@@ -163,7 +163,7 @@ function updateGreeting(fullName) {
     const greeting = document.getElementById('dashboard-greeting');
     const title    = document.getElementById('dashboard-title');
     if (greeting) greeting.textContent = `${saludo}, ${firstName} 👋`;
-    if (title)    title.textContent    = 'Lo que importa, primero.';
+    if (title)    title.textContent    = 'Resumen financiero';
 }
 
 // ──────────────────────────────────────────────
