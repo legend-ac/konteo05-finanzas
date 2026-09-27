@@ -179,11 +179,12 @@ function renderTxCard(tx, idx) {
     const disabled  = isReview ? 'disabled' : '';
     const reason    = (isReview || tx.possibleDuplicate) && tx.reviewReason ? `<div class="gmail-tx-reason">${escapeHtml(tx.reviewReason)}</div>` : '';
     const controls  = `${renderCategoryControl(tx, idx)}${renderAccountControl(tx, idx)}`;
+    const protection = isReview ? '<div class="gmail-review-protection">No se importará hasta que indiques qué representa.</div>' : '';
     const reviewActions = isReview ? `
         <div class="gmail-review-actions" aria-label="Clasificar movimiento pendiente">
-            <span>Si no es una transferencia entre tus cuentas:</span>
-            <button type="button" class="gmail-review-choice" data-review-classification="income" data-idx="${idx}">Es un ingreso</button>
-            <button type="button" class="gmail-review-choice" data-review-classification="expense" data-idx="${idx}">Es un gasto</button>
+            <span>Solo si no es una transferencia entre tus propias cuentas:</span>
+            <button type="button" class="gmail-review-choice gmail-review-income" data-review-classification="income" data-idx="${idx}">Clasificar como ingreso</button>
+            <button type="button" class="gmail-review-choice gmail-review-expense" data-review-classification="expense" data-idx="${idx}">Clasificar como gasto</button>
         </div>` : '';
     return `
     <article class="gmail-tx-card ${typeClass}${isReview ? ' is-review' : ''}" data-idx="${idx}" data-source="${escapeHtml(tx.source)}">
@@ -199,6 +200,7 @@ function renderTxCard(tx, idx) {
                 ${controls}
             </div>
             ${reason}
+            ${protection}
             ${reviewActions}
         </div>
         <div class="gmail-tx-amount ${typeClass}-amount">${sign} ${fmtAmt(tx.amount, tx.currency)}</div>
@@ -237,7 +239,7 @@ function renderSourceControls() {
     container.innerHTML = `
         <div class="gmail-source-heading">
             <div>
-                <span class="gmail-results-kicker">Fuentes detectadas</span>
+                <span class="gmail-results-kicker">Movimientos listos · Fuentes detectadas</span>
                 <p>Elige de qué bancos o apps quieres importar movimientos.</p>
             </div>
         </div>
@@ -318,7 +320,7 @@ function buildModal() {
         <div class="modal-handle"></div>
         <div class="gmail-modal-header">
             <div>
-                <h3 id="gmail-modal-title">Importar desde Gmail</h3>
+                <h3 id="gmail-modal-title">Centro de revisión Gmail</h3>
                 <p class="gmail-modal-sub" id="gmail-modal-sub">Revisa notificaciones financieras y decide qué movimientos registrar.</p>
             </div>
             <button id="gmail-modal-close" class="gmail-close-btn" aria-label="Cerrar">✕</button>
@@ -398,6 +400,7 @@ function buildModal() {
                     <span class="gmail-results-kicker">Movimientos encontrados</span>
                     <strong id="gmail-found-count" class="gmail-found-count"></strong>
                     <span id="gmail-selection-summary" class="gmail-selection-summary" aria-live="polite"></span>
+                    <span id="gmail-review-summary" class="gmail-review-summary" aria-live="polite"></span>
                 </div>
                 <div class="gmail-select-btns">
                     <button id="gmail-select-all" class="gmail-btn-sm">Todos</button>
@@ -657,8 +660,14 @@ async function doSearch(daysBack) {
 
 function updateResultsSummary() {
     const countEl = document.getElementById('gmail-found-count');
+    const reviewEl = document.getElementById('gmail-review-summary');
     const importableCount = pendingTxs.filter(tx => !tx.reviewOnly).length;
     const reviewCount = pendingTxs.length - importableCount;
+    if (reviewEl) {
+        reviewEl.textContent = reviewCount > 0
+            ? `${reviewCount} pendiente${reviewCount === 1 ? '' : 's'}: clasifica o déjalo sin importar.`
+            : 'Todo está clasificado. Revisa los detalles antes de confirmar.';
+    }
     if (!countEl) return;
     const importableText = importableCount > 0
         ? `${importableCount} movimiento${importableCount !== 1 ? '' : 's'} listo${importableCount !== 1 ? '' : 's'} para importar`
@@ -676,10 +685,10 @@ function renderTransactionResults() {
     const readyCards = ready.map(({ tx, index }) => renderTxCard(tx, index)).join('');
     const reviewCards = review.map(({ tx, index }) => renderTxCard(tx, index)).join('');
     listEl.innerHTML = `
-        ${readyCards}
+        ${ready.length ? `<div class="gmail-list-section-heading"><span>Listos para importar</span><small>${ready.length} clasificado${ready.length === 1 ? '' : 's'} y disponible${ready.length === 1 ? '' : 's'} para confirmar.</small></div>${readyCards}` : ''}
         ${review.length ? `<details class="gmail-review-queue">
-            <summary>Revisar ${review.length} movimiento${review.length === 1 ? '' : 's'} pendiente${review.length === 1 ? '' : 's'}</summary>
-            <p>Los dejamos sin seleccionar porque el correo no confirma si es ingreso, gasto o una transferencia propia. Las transferencias entre tus cuentas no se importan como gasto ni ingreso.</p>
+            <summary><span>Decisiones pendientes</span><small>${review.length} movimiento${review.length === 1 ? '' : 's'} necesita${review.length === 1 ? '' : 'n'} tu criterio</small></summary>
+            <p>Los dejamos fuera porque el correo no confirma si es ingreso, gasto o una transferencia propia. Una transferencia entre tus cuentas no se debe importar como gasto ni ingreso.</p>
             <div class="gmail-review-list">${reviewCards}</div>
         </details>` : ''}`;
 }

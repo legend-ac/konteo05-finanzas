@@ -699,6 +699,9 @@ document.getElementById('show-register')?.addEventListener('click', e => { e.pre
 document.getElementById('show-login')?.addEventListener('click',    e => { e.preventDefault(); showPage('login'); });
 document.getElementById('home-start-register')?.addEventListener('click', () => showPage('register'));
 document.getElementById('home-start-login')?.addEventListener('click',    () => showPage('login'));
+document.querySelectorAll('[data-home-auth]').forEach(button => {
+    button.addEventListener('click', () => showPage(button.dataset.homeAuth === 'login' ? 'login' : 'register'));
+});
 document.getElementById('back-home-from-login')?.addEventListener('click',    e => { e.preventDefault(); showPage('home'); });
 document.getElementById('back-home-from-register')?.addEventListener('click', e => { e.preventDefault(); showPage('home'); });
 

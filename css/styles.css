@@ -1418,6 +1418,99 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .gmail-modal-content .gmail-category-control select, .gmail-modal-content .gmail-account-control select { width: min(100%, 180px); }
 }
 
+/* ========================================================================
+   PUBLIC HOME — explain the product before asking for an account.
+   ======================================================================== */
+.home-shell { max-width: 1240px; padding: 0 42px 42px; }
+.home-header { gap: 20px; }
+.home-nav { display: flex; align-items: center; gap: 22px; margin-left: auto; }
+.home-nav a, .home-footer a { color: var(--text-3); font-size: 12px; font-weight: 650; text-decoration: none; }
+.home-nav a:hover, .home-footer a:hover { color: var(--text); }
+.home-hero { min-height: 540px; gap: clamp(42px, 7vw, 94px); padding: 72px 0 68px; }
+.home-copy h1 { max-width: 10.5ch; }
+.home-actions a.home-button { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.home-trust-list { display: flex; flex-wrap: wrap; gap: 7px 16px; margin: 18px 0 0; padding: 0; list-style: none; color: var(--text-3); font-size: 11px; }
+.home-trust-list li { display: flex; align-items: center; gap: 6px; }
+.home-trust-list li::before { content: '•'; color: var(--income); font-size: 15px; line-height: 1; }
+.home-proof { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-bottom: 1px solid var(--line); }
+.home-proof article { min-height: 150px; padding: 28px 28px 30px; border-right: 1px solid var(--line); }
+.home-proof article:first-child { padding-left: 0; }
+.home-proof article:last-child { border-right: 0; }
+.home-proof strong { display: block; color: var(--text); font-size: 14px; letter-spacing: -.02em; }
+.home-proof p { margin: 10px 0 0; max-width: 31ch; color: var(--text-2); font-size: 12px; line-height: 1.65; }
+.home-section { display: grid; grid-template-columns: minmax(240px, .78fr) minmax(0, 1.22fr); gap: clamp(44px, 9vw, 118px); padding: 96px 0; border-bottom: 1px solid var(--line); }
+.home-section-heading h2, .home-privacy h2, .home-final-cta h2 { max-width: 13ch; color: var(--text); font-size: clamp(30px, 3.4vw, 45px); font-weight: 720; letter-spacing: -.055em; line-height: 1.04; }
+.home-section-heading > p:last-child, .home-privacy > div > p:last-child { max-width: 39ch; margin-top: 18px; color: var(--text-2); font-size: 14px; line-height: 1.7; }
+.home-steps { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.home-steps li { display: grid; grid-template-columns: 46px 1fr; gap: 18px; padding: 21px 0; border-bottom: 1px solid var(--line); }
+.home-steps > li > span { color: var(--gold); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; }
+.home-steps h3, .home-client-card h3 { color: var(--text); font-size: 15px; font-weight: 700; letter-spacing: -.025em; }
+.home-steps p, .home-client-card p { margin: 5px 0 0; color: var(--text-2); font-size: 12px; line-height: 1.65; }
+.home-client-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.home-client-card { min-height: 190px; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); }
+.home-client-card:hover { border-color: var(--line-2); transform: translateY(-2px); transition: transform var(--t-md) var(--ease), border-color var(--t) var(--ease); }
+.home-client-balance { background: linear-gradient(145deg, rgba(227,179,65,.16), rgba(20,25,24,.12) 65%), var(--bg-2); }
+.home-card-kicker { display: block; margin-bottom: 28px; color: var(--gold); font-size: 10px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+.home-privacy { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, .72fr); gap: clamp(42px, 9vw, 120px); align-items: start; padding: 90px 0; border-bottom: 1px solid var(--line); }
+.home-privacy ul { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.home-privacy li { display: grid; gap: 3px; padding: 18px 20px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+.home-privacy li:last-child { border-bottom: 0; }
+.home-privacy strong { color: var(--text); font-size: 13px; }
+.home-privacy span { color: var(--text-3); font-size: 12px; }
+.home-final-cta { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 76px 0; }
+.home-final-cta .home-eyebrow { margin-bottom: 14px; }
+.home-final-cta h2 { max-width: 16ch; }
+.home-final-cta .home-button { flex: 0 0 auto; }
+.home-footer { display: flex; align-items: center; justify-content: space-between; padding: 24px 0 0; color: var(--text-3); font-size: 11px; }
+.home-footer div { display: flex; gap: 18px; }
+
+@media (max-width: 760px) {
+    .home-shell { padding: 0 20px 28px; }
+    .home-nav { display: none; }
+    .home-header { padding: 16px 0; }
+    .home-hero { min-height: 0; padding: 58px 0 54px; }
+    .home-trust-list { display: grid; gap: 7px; }
+    .home-proof { grid-template-columns: 1fr; }
+    .home-proof article, .home-proof article:first-child { min-height: 0; padding: 21px 0; border-right: 0; border-bottom: 1px solid var(--line); }
+    .home-proof article:last-child { border-bottom: 0; }
+    .home-section, .home-privacy { grid-template-columns: 1fr; gap: 34px; padding: 58px 0; }
+    .home-section-heading h2, .home-privacy h2, .home-final-cta h2 { font-size: 31px; }
+    .home-client-grid { grid-template-columns: 1fr; }
+    .home-client-card { min-height: 0; }
+    .home-card-kicker { margin-bottom: 20px; }
+    .home-final-cta { align-items: flex-start; flex-direction: column; padding: 58px 0; }
+    .home-final-cta .home-button { width: 100%; }
+}
+
+/* Gmail review centre — the decision state must be visually unmistakable. */
+.gmail-review-summary { display: block; margin-top: 5px; color: var(--warn); font-size: 11px; line-height: 1.35; }
+.gmail-list-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 1px 2px 4px; }
+.gmail-list-section-heading > span { color: var(--text); font-size: 12px; font-weight: 750; }
+.gmail-list-section-heading > small { color: var(--text-3); font-size: 10px; text-align: right; }
+.gmail-review-queue { border-style: solid; border-color: rgba(227,179,65,.35); background: linear-gradient(135deg, rgba(227,179,65,.10), rgba(227,179,65,.025)); }
+.gmail-review-queue > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; min-height: 62px; padding: 11px 16px; }
+.gmail-review-queue > summary > span { color: var(--gold); font-size: 13px; font-weight: 750; }
+.gmail-review-queue > summary > small { grid-column: 1; color: var(--text-2); font-size: 10px; font-weight: 500; }
+.gmail-review-queue > summary::after { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.gmail-review-queue > p { max-width: 74ch; padding-bottom: 14px; }
+.gmail-tx-card.is-review { border-color: rgba(227,179,65,.28); background: var(--bg-2); opacity: 1; }
+.gmail-tx-card.is-review .gmail-tx-desc { color: var(--text); }
+.gmail-review-protection { display: inline-flex; margin-top: 7px; padding: 3px 7px; border-radius: 5px; background: rgba(227,179,65,.11); color: var(--gold); font-size: 10px; font-weight: 650; }
+.gmail-review-actions { padding-top: 8px; border-top: 1px solid var(--line); }
+.gmail-review-actions > span { margin-bottom: 1px; color: var(--text-2); font-size: 10px; }
+.gmail-review-choice { height: 31px; padding: 0 11px; border-color: var(--line-2); background: var(--bg-3); color: var(--text); }
+.gmail-review-choice:hover { color: var(--text); transform: translateY(-1px); }
+.gmail-review-income:hover { border-color: var(--income); background: var(--income-dim); }
+.gmail-review-expense:hover { border-color: var(--expense); background: var(--expense-dim); }
+@media (max-width: 599px) {
+    .gmail-list-section-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
+    .gmail-list-section-heading > small { text-align: left; }
+    .gmail-review-queue > summary { min-height: 58px; padding: 10px 12px; }
+    .gmail-review-queue > p { padding: 0 12px 12px; }
+    .gmail-review-protection { line-height: 1.35; }
+    .gmail-review-choice { min-width: 0; font-size: 10px; }
+}
+
 /* Gmail import review: separate safe imports from messages needing a decision. */
 .gmail-source-controls {
     border-color: var(--line);

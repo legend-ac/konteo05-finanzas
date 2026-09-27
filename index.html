@@ -79,7 +79,11 @@
                     <span aria-hidden="true">K</span>
                     <div><strong>Konteo 05</strong><small>Finanzas personales</small></div>
                 </div>
-                <button id="home-start-login" class="home-btn-nav" type="button">Iniciar sesi&oacute;n</button>
+                <nav class="home-nav" aria-label="Información de Konto">
+                    <a href="#como-funciona">Cómo funciona</a>
+                    <a href="#privacidad">Privacidad</a>
+                </nav>
+                <button id="home-start-login" class="home-btn-nav" type="button">Iniciar sesión</button>
             </header>
 
             <!-- Hero -->
@@ -89,9 +93,14 @@
                     <h1>El saldo deja de ser una adivinanza.</h1>
                     <p class="home-intro">Registra lo que entra y sale cuando pasa. Konteo reúne tus movimientos para que sepas dónde estás antes de decidir.</p>
                     <div class="home-actions">
-                        <button id="home-start-register" class="home-button home-button-main" type="button">Crear mi cuenta</button>
+                        <button id="home-start-register" class="home-button home-button-main" type="button">Crear mi cuenta gratis</button>
+                        <a class="home-button home-button-secondary" href="#como-funciona">Ver cómo funciona</a>
                     </div>
-                    <p class="home-trust">Empieza con un movimiento. No hay nada que configurar primero.</p>
+                    <ul class="home-trust-list" aria-label="Ventajas principales">
+                        <li>Sin tarjeta para empezar</li>
+                        <li>Registra manualmente o revisa Gmail</li>
+                        <li>Tú confirmas cada movimiento</li>
+                    </ul>
                 </div>
 
                 <aside class="home-visual" aria-hidden="true">
@@ -121,6 +130,69 @@
                     </div>
                 </aside>
             </section>
+
+            <section class="home-proof" aria-label="Lo que puedes ver en Konto">
+                <article>
+                    <strong>Una vista real de tu dinero</strong>
+                    <p>Saldo, ingresos y gastos del período en un solo lugar, con cada cifra respaldada por movimientos.</p>
+                </article>
+                <article>
+                    <strong>Varias cuentas, una lectura clara</strong>
+                    <p>Separa banco, efectivo y billeteras sin perder de vista tu saldo consolidado.</p>
+                </article>
+                <article>
+                    <strong>Decisiones, no solo registros</strong>
+                    <p>Usa presupuesto, categorías y comparaciones para detectar en qué se está yendo tu dinero.</p>
+                </article>
+            </section>
+
+            <section id="como-funciona" class="home-section home-how">
+                <div class="home-section-heading">
+                    <p class="home-eyebrow">Un recorrido simple</p>
+                    <h2>Del movimiento al control, sin hojas de cálculo.</h2>
+                    <p>Empieza registrando algo pequeño. Konteo crece contigo y no necesita una configuración complicada antes de ser útil.</p>
+                </div>
+                <ol class="home-steps">
+                    <li><span>01</span><div><h3>Agrega tus cuentas</h3><p>Crea una cuenta bancaria, billetera digital o efectivo. Elige si debe entrar en tu saldo total.</p></div></li>
+                    <li><span>02</span><div><h3>Registra o revisa movimientos</h3><p>Anota un gasto en segundos o conecta Gmail en modo solo lectura para revisar notificaciones financieras.</p></div></li>
+                    <li><span>03</span><div><h3>Confirma antes de guardar</h3><p>Los correos dudosos quedan en revisión. Tú decides si son gasto, ingreso, transferencia u operación a omitir.</p></div></li>
+                    <li><span>04</span><div><h3>Entiende el período</h3><p>Consulta tu saldo, el gasto mayor, presupuesto y movimientos por cuenta, fecha y categoría.</p></div></li>
+                </ol>
+            </section>
+
+            <section class="home-section home-client-view" aria-labelledby="client-view-title">
+                <div class="home-section-heading">
+                    <p class="home-eyebrow">Tu vista diaria</p>
+                    <h2 id="client-view-title">Todo lo importante, explicado.</h2>
+                    <p>No tendrás que interpretar números sueltos. Cada bloque responde una pregunta concreta.</p>
+                </div>
+                <div class="home-client-grid">
+                    <article class="home-client-card home-client-balance"><span class="home-card-kicker">Resumen</span><h3>¿Cómo voy hoy?</h3><p>El saldo del período muestra lo que entró menos lo que salió. Cambia entre hoy, semana, mes o un rango personalizado.</p></article>
+                    <article class="home-client-card"><span class="home-card-kicker">Movimientos</span><h3>¿Qué explica el total?</h3><p>Filtra por categoría, estado o fecha. Abre cualquier movimiento para conocer monto, cuenta, fuente y trazabilidad.</p></article>
+                    <article class="home-client-card"><span class="home-card-kicker">Cuentas</span><h3>¿Dónde está mi dinero?</h3><p>Revisa cada banco o billetera por separado y consulta el saldo consolidado sin mezclar operaciones pendientes.</p></article>
+                    <article class="home-client-card"><span class="home-card-kicker">Presupuesto</span><h3>¿Cuánto puedo gastar?</h3><p>Define un límite de gasto e identifica cuánto queda disponible antes de cerrar el período.</p></article>
+                </div>
+            </section>
+
+            <section id="privacidad" class="home-privacy">
+                <div>
+                    <p class="home-eyebrow">Privacidad y control</p>
+                    <h2>Tu correo no se importa a ciegas.</h2>
+                    <p>La conexión con Gmail es opcional y de solo lectura. Konto no envía ni elimina correos; muestra los movimientos detectados para que elijas qué guardar. Puedes desconectarla cuando quieras.</p>
+                </div>
+                <ul>
+                    <li><strong>Solo lectura</strong><span>No modifica tu Gmail.</span></li>
+                    <li><strong>Revisión explícita</strong><span>Nada se guarda sin tu confirmación.</span></li>
+                    <li><strong>Información trazable</strong><span>Cada movimiento conserva su origen y detalle.</span></li>
+                </ul>
+            </section>
+
+            <section class="home-final-cta">
+                <div><p class="home-eyebrow">Empieza simple</p><h2>Con un movimiento ya puedes empezar a entender tu dinero.</h2></div>
+                <button class="home-button home-button-main" type="button" data-home-auth="register">Crear mi cuenta</button>
+            </section>
+
+            <footer class="home-footer"><span>© 2026 Konto 05</span><div><a href="privacy.html">Privacidad</a><a href="terms.html">Términos</a></div></footer>
 
         </main>
     </div>
