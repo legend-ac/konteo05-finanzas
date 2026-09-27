@@ -32,6 +32,7 @@
     <link rel="preconnect" href="https://www.googleapis.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/workspace.css">
     <style>
         /* Run before the stylesheet loads: authenticated users must never see
            the public home while Firebase restores their saved session. */
@@ -106,10 +107,10 @@
 
                 <aside class="home-visual" aria-label="Vista de ejemplo de Konteo">
                     <section class="home-preview">
-                        <div class="home-preview-top"><span>Vista del período</span><span class="home-preview-status">Actualizado</span></div>
-                        <div class="home-preview-balance"><span>Saldo disponible</span><strong>S/ 1,248.50</strong></div>
+                        <div class="home-preview-top"><span>Así se ve tu resumen</span><span>Datos de ejemplo</span></div>
+                        <div class="home-preview-balance"><span>Balance del período</span><strong>S/ 1,248.50</strong></div>
                         <div class="home-preview-stats"><div><span>Ingresos</span><strong class="is-income">S/ 1,800.00</strong></div><div><span>Gastos</span><strong class="is-expense">S/ 551.50</strong></div></div>
-                        <div class="home-preview-ledger"><div><span class="preview-dot is-income"></span><p><strong>Ingreso registrado</strong><small>Hoy</small></p><b class="is-income">+ S/ 1,800</b></div><div><span class="preview-dot is-expense"></span><p><strong>Compra necesaria</strong><small>Hoy</small></p><b class="is-expense">− S/ 85</b></div><div><span class="preview-dot is-expense"></span><p><strong>Pago de servicio</strong><small>Ayer</small></p><b class="is-expense">− S/ 120</b></div></div>
+                        <div class="home-preview-ledger"><div><span class="preview-dot is-income"></span><p><strong>Ingreso registrado</strong><small>Hoy</small></p><b class="is-income">+ S/ 1,800</b></div><div><span class="preview-dot is-expense"></span><p><strong>Compra necesaria</strong><small>Hoy</small></p><b class="is-expense">− S/ 85</b></div><div><span class="preview-dot is-expense"></span><p><strong>Pago de servicio</strong><small>Ayer</small></p><b class="is-expense">− S/ 120</b></div><div><span class="preview-dot is-expense"></span><p><strong>Otros gastos</strong><small>Este período</small></p><b class="is-expense">− S/ 346.50</b></div></div>
                     </section>
                 </aside>
             </section>
@@ -134,6 +135,11 @@
                     <p class="home-eyebrow">Un recorrido simple</p>
                     <h2>Del movimiento al control, sin hojas de cálculo.</h2>
                     <p>Empieza registrando algo pequeño. Konteo crece contigo y no necesita una configuración complicada antes de ser útil.</p>
+                    <details class="companion-help home-companion">
+                        <summary><img src="/images/konteo-guide-welcome.jpg" width="112" height="140" loading="lazy" alt=""><span><strong>¿Por dónde empiezo?</strong><span>Una guía para tu primera cuenta</span><span class="companion-link">Ver los primeros pasos</span></span></summary>
+                        <p>Agrega una cuenta con el nombre que reconozcas y su saldo inicial. Después registra un ingreso o gasto y asígnalo a esa cuenta. Los importes del resumen se calculan con los movimientos que guardas.</p>
+                        <button type="button" class="home-button home-button-secondary" data-home-auth="register">Crear mi cuenta</button>
+                    </details>
                 </div>
                 <ol class="home-steps">
                     <li><span>01</span><div><h3>Agrega tus cuentas</h3><p>Crea una cuenta bancaria, billetera digital o efectivo. Elige si debe entrar en tu saldo total.</p></div></li>
@@ -162,6 +168,11 @@
                     <p class="home-eyebrow">Privacidad y control</p>
                     <h2>Tu correo no se importa a ciegas.</h2>
                     <p>La conexión con Gmail es opcional y de solo lectura. Konto no envía ni elimina correos; muestra los movimientos detectados para que elijas qué guardar. Puedes desconectarla cuando quieras.</p>
+                    <details class="companion-help context-companion privacy-companion">
+                        <summary><img src="/images/konteo-guide-gmail.jpg" width="80" height="80" loading="lazy" alt=""><span><strong>Antes de conectar tu correo</strong><span class="companion-link">Conoce qué vas a autorizar</span></span></summary>
+                        <p>Gmail es opcional. Puedes empezar registrando a mano. Si conectas tu correo, revisa los permisos solicitados por Google y confirma los movimientos que quieras guardar.</p>
+                        <a class="guide-action" href="gmail-data.html">Leer cómo se usan los datos de Gmail</a>
+                    </details>
                 </div>
                 <ul>
                     <li><strong>Solo lectura</strong><span>No modifica tu Gmail.</span></li>
@@ -248,7 +259,7 @@
                 <div><h2>Konteo 05</h2><span class="header-sub">Finanzas personales</span></div>
             </div>
             <div class="header-actions">
-                <button id="btn-gmail-import" class="btn-gmail-hd" type="button" title="Importar desde Gmail">
+                <button id="btn-gmail-import" class="btn-gmail-hd" type="button" aria-label="Importar desde Gmail" title="Importar desde Gmail">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
                     <span>Importar</span>
                 </button>
@@ -256,7 +267,7 @@
                     <svg class="profile-btn-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.42 0-8 2.24-8 5v2h16v-2c0-2.76-3.58-5-8-5Z"/></svg>
                     <span id="user-name" class="profile-btn-label">Perfil</span>
                 </button>
-                <button id="theme-toggle-btn" class="btn-icon" aria-label="Cambiar tema">&#127769;</button>
+                <button id="theme-toggle-btn" class="btn-icon" type="button" aria-label="Cambiar tema"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20.5 13a8.5 8.5 0 0 1-9.5-9.5A8.5 8.5 0 1 0 20.5 13Z"/></svg></button>
                 <button id="logout-btn" class="btn-text-hd btn-logout" type="button">Salir</button>
             </div>
         </header>
@@ -357,16 +368,19 @@
                                 <p class="ledger-eyebrow">Actividad</p>
                                 <h2>Movimientos recientes <span class="transactions-count" id="tx-count"></span></h2>
                             </div>
-                            <div class="ledger-export-quick">
+                            <details class="export-control">
+                                <summary><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg>Exportar</summary>
+                                <div class="ledger-export-quick">
                                 <button id="btn-export-excel-toolbar" class="btn-export-mini btn-export-excel" type="button" title="Exportar período activo a Excel">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-                                    <span>Excel</span>
+                                    <span>Descargar Excel</span>
                                 </button>
                                 <button id="btn-export-pdf-toolbar" class="btn-export-mini btn-export-pdf" type="button" title="Exportar período activo a PDF">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>
-                                    <span>PDF</span>
+                                    <span>Descargar PDF</span>
                                 </button>
-                            </div>
+                                </div>
+                            </details>
                         </div>
                         <div class="filter-bar">
                             <input type="text" id="search-input" placeholder="Buscar movimiento…" class="search-input" aria-label="Buscar">
@@ -394,9 +408,6 @@
                     </div>
                     <div id="list" role="list"></div>
 
-                    <footer class="app-footer">
-                        <p><a href="/privacy.html">Privacidad</a> &middot; <a href="/gmail-data.html">Uso de Gmail</a> &middot; <a href="/security.html">Seguridad</a> &middot; <a href="/terms.html">Términos</a> &middot; <a href="/legal-notice.html">Aviso legal</a> &middot; Konteo 05 &copy; 2026</p>
-                    </footer>
                 </section>
 
                 <!-- RIGHT: Plan + Charts -->
@@ -446,21 +457,30 @@
                         <div class="plan-body" id="plan-body">
                             <div class="plan-input-row">
                                 <div class="plan-input-wrap">
-                                    <label class="plan-input-label">L&iacute;mite del per&iacute;odo</label>
+                                    <label class="plan-input-label" for="plan-expense-limit">L&iacute;mite del per&iacute;odo</label>
                                     <input type="number" id="plan-expense-limit" placeholder="0.00" min="0" step="0.01" class="plan-input">
                                 </div>
                                 <div class="plan-input-wrap">
-                                    <label class="plan-input-label">Ingreso objetivo</label>
+                                    <label class="plan-input-label" for="plan-income-target">Ingreso objetivo</label>
                                     <input type="number" id="plan-income-target" placeholder="0.00" min="0" step="0.01" class="plan-input">
                                 </div>
                             </div>
                             <button id="btn-save-plan" class="btn-save-plan" type="button">Guardar</button>
                         </div>
+                        <details id="budget-guide" class="companion-help context-companion">
+                            <summary><img src="/images/konteo-guide-empty.jpg" width="80" height="80" loading="lazy" alt=""><span><strong data-guide-title>Dale un límite a este período</strong><span class="companion-link" data-guide-hint>Cómo empezar con tu presupuesto</span></span></summary>
+                            <p data-guide-body>Elige tu límite y revisa los gastos del período. Los cambios solo se guardan cuando pulsas Guardar.</p>
+                            <button class="guide-action" type="button" data-guide-action="focus" data-guide-target="plan-expense-limit">Escribir mi límite</button>
+                        </details>
                     </div>
 
                 </aside>
 
             </div><!-- /dashboard-grid -->
+
+            <footer class="app-footer">
+                <p><a href="/privacy.html">Privacidad</a> &middot; <a href="/gmail-data.html">Uso de Gmail</a> &middot; <a href="/security.html">Seguridad</a> &middot; <a href="/terms.html">Términos</a> &middot; <a href="/legal-notice.html">Aviso legal</a> &middot; Konteo 05 &copy; 2026</p>
+            </footer>
 
         <!-- Mobile sticky action bar -->
         <div class="action-bar-mobile">
@@ -494,6 +514,11 @@
                             <button id="btn-wallet-transfer" class="wallet-secondary" type="button">Transferir</button>
                         </div>
                         <div id="wallets-list" class="wallets-list"></div>
+                        <details id="accounts-guide" class="companion-help context-companion">
+                            <summary><img src="/images/konteo-guide-welcome.jpg" width="72" height="90" loading="lazy" alt=""><span><strong data-guide-title>Organiza tus cuentas</strong><span class="companion-link" data-guide-hint>Cómo elegir banco y billetera</span></span></summary>
+                            <p data-guide-body>Cada cuenta tiene su propio saldo y configuración. Revisa cuáles usas y qué movimientos les asignas.</p>
+                            <button class="guide-action" type="button" data-guide-action="new-account">Configurar una cuenta</button>
+                        </details>
                     </section>
                     <aside id="wallet-detail" class="wallet-detail-panel" aria-live="polite"></aside>
                 </div>

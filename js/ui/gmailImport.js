@@ -100,19 +100,21 @@ function renderHeaderBadge(email) {
     if (email) {
         btn.classList.add('gmail-connected');
         btn.title = `Gmail conectado: ${email}`;
+        btn.setAttribute('aria-label', 'Importar desde Gmail, cuenta conectada');
         btn.innerHTML = `
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
             </svg>
-            <span>Gmail ✓</span>`;
+            <span>Importar</span>`;
     } else {
         btn.classList.remove('gmail-connected');
-        btn.title = 'Conectar Gmail para auto-importar movimientos';
+        btn.title = 'Conectar Gmail para revisar movimientos';
+        btn.setAttribute('aria-label', 'Importar desde Gmail');
         btn.innerHTML = `
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
             </svg>
-            <span>Auto-importar</span>`;
+            <span>Importar</span>`;
     }
 }
 
@@ -333,18 +335,21 @@ function buildModal() {
         </div>
         <div id="gmail-state-consent" class="gmail-state">
             <div class="gmail-consent-box">
-                <div class="gmail-consent-icon">🔒</div>
+                <details class="companion-help import-companion">
+                    <summary><img src="/images/konteo-guide-gmail.jpg" width="88" height="88" alt=""><span><strong>Tú revisas, tú decides</strong><span class="companion-link">¿Qué se guarda desde Gmail?</span></span></summary>
+                    <p>Primero verás los movimientos detectados. Revisa monto, tipo y cuenta antes de seleccionarlos. Solo se guardan los que confirmas al importar; si falta información, debes revisarla antes.</p>
+                </details>
                 <h4>Conecta tu correo de notificaciones</h4>
                 <p>Konteo revisa correos de bancos y billeteras. Nunca registra un movimiento sin que lo confirmes.</p>
                 <div class="gmail-consent-features">
-                    <div class="gmail-cf-item">✅ Solo lectura — nunca envía ni borra emails</div>
-                    <div class="gmail-cf-item">✅ Tú decides qué importar antes de guardar</div>
-                    <div class="gmail-cf-item">✅ Puedes desconectar en cualquier momento</div>
-                    <div class="gmail-cf-item">✅ El token no se almacena en nuestros servidores</div>
+                    <div class="gmail-cf-item">Solo lectura: nunca envía ni borra correos.</div>
+                    <div class="gmail-cf-item">Tú decides qué importar antes de guardar.</div>
+                    <div class="gmail-cf-item">Puedes desconectar en cualquier momento.</div>
+                    <div class="gmail-cf-item">El token no se almacena en nuestros servidores.</div>
                 </div>
                 <div class="gmail-consent-sources">
-                    <span>💜 Yape</span><span>🔵 Plin</span><span>🔴 BCP</span>
-                    <span>🟢 Interbank</span><span>🔵 BBVA</span><span>🔴 Scotiabank</span>
+                    <span>Yape</span><span>Plin</span><span>BCP</span>
+                    <span>Interbank</span><span>BBVA</span><span>Scotiabank</span>
                 </div>
                 <div class="gmail-days-row" style="justify-content:center;margin-top:8px">
                     <label for="gmail-days-select">Período a revisar:</label>

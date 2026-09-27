@@ -11,6 +11,7 @@ import {
 import { showToast }           from './ui/toast.js';
 import { openModal, closeModal }  from './ui/modals.js';
 import { renderTransactionList }  from './ui/render.js';
+import { accountGuide, initContextGuides, updateContextGuide } from './ui/guides.js';
 import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
 import * as dbService             from './services/dbService.js';
@@ -32,7 +33,11 @@ function initTheme() {
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     const btn = document.getElementById('theme-toggle-btn');
-    if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if (btn) {
+        btn.title = theme === 'dark' ? 'Activar tema claro' : 'Activar tema oscuro';
+        btn.setAttribute('aria-label', btn.title);
+        btn.setAttribute('aria-pressed', String(theme === 'dark'));
+    }
 }
 
 let chartSnapshot = null;
@@ -82,33 +87,6 @@ function initInterfaceMotion() {
     const homePage = document.getElementById('home-page');
     if (homePage) window.requestAnimationFrame(() => homePage.classList.add('motion-revealed'));
 
-    const canUsePointerMotion = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
-    const balanceHero = document.querySelector('.balance-hero');
-    if (!balanceHero || !canUsePointerMotion) return;
-
-    let frameId = 0;
-    let pointerX = 50;
-    let pointerY = 50;
-    const paintPointerPosition = () => {
-        balanceHero.style.setProperty('--motion-x', `${pointerX}%`);
-        balanceHero.style.setProperty('--motion-y', `${pointerY}%`);
-        frameId = 0;
-    };
-
-    balanceHero.addEventListener('pointermove', event => {
-        const bounds = balanceHero.getBoundingClientRect();
-        pointerX = Math.max(0, Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100));
-        pointerY = Math.max(0, Math.min(100, ((event.clientY - bounds.top) / bounds.height) * 100));
-        balanceHero.classList.add('has-pointer-motion');
-        if (!frameId) frameId = window.requestAnimationFrame(paintPointerPosition);
-    });
-
-    balanceHero.addEventListener('pointerleave', () => {
-        balanceHero.classList.remove('has-pointer-motion');
-        pointerX = 50;
-        pointerY = 50;
-        if (!frameId) frameId = window.requestAnimationFrame(paintPointerPosition);
-    });
 }
 
 // ──────────────────────────────────────────────
@@ -194,7 +172,9 @@ function renderTransactionLedger(incomeItems, expenseItems) {
             ? `${filtered.length} movimiento${filtered.length !== 1 ? 's' : ''}`
             : '';
     }
-    renderTransactionList(document.getElementById('list'), filtered);
+    renderTransactionList(document.getElementById('list'), filtered, {
+        hasFilters: Boolean(searchTerm || categoryFilter !== 'all' || statusFilter !== 'all')
+    });
 }
 
 function renderTransactionLedgerFromCache() {
@@ -1340,15 +1320,12 @@ function walletVisualColor(wallet) {
     return defaults[walletBankKey(wallet)] || wallet?.color || 'gold';
 }
 
-function walletUsageLabel(wallet) {
-    return wallet.includeInTotal === false ? 'Fuera del saldo' : 'Incluida en saldo';
-}
-
 function createWalletItem(wallet) {
     const item = document.createElement('button');
     item.type = 'button';
     item.className = `wallet-list-item wallet-bank-${walletBankKey(wallet)} ${state.selectedWalletId === wallet.id ? 'is-selected' : ''}`;
     item.dataset.walletId = wallet.id;
+    item.setAttribute('aria-pressed', String(state.selectedWalletId === wallet.id));
     const identity = document.createElement('span');
     identity.className = `wallet-list-icon wallet-color-${walletVisualColor(wallet)}`;
     identity.textContent = wallet.type === 'wallet' ? '◉' : wallet.type === 'cash' ? 'S/' : wallet.type === 'credit' ? '▤' : '▣';
@@ -1357,17 +1334,8 @@ function createWalletItem(wallet) {
     const name = document.createElement('strong');
     name.textContent = wallet.name;
     const meta = document.createElement('small');
-    meta.textContent = walletSubtitle(wallet);
-    const badges = document.createElement('span');
-    badges.className = 'wallet-list-badges';
-    const status = document.createElement('span');
-    status.className = 'wallet-state wallet-state-active';
-    status.textContent = 'Activa';
-    const usage = document.createElement('span');
-    usage.className = `wallet-usage ${wallet.includeInTotal === false ? 'is-excluded' : ''}`;
-    usage.textContent = walletUsageLabel(wallet);
-    badges.append(status, usage);
-    copy.append(name, meta, badges);
+    meta.textContent = `${walletSubtitle(wallet)}${wallet.includeInTotal === false ? ' · Fuera del total' : ''}`;
+    copy.append(name, meta);
     const amount = document.createElement('span');
     amount.className = 'wallet-list-amount';
     amount.textContent = `S/ ${fmt(accountBalance(wallet))}`;
@@ -1382,6 +1350,10 @@ function renderWalletDetail() {
     const wallet = state.wallets.find(item => item.id === state.selectedWalletId && isActiveWallet(item));
     panel.className = `wallet-detail-panel wallet-bank-${wallet ? walletBankKey(wallet) : 'default'}`;
     if (!wallet) {
+        if (!activeWallets().length) {
+            panel.classList.add('hidden');
+            return;
+        }
         const empty = document.createElement('div');
         empty.className = 'wallet-detail-empty';
         empty.innerHTML = '<span>▣</span><h2>Elige una cuenta</h2><p>Verás su saldo, movimientos y acciones desde aquí.</p>';
@@ -1395,12 +1367,25 @@ function renderWalletDetail() {
     const expense = sumAmounts(movements.filter(item => item.type === 'expense' && isPosted(item)));
     const heading = document.createElement('div');
     heading.className = 'wallet-detail-heading';
-    heading.innerHTML = `<span class="wallet-detail-type">${WALLET_TYPE_LABELS[wallet.type] || 'Cuenta'}</span><h2></h2><div class="wallet-detail-states"></div><p></p>`;
+    heading.innerHTML = `<span class="wallet-detail-type">${WALLET_TYPE_LABELS[wallet.type] || 'Cuenta'}</span><h2></h2><p></p>`;
     heading.querySelector('h2').textContent = wallet.name;
-    const states = heading.querySelector('.wallet-detail-states');
-    states.innerHTML = `<span class="wallet-state wallet-state-active">Activa</span><span class="wallet-usage ${wallet.includeInTotal === false ? 'is-excluded' : ''}">${walletUsageLabel(wallet)}</span>`;
-    if (wallet.linkSource) states.insertAdjacentHTML('beforeend', '<span class="wallet-source-state">Vinculada a importaciones</span>');
     heading.querySelector('p').textContent = walletSubtitle(wallet);
+    const settings = document.createElement('dl');
+    settings.className = 'wallet-settings-summary';
+    const settingsRows = [
+        ['Estado', 'Activa'],
+        ['Saldo total', wallet.includeInTotal === false ? 'No incluida' : 'Incluida'],
+        ['Importaciones', wallet.linkSource && wallet.sourceKey ? 'Asignación por fuente vinculada' : 'Asignación manual']
+    ];
+    settingsRows.forEach(([label, value]) => {
+        const row = document.createElement('div');
+        const term = document.createElement('dt');
+        const detail = document.createElement('dd');
+        term.textContent = label;
+        detail.textContent = value;
+        row.append(term, detail);
+        settings.append(row);
+    });
     const balance = document.createElement('strong');
     balance.className = 'wallet-detail-balance';
     balance.textContent = `S/ ${fmt(accountBalance(wallet))}`;
@@ -1431,7 +1416,7 @@ function renderWalletDetail() {
     const management = document.createElement('div');
     management.className = 'wallet-management';
     management.innerHTML = '<button type="button" data-wallet-action="edit">Editar cuenta</button><button type="button" data-wallet-action="archive">Archivar cuenta</button>';
-    panel.append(heading, balance, actions, stats, recent, management);
+    panel.append(heading, balance, actions, stats, settings, recent, management);
 }
 
 function renderWalletChoices() {
@@ -1444,11 +1429,13 @@ function renderWalletChoices() {
     const heading = document.createElement('h2');
     heading.textContent = review.length
         ? 'Acciones pendientes para tus cuentas'
-        : 'Cuentas sugeridas';
+        : suggestedWallets.length ? 'Cuentas sugeridas' : 'Cuentas archivadas';
     const description = document.createElement('p');
     description.textContent = review.length
         ? 'Las cuentas pendientes no afectan tu saldo. Decide si las activas, las archivas o creas una cuenta sugerida para movimientos sin asignar.'
-        : 'Detectamos movimientos sin cuenta asignada. Crea y vincula una cuenta para ordenarlos.';
+        : suggestedWallets.length
+            ? 'Detectamos movimientos sin cuenta asignada. Crea y vincula una cuenta para ordenarlos.'
+            : 'Estas cuentas están fuera de tu gestión diaria y del saldo total. Puedes revisarlas y reactivarlas cuando las necesites.';
     panel.append(heading, description);
     const addRow = (name, detail, actions) => {
         const row = document.createElement('div');
@@ -1531,6 +1518,7 @@ document.getElementById('wallet-choices')?.addEventListener('click', async event
 function renderWallets() {
     const list = document.getElementById('wallets-list');
     const active = activeWallets();
+    updateContextGuide('accounts-guide', accountGuide(active.length > 0));
     const included = active.filter(wallet => wallet.includeInTotal !== false);
     const total = included.reduce((sum, wallet) => sum + accountBalance(wallet), 0);
     const reviewCount = state.wallets.filter(walletNeedsReview).length;
@@ -1709,6 +1697,27 @@ function getExportContext() {
 document.getElementById('btn-export-excel-toolbar')?.addEventListener('click', () => exportToExcel(getExportContext()));
 document.getElementById('btn-export-pdf-toolbar')?.addEventListener('click', () => exportToPDF(getExportContext()));
 
+// Native details keeps export choices keyboard-accessible without a custom menu.
+document.addEventListener('click', event => {
+    document.querySelectorAll('.export-control[open]').forEach(control => {
+        if (!control.contains(event.target) || event.target.closest('.btn-export-mini')) control.open = false;
+    });
+    if (event.target.closest('[data-reset-ledger-filters]')) {
+        document.getElementById('search-input').value = '';
+        document.getElementById('category-filter').value = 'all';
+        document.getElementById('status-filter').value = 'all';
+        renderTransactionLedgerFromCache();
+        document.getElementById('search-input').focus();
+    }
+});
+document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('.export-control[open]').forEach(control => {
+        if (control.contains(document.activeElement)) control.querySelector('summary').focus();
+        control.open = false;
+    });
+});
+
 // ──────────────────────────────────────────────
 // DELETE ALL USER DATA
 // ──────────────────────────────────────────────
@@ -1788,3 +1797,11 @@ if ('serviceWorker' in navigator) {
 // ──────────────────────────────────────────────
 initTheme();
 initInterfaceMotion();
+initContextGuides({
+    onNewAccount: () => openWalletModal(),
+    onEditAccount: () => {
+        const wallet = state.wallets.find(item => item.id === state.selectedWalletId && isActiveWallet(item));
+        if (wallet) openWalletModal(wallet);
+        else document.getElementById('wallets-list')?.querySelector('button')?.focus();
+    }
+});

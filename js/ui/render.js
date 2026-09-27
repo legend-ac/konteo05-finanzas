@@ -118,19 +118,42 @@ function createRow(item, index) {
     return el;
 }
 
-export function renderTransactionList(listEl, filtered) {
+export function renderTransactionList(listEl, filtered, { hasFilters = false } = {}) {
     if (!listEl) return;
     listEl.textContent = '';
 
     if (!filtered.length) {
         const p = document.createElement('section');
         p.className = 'empty empty-state';
-        p.style.marginTop = '32px';
-        p.textContent = '';
+        p.setAttribute('role', 'listitem');
+        const content = document.createElement('div');
+        content.className = 'empty-state-copy';
         const title = document.createElement('h3');
-        title.textContent = 'Empieza con tu primer movimiento';
+        title.textContent = hasFilters ? 'No hay coincidencias' : 'Este período aún no tiene movimientos';
         const copy = document.createElement('p');
-        copy.textContent = 'Registra un ingreso o gasto para convertir este panel en tu historial financiero.';
+        copy.textContent = hasFilters
+            ? 'Prueba otra búsqueda o quita los filtros para ver los movimientos del período.'
+            : 'Registra lo que entra o sale, o elige otro período para consultar tu historial.';
+        content.append(title, copy);
+        if (hasFilters) {
+            p.classList.add('empty-state-filtered');
+            const reset = document.createElement('button');
+            reset.type = 'button';
+            reset.className = 'wallet-secondary';
+            reset.dataset.resetLedgerFilters = '';
+            reset.textContent = 'Limpiar filtros';
+            content.append(reset);
+            p.append(content);
+            listEl.append(p);
+            return;
+        }
+        const guide = document.createElement('img');
+        guide.className = 'empty-state-guide';
+        guide.src = '/images/konteo-guide-empty.jpg';
+        guide.alt = '';
+        guide.width = 120;
+        guide.height = 120;
+        guide.loading = 'lazy';
         const actions = document.createElement('div');
         actions.className = 'empty-state-actions';
         // #1 — Mismo texto y clases que la tarjeta de saldo
@@ -143,7 +166,8 @@ export function renderTransactionList(listEl, filtered) {
         expense.className = 'btn-balance-action btn-balance-expense btn-open-expense';
         expense.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Gasto</span>`;
         actions.append(income, expense);
-        p.append(title, copy, actions);
+        content.append(actions);
+        p.append(guide, content);
         listEl.appendChild(p);
         return;
     }

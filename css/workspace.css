@@ -1,0 +1,412 @@
+/* Final workspace composition. Keep shared legacy forms in styles.css;
+   layout, contextual guides and everyday controls are defined here. */
+:root, [data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #141615;
+    --bg-2: #1b1e1c;
+    --bg-3: #242824;
+    --bg-4: #2d322c;
+    --line: #353b34;
+    --line-2: #50584d;
+    --text: #f3f0e7;
+    --text-2: #c2c4b9;
+    --text-3: #a1a799;
+    --gold: #dfbc6a;
+    --gold-dim: #dfbc6a18;
+    --gold-faint: #dfbc6a0c;
+    --income: #83c6a4;
+    --expense: #ef9b93;
+}
+[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f4f1e9;
+    --bg-2: #fffcf5;
+    --bg-3: #eeece3;
+    --bg-4: #e3e0d5;
+    --line: #d9d8cc;
+    --line-2: #b7b9ab;
+    --text: #252b24;
+    --text-2: #525c4f;
+    --text-3: #64705f;
+    --gold: #8d6523;
+    --income: #286a48;
+    --expense: #a13e36;
+}
+
+/* Reserve colour for money, account identity and the primary action. */
+#home-page, #dashboard-page { background: var(--bg); }
+#dashboard-page > header, .desktop-nav { background: var(--bg); }
+.header-actions { gap: 6px; }
+#dashboard-page .header-actions > button,
+#dashboard-page #btn-gmail-import.gmail-connected {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: var(--text-2);
+    background: transparent;
+    box-shadow: none;
+}
+#dashboard-page #btn-gmail-import { border-color: var(--line); }
+#dashboard-page #btn-gmail-import.gmail-connected { border-color: var(--line); }
+#dashboard-page .header-actions > button:hover { color: var(--text); background: var(--bg-3); }
+#dashboard-page #theme-toggle-btn { width: 40px; padding: 0; }
+#dashboard-page #logout-btn { color: var(--text-2) !important; border-color: transparent !important; }
+#dashboard-page #logout-btn:hover { background: var(--bg-3) !important; }
+.home-brand > span, .desktop-nav-mark, .brand-icon { background: #dfbc6a; color: #262318; box-shadow: none; }
+.desktop-nav .app-nav-link { display: flex; justify-content: flex-start; border: 1px solid transparent; }
+.desktop-nav .app-nav-link.active { background: var(--bg-3); border-color: var(--line); color: var(--text); }
+.desktop-nav .app-nav-link.active > span { color: var(--gold); }
+button:focus-visible, summary:focus-visible, a:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+}
+
+/* One financial summary, not three oversized competing cards. */
+.dashboard-title-row { align-items: center; gap: 20px; margin-bottom: 20px; }
+.dashboard-title-left h1 { max-width: none; font-size: clamp(26px, 2.7vw, 36px); line-height: 1.2; }
+.dashboard-eyebrow { color: var(--text-3); letter-spacing: .055em; }
+.dashboard-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg-2);
+    overflow: visible;
+}
+.balance-hero {
+    grid-column: auto;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    align-content: center;
+    gap: 16px;
+    padding: 22px;
+    border: 0;
+    border-radius: 12px 0 0 12px;
+    background: transparent;
+    color: var(--text);
+    box-shadow: none;
+}
+.balance-hero::before, .balance-hero::after, .overview-stat::before { display: none; }
+.balance-hero .balance-number {
+    color: var(--text);
+    font-family: inherit;
+    font-size: clamp(28px, 2.6vw, 38px);
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.04em;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+.balance-hero .balance-period-label, .balance-hero .balance-caption { color: var(--text-2); }
+.balance-hero .balance-caption { margin-top: 4px; font-size: 12px; }
+.balance-hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.btn-balance-action { min-width: 0; height: auto; min-height: 38px; padding: 9px 12px; border-radius: 7px; font-size: 12px; box-shadow: none; }
+.balance-hero .btn-balance-income, .empty-state .btn-balance-income,
+.wallet-primary, .btn-save-plan, .home-button-main {
+    background: #dfbc6a;
+    color: #262318;
+    border: 1px solid #dfbc6a;
+    box-shadow: none;
+}
+.balance-hero .btn-balance-expense, .empty-state .btn-balance-expense {
+    border: 1px solid var(--line-2) !important;
+    background: transparent;
+    color: var(--text);
+    box-shadow: none;
+}
+.balance-hero .btn-balance-expense:hover, .empty-state .btn-balance-expense:hover {
+    background: var(--bg-3); color: var(--text); border-color: var(--line-2) !important;
+}
+.overview-stat {
+    min-width: 0;
+    min-height: 0;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 8px;
+    border: 0;
+    border-left: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.overview-stat > span { margin: 0; font-size: 13px; text-transform: none; letter-spacing: 0; color: var(--text-2); }
+.overview-stat strong { font-family: inherit; font-size: clamp(20px, 2vw, 28px); font-variant-numeric: tabular-nums; letter-spacing: -.03em; overflow-wrap: anywhere; }
+.overview-stat:last-child { border-radius: 0 12px 12px 0; }
+.period-bar { background: var(--bg-2); border-radius: 8px; box-shadow: none; }
+.period-bar .filter { border-radius: 5px; }
+.period-bar .filter.active { background: var(--bg-4); color: var(--text); box-shadow: none; }
+.dashboard-grid { align-items: start; gap: 16px; }
+.dashboard-support { min-width: 0; order: 0; }
+.ledger-card { min-width: 0; min-height: 0; height: auto; padding: 20px; border-radius: 12px; }
+.ledger-title-group { align-items: center; gap: 12px; }
+.ledger-title h2 { font-size: 19px; }
+.ledger-eyebrow, .plan-eyebrow { color: var(--text-3); letter-spacing: .05em; }
+.transactions-count { color: var(--text-3); font-size: 12px; }
+.filter-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.filter-bar .search-input { grid-column: 1 / -1; }
+.filter-bar input, .filter-bar select { width: 100%; min-width: 0; height: 40px; font-size: 12px; border-radius: 6px; }
+.plan-section, .insights-section { padding: 20px; border-radius: 12px; }
+.plan-kpis { margin-block: 14px; }
+.plan-body { margin-top: 14px; }
+.plan-h2, .insights-h2 { font-size: 19px; }
+.plan-input-label { color: var(--text-2); }
+.btn-save-plan { border-radius: 7px; min-height: 40px; }
+.app-footer { margin: 0; padding: 20px 0 0; }
+.app-footer p { line-height: 2; }
+
+/* A quiet disclosure instead of a permanent row of multicolour export pills. */
+.export-control { position: relative; flex: 0 0 auto; }
+.export-control > summary {
+    display: flex; align-items: center; gap: 7px; min-height: 40px;
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px;
+    list-style: none; cursor: pointer; color: var(--text-2); font-size: 12px;
+}
+.export-control > summary::-webkit-details-marker { display: none; }
+.export-control[open] > summary, .export-control > summary:hover { background: var(--bg-3); color: var(--text); }
+.export-control .ledger-export-quick {
+    position: absolute; z-index: 30; top: calc(100% + 6px); right: 0;
+    display: grid; width: 196px; padding: 6px; gap: 2px;
+    border: 1px solid var(--line-2); border-radius: 9px;
+    background: var(--bg-2); box-shadow: 0 10px 24px #0002;
+}
+.export-control .btn-export-mini {
+    justify-content: flex-start; width: 100%; height: auto; min-height: 40px;
+    padding: 9px; border: 0; border-radius: 5px;
+    background: transparent; color: var(--text); font-size: 12px;
+}
+.export-control .btn-export-mini:hover { background: var(--bg-3); color: var(--text); }
+
+/* Companions explain the next action. Their entire illustration stays visible. */
+.companion-help { margin-top: 20px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); }
+.companion-help > summary { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 18px; cursor: pointer; list-style: none; text-align: left; border-radius: 6px; }
+.companion-help > summary::-webkit-details-marker { display: none; }
+.companion-help img, .empty-state-guide { display: block; max-width: 100%; object-fit: contain; border-radius: 7px; background: #faf7ed; }
+.companion-help summary > span { display: grid; gap: 5px; }
+.companion-help summary strong { color: var(--text); font-size: 15px; }
+.companion-help summary span span { color: var(--text-2); font-size: 12px; }
+.companion-help summary .companion-link { margin-top: 5px; color: var(--text); text-decoration: underline; text-underline-offset: 4px; }
+.companion-link::after { content: ' +'; display: inline-block; margin-left: 7px; text-decoration: none; }
+.companion-help[open] .companion-link::after { content: ' −'; }
+.companion-help > p { margin: 14px 0 0; font-size: 13px; line-height: 1.7; color: var(--text-2); }
+.companion-help > button { margin-top: 14px; }
+.context-companion { margin: 18px 0 0; padding: 16px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+.context-companion > summary { gap: 14px; }
+.context-companion summary strong { font-size: 13px; line-height: 1.5; }
+.context-companion summary .companion-link { font-size: 12px; line-height: 1.5; margin-top: 2px; }
+.context-companion > p { font-size: 13px; line-height: 1.7; }
+.guide-action { display: inline-flex; align-items: center; min-height: 42px; max-width: 100%; margin-top: 14px; padding: 9px 12px; border: 1px solid var(--line-2); border-radius: 7px; background: transparent; color: var(--text); text-align: left; font-size: 12px; font-weight: 600; line-height: 1.5; cursor: pointer; text-decoration: none; }
+.guide-action:hover { background: var(--bg-3); }
+.import-companion { margin: 0 0 18px; background: var(--bg-2); }
+.import-companion img { width: 88px; height: 88px; }
+#modal-gmail-import .gmail-modal-content { overflow: hidden; }
+#modal-gmail-import .gmail-modal-header { flex: 0 0 auto; }
+#gmail-state-consent { min-height: 0; overflow: hidden; }
+#gmail-state-consent .gmail-consent-box {
+    min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    align-items: stretch; text-align: left; padding: 0 5px 0 0;
+    border: 0; border-radius: 0; background: transparent;
+}
+#gmail-state-consent .gmail-consent-actions { flex: 0 0 auto; padding-top: 12px; border-top: 1px solid var(--line); }
+#gmail-state-consent .import-companion > p { text-align: left; }
+#gmail-state-consent .gmail-consent-features { gap: 0; }
+#gmail-state-consent .gmail-cf-item { padding: 9px 0; border-radius: 0; border-bottom: 1px solid var(--line); background: transparent; }
+#gmail-state-consent .gmail-consent-sources { justify-content: flex-start; gap: 8px 14px; }
+#gmail-state-consent .gmail-consent-sources span { padding: 0; border: 0; border-radius: 0; background: transparent; font-size: 12px; }
+.gmail-btn-primary { background: #dfbc6a; color: #262318; border-radius: 7px; }
+#dashboard-page .ledger-card, #dashboard-page .plan-section, #dashboard-page .insights-section,
+#dashboard-page .mobile-nav { box-shadow: none; }
+.empty.empty-state {
+    display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center;
+    justify-items: start;
+    gap: 20px; min-height: 0; margin: 0; padding: 28px 0 10px;
+    text-align: left; border: 0; background: transparent;
+}
+.empty-state-guide { width: 120px; height: 120px; }
+.empty-state-copy h3 { margin: 0; font-size: 15px; line-height: 1.45; }
+.empty-state-copy p { max-width: 42ch; margin: 8px 0 16px; color: var(--text-2); font-size: 13px; line-height: 1.65; }
+.empty-state-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin: 0; }
+.empty.empty-state-filtered { display: block; padding-block: 24px; }
+
+/* Account status belongs to readable settings, not repeated tiny badges. */
+.wallets-shell { display: grid; align-content: start; gap: 18px; }
+.wallets-shell > .wallets-page-heading, .wallets-shell > .wallet-total-card,
+.wallets-shell > .wallet-choices, .wallets-shell > .wallets-layout { margin: 0; min-width: 0; }
+.wallets-layout:has(> #wallet-detail.hidden) { grid-template-columns: minmax(0, 1fr); }
+.wallet-total-card { background: var(--bg-2); border-radius: 12px; min-height: 0; padding: 20px; gap: 16px; }
+.wallet-total-card > strong { font-family: inherit; font-variant-numeric: tabular-nums; font-size: clamp(26px, 3vw, 36px); letter-spacing: -.035em; overflow-wrap: anywhere; }
+.wallets-layout { grid-template-columns: minmax(290px, .85fr) minmax(0, 1.3fr); gap: 16px; }
+.wallets-list-panel { padding: 16px; border-radius: 12px; }
+.wallet-detail-panel { padding: 22px; border-radius: 12px; border-top: 1px solid var(--line); }
+.wallet-list-item { min-height: 72px; border-radius: 6px; padding: 12px 9px; gap: 10px; }
+.wallet-list-item.is-selected { background: var(--bg-3); border-color: var(--line-2); box-shadow: inset 2px 0 0 var(--bank-accent); }
+.wallet-list-icon { border-radius: 7px; }
+.wallet-list-copy strong { font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+.wallet-list-copy small { font-size: 12px; white-space: normal; line-height: 1.45; }
+.wallet-list-amount { font-family: inherit; font-size: 13px; font-variant-numeric: tabular-nums; }
+.wallet-detail-type { color: var(--text-3); letter-spacing: .05em; }
+.wallet-detail-heading h2 { font-size: 24px; overflow-wrap: anywhere; }
+.wallet-detail-balance { display: block; margin: 20px 0 16px; font-family: inherit; font-variant-numeric: tabular-nums; font-size: clamp(26px, 3vw, 36px); letter-spacing: -.04em; overflow-wrap: anywhere; }
+.wallet-detail-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 22px 0; border-block: 1px solid var(--line); }
+.wallet-detail-stats > div { padding: 14px 8px; border: 0; border-radius: 0; background: transparent; }
+.wallet-detail-stats > div + div { border-left: 1px solid var(--line); }
+.wallet-detail-stats span { font-size: 12px; text-transform: none; letter-spacing: 0; }
+.wallet-detail-stats strong { font-family: inherit; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.wallet-settings-summary { display: grid; gap: 8px; margin-bottom: 20px; }
+.wallet-settings-summary > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 16px; font-size: 12px; }
+.wallet-settings-summary dt { color: var(--text-3); }
+.wallet-settings-summary dd { margin: 0; color: var(--text); }
+.wallet-management button { min-height: 40px; color: var(--text-2); font-size: 12px; }
+.wallet-choices { border-color: var(--line); background: var(--bg-2); border-radius: 12px; }
+.wallet-choice-group > summary { color: var(--text); min-height: 40px; }
+.wallet-primary, .wallet-secondary { border-radius: 7px; min-height: 40px; }
+
+/* Public page: demonstrate the product first, guide alongside the explanation. */
+.home-shell { max-width: 1240px; padding-inline: 40px; }
+.home-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; min-height: 0; padding: 48px 0 36px; }
+.home-copy h1 { font-size: clamp(36px, 4.2vw, 56px); max-width: 16ch; line-height: 1.08; letter-spacing: -.045em; }
+.home-intro { margin-top: 20px; font-size: 16px; line-height: 1.7; max-width: 48ch; }
+.home-actions { margin-top: 24px; flex-wrap: wrap; gap: 10px; }
+.home-actions .home-button { min-height: 44px; padding: 12px 16px; border-radius: 7px; }
+.home-trust-list { margin-top: 18px; gap: 8px 16px; }
+.home-trust-list li { color: var(--text-2); }
+.home-trust-list li::before { background: transparent; color: var(--text-3); }
+.home-visual { width: 100%; max-width: none; margin: 0; }
+.home-preview { border-radius: 12px; padding: 22px; gap: 16px; box-shadow: none; background: var(--bg-2); }
+.home-preview-top { letter-spacing: 0; text-transform: none; font-size: 12px; color: var(--text-2); }
+.home-preview-top > span:last-child { font-size: 11px; font-weight: 400; }
+.home-preview-balance { background: transparent; padding: 6px 0; border-radius: 0; }
+.home-preview-balance strong { font-family: inherit; font-size: 38px; letter-spacing: -.04em; }
+.home-preview-balance span, .home-preview-stats span { font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.home-preview-stats { grid-template-columns: 1fr 1fr; gap: 0; border-block: 1px solid var(--line); }
+.home-preview-stats > div { background: transparent; padding: 14px 0; border: 0; border-radius: 0; }
+.home-preview-stats strong, .home-preview-ledger b { font-family: inherit; font-variant-numeric: tabular-nums; }
+.home-preview-ledger p small { font-size: 11px; }
+.home-proof { margin: 0; border-block: 1px solid var(--line); }
+.home-proof article { min-height: 0; padding: 24px 22px; }
+.home-proof article:first-child { padding-left: 0; }
+.home-section { padding-block: 44px; }
+.home-how { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; }
+.home-section-heading h2 { max-width: 23ch; font-size: clamp(24px, 2.5vw, 32px); line-height: 1.2; }
+.home-section-heading > p:not(.home-eyebrow) { margin-top: 14px; color: var(--text-2); line-height: 1.7; }
+.home-section-heading > p:last-child { font-size: 14px; }
+.home-steps { gap: 0; }
+.home-steps li { padding: 20px 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; border-radius: 0; }
+.home-client-card, .home-privacy { border-radius: 10px; background: var(--bg-2); }
+.home-client-balance { background: var(--bg-2); }
+.home-privacy { padding: 30px; gap: 32px; border: 1px solid var(--line); }
+.home-privacy h2, .home-final-cta h2 { max-width: 25ch; font-size: clamp(25px, 2.5vw, 34px); line-height: 1.2; }
+.home-privacy > div > p:last-child { max-width: 55ch; }
+.home-final-cta { margin-top: 32px; padding-block: 32px; }
+
+/* Interaction is feedback; financial panels should not float under the cursor. */
+.motion-ready .balance-hero, .motion-ready .overview-stat,
+.motion-ready .ledger-card, .motion-ready .wallet-list-item,
+.motion-ready .plan-section, .motion-ready .insights-section { transform: none !important; }
+@media (prefers-reduced-motion: no-preference) {
+    .companion-help img { transition: transform 180ms ease-out; }
+    .companion-help > summary:hover img, .companion-help > summary:focus-visible img { transform: translateY(-3px); }
+    .companion-help[open] > p { animation: guide-reveal 180ms ease-out; }
+}
+@keyframes guide-reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (min-width: 768px) {
+    .dashboard-shell, .wallets-shell { padding-top: 94px; padding-inline: 28px; }
+}
+@media (max-width: 1179px) {
+    .dashboard-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .balance-hero { grid-column: 1 / -1; padding: 20px; }
+    .overview-stat { border-top: 1px solid var(--line); min-height: 0; padding: 16px 20px; }
+    .overview-stat.income-stat { border-left: 0; }
+    .overview-stat.expense-stat { border-radius: 0 0 12px 0; }
+    .overview-stat.income-stat { border-radius: 0 0 0 12px; }
+    .wallets-layout { grid-template-columns: minmax(0, 1fr); }
+    .wallet-detail-panel { position: static; }
+    .wallets-list { max-height: none; }
+    .wallet-total-card { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .wallet-total-card small { text-align: left; white-space: normal; }
+}
+@media (max-width: 900px) {
+    .home-shell { padding-inline: 24px; }
+    .home-hero, .home-how { gap: 28px; }
+    .home-copy h1 { font-size: 38px; }
+    .home-hero { grid-template-columns: minmax(0, 1fr); padding-top: 32px; }
+    .home-copy h1, .home-intro { max-width: 24ch; }
+    .home-intro { max-width: 60ch; }
+    .home-visual { max-width: 600px; justify-self: start; }
+    .home-proof { grid-template-columns: 1fr; }
+    .home-proof article { padding: 18px 0; border: 0; }
+    .home-proof article + article { border-top: 1px solid var(--line); }
+    .home-how { grid-template-columns: minmax(0, 1fr); }
+    .home-companion { max-width: 560px; }
+}
+@media (max-width: 767px) {
+    #dashboard-page > header { padding-inline: 12px; }
+    #dashboard-page .header-actions { gap: 2px; }
+    #dashboard-page .header-actions #logout-btn { display: none; }
+    #dashboard-page #btn-gmail-import { width: auto; padding-inline: 9px; font-size: 12px; }
+    #dashboard-page #btn-gmail-import span { display: inline; }
+    #dashboard-page #profile-btn { padding-inline: 10px; }
+    .dashboard-shell, .wallets-shell { width: 100%; margin: 0; padding: 22px 14px 88px; }
+    .dashboard-title-row { align-items: stretch; gap: 16px; }
+    .dashboard-title-left h1 { max-width: none; font-size: 28px; }
+    .dashboard-time { display: none; }
+    .balance-hero { padding: 18px; gap: 14px; }
+    .balance-hero-actions { display: flex; }
+    .balance-hero .balance-number { font-size: 32px; }
+    .overview-stat { padding: 14px 18px; }
+    .overview-stat strong { font-size: 21px; }
+    .ledger-card, .plan-section, .insights-section { padding: 16px; }
+    .ledger-title-group { flex-wrap: nowrap; align-items: flex-start; }
+    .ledger-title h2 { font-size: 18px; }
+    .filter-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .filter-bar .search-input { grid-column: auto; }
+    .empty.empty-state { grid-template-columns: 88px minmax(0, 1fr); gap: 14px; padding-block: 24px 8px; }
+    .empty-state-guide { width: 88px; height: 88px; align-self: start; }
+    .empty-state-copy h3 { font-size: 14px; }
+    .empty-state-copy p { font-size: 12px; }
+    .empty-state-actions .btn-balance-action { min-height: 40px; }
+    .dashboard-support { grid-template-columns: 1fr; }
+    .action-bar-mobile { display: none; }
+    .mobile-nav { min-height: 64px; background: var(--bg-2); backdrop-filter: none; }
+    .mobile-nav .app-nav-link.active { background: var(--bg-3); color: var(--text); }
+    .mobile-nav .app-nav-link small { font-size: 12px; }
+    .wallet-detail-panel { padding: 18px; }
+    .wallet-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .wallet-detail-stats > div { padding-inline: 6px; }
+    .wallet-recent-row { gap: 12px; }
+    .wallet-recent-row strong { overflow-wrap: anywhere; }
+    .home-shell { padding-inline: 18px; }
+    .home-header { flex-wrap: wrap; gap: 14px; padding-block: 18px; }
+    .home-nav { order: 3; width: 100%; display: flex; justify-content: flex-start; gap: 22px; }
+    .home-copy h1 { font-size: 38px; }
+    .home-eyebrow { margin-bottom: 14px; }
+    .home-preview { padding: 18px; }
+    .home-section { padding-block: 32px; }
+    .home-privacy { padding: 20px; }
+    .home-companion img { width: 96px; height: 120px; }
+    .companion-help { padding: 12px; }
+    .companion-help > summary { gap: 14px; }
+    .home-final-cta { margin-top: 20px; }
+    .app-footer a { display: inline-block; padding-block: 3px; }
+}
+@media (max-width: 374px) {
+    .header-brand small { display: none; }
+    .header-brand { gap: 5px; }
+    .balance-hero-actions .btn-balance-action { flex: 1; font-size: 11px; padding-inline: 6px; }
+    .empty.empty-state { grid-template-columns: 68px minmax(0, 1fr); gap: 12px; }
+    .empty-state-guide { width: 68px; height: 68px; }
+    .wallet-list-item { grid-template-columns: 30px minmax(0, 1fr); }
+    .wallet-list-amount { grid-column: 2; }
+    .wallet-settings-summary > div { grid-template-columns: 92px minmax(0, 1fr); gap: 8px; }
+}

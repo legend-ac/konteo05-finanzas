@@ -3,6 +3,7 @@
 import { state } from '../state.js';
 import { showToast } from './toast.js';
 import * as dbService from '../services/dbService.js';
+import { budgetGuide, updateContextGuide } from './guides.js';
 
 function setText(id, value) {
     const element = document.getElementById(id);
@@ -15,6 +16,7 @@ function money(value) {
 
 export function updateStrategyPanel({ totalExpenses }) {
     const expenseLimit = state.planConfig.expenseLimit;
+    updateContextGuide('budget-guide', budgetGuide(expenseLimit, totalExpenses));
     const status = document.getElementById('strategy-status');
     const bar = document.getElementById('budget-progress-bar');
 
