@@ -127,15 +127,6 @@ export function renderTransactionList(listEl, filtered) {
         p.className = 'empty empty-state';
         p.style.marginTop = '32px';
         p.textContent = '';
-        const icon = document.createElement('span');
-        icon.className = 'empty-state-icon';
-        icon.setAttribute('aria-hidden', 'true');
-        // #7 — Billetera vacía: más semántico que recibo con rayas
-        icon.appendChild(makeLineIcon([
-            'M21 7H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1z',
-            'M2 11h20',
-            'M16 15h2'
-        ]));
         const title = document.createElement('h3');
         title.textContent = 'Empieza con tu primer movimiento';
         const copy = document.createElement('p');
@@ -152,7 +143,7 @@ export function renderTransactionList(listEl, filtered) {
         expense.className = 'btn-balance-action btn-balance-expense btn-open-expense';
         expense.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Gasto</span>`;
         actions.append(income, expense);
-        p.append(icon, title, copy, actions);
+        p.append(title, copy, actions);
         listEl.appendChild(p);
         return;
     }

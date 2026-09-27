@@ -81,6 +81,7 @@
                 </div>
                 <nav class="home-nav" aria-label="Información de Konto">
                     <a href="#como-funciona">Cómo funciona</a>
+                    <a href="security.html">Seguridad</a>
                     <a href="#privacidad">Privacidad</a>
                 </nav>
                 <button id="home-start-login" class="home-btn-nav" type="button">Iniciar sesión</button>
@@ -103,31 +104,13 @@
                     </ul>
                 </div>
 
-                <aside class="home-visual" aria-hidden="true">
-                    <div class="home-art">
-                        <img src="/images/hero.jpg" alt="">
-                        <div class="home-art-overlay">
-                            <div class="art-meta">Balance &middot; Hoy</div>
-                            <div class="art-balance">S/ 324.00</div>
-                            <div class="art-ledger">
-                                <div class="art-row">
-                                    <span class="art-dot income"></span>
-                                    <span class="art-name">Salario abr.</span>
-                                    <span class="art-amt income">+2,096</span>
-                                </div>
-                                <div class="art-row">
-                                    <span class="art-dot expense"></span>
-                                    <span class="art-name">Refrigeradora</span>
-                                    <span class="art-amt expense">&minus;1,135</span>
-                                </div>
-                                <div class="art-row">
-                                    <span class="art-dot expense"></span>
-                                    <span class="art-name">Ropa</span>
-                                    <span class="art-amt expense">&minus;100</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <aside class="home-visual" aria-label="Vista de ejemplo de Konteo">
+                    <section class="home-preview">
+                        <div class="home-preview-top"><span>Vista del período</span><span class="home-preview-status">Actualizado</span></div>
+                        <div class="home-preview-balance"><span>Saldo disponible</span><strong>S/ 1,248.50</strong></div>
+                        <div class="home-preview-stats"><div><span>Ingresos</span><strong class="is-income">S/ 1,800.00</strong></div><div><span>Gastos</span><strong class="is-expense">S/ 551.50</strong></div></div>
+                        <div class="home-preview-ledger"><div><span class="preview-dot is-income"></span><p><strong>Ingreso registrado</strong><small>Hoy</small></p><b class="is-income">+ S/ 1,800</b></div><div><span class="preview-dot is-expense"></span><p><strong>Compra necesaria</strong><small>Hoy</small></p><b class="is-expense">− S/ 85</b></div><div><span class="preview-dot is-expense"></span><p><strong>Pago de servicio</strong><small>Ayer</small></p><b class="is-expense">− S/ 120</b></div></div>
+                    </section>
                 </aside>
             </section>
 
@@ -192,7 +175,14 @@
                 <button class="home-button home-button-main" type="button" data-home-auth="register">Crear mi cuenta</button>
             </section>
 
-            <footer class="home-footer"><span>© 2026 Konto 05</span><div><a href="privacy.html">Privacidad</a><a href="terms.html">Términos</a></div></footer>
+            <footer class="home-footer home-footer-pro">
+                <div class="footer-brand"><strong>Konteo 05</strong><span>Control financiero personal</span></div>
+                <div class="footer-column"><strong>Producto</strong><a href="#como-funciona">Cómo funciona</a><a href="#privacidad">Cómo tratamos tus datos</a></div>
+                <div class="footer-column"><strong>Confianza</strong><a href="security.html">Seguridad</a><a href="gmail-data.html">Uso de Gmail</a><a href="privacy.html">Privacidad</a></div>
+                <div class="footer-column"><strong>Legal</strong><a href="terms.html">Términos de uso</a><a href="privacy.html#eliminacion">Eliminar mi cuenta</a><a href="privacy.html#derechos">Derechos sobre mis datos</a><a href="legal-notice.html">Aviso legal</a></div>
+                <p class="footer-legal-note">Konteo es una herramienta de organización personal; no es un banco, asesor financiero ni plataforma de inversión.</p>
+                <p class="footer-copyright">© 2026 Konteo 05. Todos los derechos reservados.</p>
+            </footer>
 
         </main>
     </div>
@@ -405,7 +395,7 @@
                     <div id="list" role="list"></div>
 
                     <footer class="app-footer">
-                        <p><a href="/privacy.html">Privacidad</a> &middot; <a href="/terms.html">T&eacute;rminos</a> &middot; Konteo 05 &copy; 2026</p>
+                        <p><a href="/privacy.html">Privacidad</a> &middot; <a href="/gmail-data.html">Uso de Gmail</a> &middot; <a href="/security.html">Seguridad</a> &middot; <a href="/terms.html">Términos</a> &middot; <a href="/legal-notice.html">Aviso legal</a> &middot; Konteo 05 &copy; 2026</p>
                     </footer>
                 </section>
 
@@ -487,20 +477,20 @@
                     <div>
                         <p class="dashboard-eyebrow">Organización</p>
                         <h1 id="wallets-title">Tus cuentas</h1>
-                        <p>Consulta el dinero por cuenta. Las cuentas pendientes no se incluyen en tu saldo.</p>
+                        <p>Organiza bancos, billeteras y efectivo. Solo las cuentas activas participan en tu gestión diaria.</p>
                     </div>
                     <button id="btn-new-wallet" class="wallet-primary" type="button">+ Agregar cuenta</button>
                 </div>
                 <section class="wallet-total-card" aria-label="Saldo total de billeteras">
                     <span>Saldo consolidado</span>
                     <strong id="wallets-total">S/ 0.00</strong>
-                    <small id="wallets-total-detail">0 cuentas activas</small>
+                    <div class="wallet-total-meta"><small id="wallets-total-detail">0 cuentas activas</small><span id="wallets-review-status" class="hidden"></span></div>
                 </section>
                 <section id="wallet-choices" class="wallet-choices hidden" aria-label="Elegir cuentas"></section>
                 <div class="wallets-layout">
                     <section class="wallets-list-panel" aria-labelledby="wallets-list-title">
                         <div class="wallets-panel-heading">
-                            <div><h2 id="wallets-list-title">Cuentas</h2><span id="wallets-count">0 cuentas activas</span></div>
+                            <div><h2 id="wallets-list-title">Cuentas activas</h2><span id="wallets-count">0 cuentas activas</span></div>
                             <button id="btn-wallet-transfer" class="wallet-secondary" type="button">Transferir</button>
                         </div>
                         <div id="wallets-list" class="wallets-list"></div>

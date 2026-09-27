@@ -62,6 +62,55 @@ function toggleTheme() {
     if (chartSnapshot) renderCharts(chartSnapshot);
 }
 
+// Motion is deliberately restrained: it confirms interaction instead of
+// competing with financial information. Cursor-only effects are never bound
+// on touch devices, and the operating system's reduced-motion preference wins.
+function interfaceMotionAllowed() {
+    return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+function replayInterfaceMotion(element) {
+    if (!element || !interfaceMotionAllowed()) return;
+    element.classList.remove('motion-enter');
+    window.requestAnimationFrame(() => element.classList.add('motion-enter'));
+}
+
+function initInterfaceMotion() {
+    if (!interfaceMotionAllowed()) return;
+    document.documentElement.classList.add('motion-ready');
+
+    const homePage = document.getElementById('home-page');
+    if (homePage) window.requestAnimationFrame(() => homePage.classList.add('motion-revealed'));
+
+    const canUsePointerMotion = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
+    const balanceHero = document.querySelector('.balance-hero');
+    if (!balanceHero || !canUsePointerMotion) return;
+
+    let frameId = 0;
+    let pointerX = 50;
+    let pointerY = 50;
+    const paintPointerPosition = () => {
+        balanceHero.style.setProperty('--motion-x', `${pointerX}%`);
+        balanceHero.style.setProperty('--motion-y', `${pointerY}%`);
+        frameId = 0;
+    };
+
+    balanceHero.addEventListener('pointermove', event => {
+        const bounds = balanceHero.getBoundingClientRect();
+        pointerX = Math.max(0, Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100));
+        pointerY = Math.max(0, Math.min(100, ((event.clientY - bounds.top) / bounds.height) * 100));
+        balanceHero.classList.add('has-pointer-motion');
+        if (!frameId) frameId = window.requestAnimationFrame(paintPointerPosition);
+    });
+
+    balanceHero.addEventListener('pointerleave', () => {
+        balanceHero.classList.remove('has-pointer-motion');
+        pointerX = 50;
+        pointerY = 50;
+        if (!frameId) frameId = window.requestAnimationFrame(paintPointerPosition);
+    });
+}
+
 // ──────────────────────────────────────────────
 // CONNECTIVITY
 // ──────────────────────────────────────────────
@@ -469,6 +518,7 @@ auth.onAuthStateChanged(user => {
             if (state.currentUser?.uid === user.uid) loadUserProfile(profile);
         });
         showPage('dashboard');
+        replayInterfaceMotion(document.getElementById('dashboard-page'));
         document.getElementById('user-name').textContent = user.displayName || '';
 
         const sortEl       = document.getElementById('sort-select');
@@ -1290,6 +1340,10 @@ function walletVisualColor(wallet) {
     return defaults[walletBankKey(wallet)] || wallet?.color || 'gold';
 }
 
+function walletUsageLabel(wallet) {
+    return wallet.includeInTotal === false ? 'Fuera del saldo' : 'Incluida en saldo';
+}
+
 function createWalletItem(wallet) {
     const item = document.createElement('button');
     item.type = 'button';
@@ -1304,7 +1358,16 @@ function createWalletItem(wallet) {
     name.textContent = wallet.name;
     const meta = document.createElement('small');
     meta.textContent = walletSubtitle(wallet);
-    copy.append(name, meta);
+    const badges = document.createElement('span');
+    badges.className = 'wallet-list-badges';
+    const status = document.createElement('span');
+    status.className = 'wallet-state wallet-state-active';
+    status.textContent = 'Activa';
+    const usage = document.createElement('span');
+    usage.className = `wallet-usage ${wallet.includeInTotal === false ? 'is-excluded' : ''}`;
+    usage.textContent = walletUsageLabel(wallet);
+    badges.append(status, usage);
+    copy.append(name, meta, badges);
     const amount = document.createElement('span');
     amount.className = 'wallet-list-amount';
     amount.textContent = `S/ ${fmt(accountBalance(wallet))}`;
@@ -1332,8 +1395,11 @@ function renderWalletDetail() {
     const expense = sumAmounts(movements.filter(item => item.type === 'expense' && isPosted(item)));
     const heading = document.createElement('div');
     heading.className = 'wallet-detail-heading';
-    heading.innerHTML = `<span class="wallet-detail-type">${WALLET_TYPE_LABELS[wallet.type] || 'Cuenta'}</span><h2></h2><p></p>`;
+    heading.innerHTML = `<span class="wallet-detail-type">${WALLET_TYPE_LABELS[wallet.type] || 'Cuenta'}</span><h2></h2><div class="wallet-detail-states"></div><p></p>`;
     heading.querySelector('h2').textContent = wallet.name;
+    const states = heading.querySelector('.wallet-detail-states');
+    states.innerHTML = `<span class="wallet-state wallet-state-active">Activa</span><span class="wallet-usage ${wallet.includeInTotal === false ? 'is-excluded' : ''}">${walletUsageLabel(wallet)}</span>`;
+    if (wallet.linkSource) states.insertAdjacentHTML('beforeend', '<span class="wallet-source-state">Vinculada a importaciones</span>');
     heading.querySelector('p').textContent = walletSubtitle(wallet);
     const balance = document.createElement('strong');
     balance.className = 'wallet-detail-balance';
@@ -1377,12 +1443,12 @@ function renderWalletChoices() {
     if (!review.length && !suggestedWallets.length && !archived.length) return;
     const heading = document.createElement('h2');
     heading.textContent = review.length
-        ? `${review.length} cuenta${review.length === 1 ? '' : 's'} pendiente${review.length === 1 ? '' : 's'} de revisar`
+        ? 'Acciones pendientes para tus cuentas'
         : 'Cuentas sugeridas';
     const description = document.createElement('p');
     description.textContent = review.length
-        ? 'Estas cuentas fueron creadas automaticamente por una version anterior. No se usan en tu saldo ni cambian tus movimientos.'
-        : 'Detectamos movimientos sin cuenta asignada. Puedes crear una cuenta para organizarlos.';
+        ? 'Las cuentas pendientes no afectan tu saldo. Decide si las activas, las archivas o creas una cuenta sugerida para movimientos sin asignar.'
+        : 'Detectamos movimientos sin cuenta asignada. Crea y vincula una cuenta para ordenarlos.';
     panel.append(heading, description);
     const addRow = (name, detail, actions) => {
         const row = document.createElement('div');
@@ -1426,16 +1492,16 @@ function renderWalletChoices() {
         panel.appendChild(group);
     };
     appendGroup(
-        `Ver ${review.length} cuenta${review.length === 1 ? '' : 's'} antigua${review.length === 1 ? '' : 's'}`,
-        review.map(w => addRow(w.name, 'No se esta usando ni afecta tu saldo actual.',
-            [['Revisar cuenta', 'keep', w.id], ['Ocultar', 'archive', w.id]])),
+        `Pendientes de revisar (${review.length})`,
+        review.map(w => addRow(w.name, 'No se usa ni afecta tu saldo hasta que la revises.',
+            [['Revisar y activar', 'keep', w.id], ['Archivar', 'archive', w.id]])),
         { collapsible: true, open: review.length <= 2 }
     );
-    appendGroup('Cuentas sugeridas', suggestedWallets.map(w => addRow(w.name,
+    appendGroup(`Cuentas sugeridas (${suggestedWallets.length})`, suggestedWallets.map(w => addRow(w.name,
         `${w.configured ? 'Entidad configurada' : 'Detectada en tus movimientos'} · ${w.count} movimientos sin asignar`,
-        [['Agregar cuenta', 'add', w.sourceKey]])));
-    appendGroup('Cuentas archivadas', archived.map(w => addRow(w.name,
-        'Esta cuenta esta oculta de tus saldos.', [['Reactivar', 'keep', w.id]])));
+        [['Crear y vincular', 'add', w.sourceKey]])));
+    appendGroup(`Cuentas archivadas (${archived.length})`, archived.map(w => addRow(w.name,
+        'No se muestra ni afecta tus saldos.', [['Reactivar y editar', 'keep', w.id]])));
 }
 
 document.getElementById('wallet-choices')?.addEventListener('click', async event => {
@@ -1465,12 +1531,19 @@ document.getElementById('wallet-choices')?.addEventListener('click', async event
 function renderWallets() {
     const list = document.getElementById('wallets-list');
     const active = activeWallets();
-    const total = active.filter(wallet => wallet.includeInTotal !== false).reduce((sum, wallet) => sum + accountBalance(wallet), 0);
+    const included = active.filter(wallet => wallet.includeInTotal !== false);
+    const total = included.reduce((sum, wallet) => sum + accountBalance(wallet), 0);
+    const reviewCount = state.wallets.filter(walletNeedsReview).length;
     const count = `${active.length} cuenta${active.length !== 1 ? 's' : ''} activa${active.length !== 1 ? 's' : ''}`;
     document.getElementById('wallets-total').textContent = `S/ ${fmt(total)}`;
-    document.getElementById('wallets-total-detail').textContent = count;
+    document.getElementById('wallets-total-detail').textContent = `${count} · ${included.length} incluida${included.length !== 1 ? 's' : ''} en saldo`;
+    const reviewStatus = document.getElementById('wallets-review-status');
+    if (reviewStatus) {
+        reviewStatus.classList.toggle('hidden', reviewCount === 0);
+        reviewStatus.textContent = reviewCount ? `${reviewCount} por revisar` : '';
+    }
     renderWalletChoices();
-    document.getElementById('wallets-count').textContent = count;
+    document.getElementById('wallets-count').textContent = `${count} · ${included.length} en saldo total`;
     if (!list) return;
     list.textContent = '';
     if (!active.length) {
@@ -1535,6 +1608,7 @@ function changeAppView(view) {
         button.classList.toggle('active', active);
         button.toggleAttribute('aria-current', active);
     });
+    replayInterfaceMotion(document.getElementById(isWallets ? 'wallets-view' : 'home-view'));
     if (isWallets) {
         const list = document.getElementById('wallets-list');
         if (!state.wallets.length && list) {
@@ -1713,3 +1787,4 @@ if ('serviceWorker' in navigator) {
 // INIT
 // ──────────────────────────────────────────────
 initTheme();
+initInterfaceMotion();

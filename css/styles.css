@@ -1418,6 +1418,196 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
     .gmail-modal-content .gmail-category-control select, .gmail-modal-content .gmail-account-control select { width: min(100%, 180px); }
 }
 
+/* Visual language: warm paper, ink and muted financial accents. The guide's
+   palette informs the UI, while status remains written out instead of relying
+   on colour alone. */
+:root {
+    --bg: #10110e;
+    --bg-2: #161713;
+    --bg-3: #1d1d18;
+    --bg-4: #25241e;
+    --line: #302f27;
+    --line-2: #413e34;
+    --text: #f3efe5;
+    --text-2: #a79f90;
+    --text-3: #7f796e;
+    --gold: #d8ad59;
+    --gold-dim: rgba(216,173,89,.14);
+    --gold-faint: rgba(216,173,89,.065);
+    --income: #59bf87;
+    --income-dim: rgba(89,191,135,.12);
+    --expense: #d86f74;
+    --expense-dim: rgba(216,111,116,.12);
+    --warn: #d99a4e;
+    --cat-green: #59bf87;
+    --cat-yellow: #d8ad59;
+    --cat-red: #d86f74;
+}
+[data-theme="light"] {
+    --bg: #f4f0e7;
+    --bg-2: #fcfaf4;
+    --bg-3: #f0ebdf;
+    --bg-4: #e5decf;
+    --line: #ded5c5;
+    --line-2: #cfc3b0;
+    --text: #29261f;
+    --text-2: #686157;
+    --text-3: #80786c;
+    --gold-faint: rgba(216,173,89,.09);
+}
+body {
+    background:
+        radial-gradient(900px 480px at 4% -14%, rgba(216,173,89,.10), transparent 62%),
+        radial-gradient(700px 360px at 104% 10%, rgba(91,135,104,.075), transparent 62%),
+        var(--bg);
+}
+
+/* Account management is a small operations workspace, not a generic list. */
+.wallet-total-card {
+    overflow: hidden;
+    border-color: rgba(216,173,89,.34);
+    background:
+        linear-gradient(110deg, rgba(216,173,89,.16), rgba(22,23,19,.96) 49%),
+        var(--bg-2);
+}
+.wallet-total-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 10px; }
+.wallet-total-card > .wallet-total-meta small { color: var(--text-2); }
+#wallets-review-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0 8px;
+    border: 1px solid rgba(216,173,89,.36);
+    border-radius: 999px;
+    background: rgba(216,173,89,.09);
+    color: #f0c96e;
+    font-size: 10px;
+    font-weight: 800;
+}
+.wallets-list-panel { background: linear-gradient(180deg, rgba(255,255,255,.012), transparent 120px), var(--bg-2); }
+.wallet-list { gap: 8px; }
+.wallet-list-item {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    min-height: 72px;
+    padding: 10px;
+    border-color: rgba(255,255,255,.025);
+}
+.wallet-list-item:hover { border-color: color-mix(in srgb, var(--bank-accent) 42%, var(--line)); }
+.wallet-list-icon { width: 36px; height: 36px; border-radius: 11px; }
+.wallet-list-copy { gap: 3px; }
+.wallet-list-copy strong { font-size: 13px; }
+.wallet-list-copy small { font-size: 10px; }
+.wallet-list-badges, .wallet-detail-states { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.wallet-state, .wallet-usage, .wallet-source-state {
+    display: inline-flex;
+    align-items: center;
+    min-height: 17px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .045em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+.wallet-state-active { border: 1px solid rgba(89,191,135,.42); background: rgba(89,191,135,.11); color: #93e1b2; }
+.wallet-usage { border: 1px solid rgba(216,173,89,.30); background: rgba(216,173,89,.08); color: #e9c978; }
+.wallet-usage.is-excluded { border-color: rgba(167,159,144,.25); background: rgba(167,159,144,.07); color: var(--text-2); }
+.wallet-source-state { border: 1px solid rgba(119,150,180,.32); background: rgba(119,150,180,.10); color: #aac3db; }
+.wallet-list-amount { align-self: center; color: var(--text); }
+.wallet-detail-panel { background: linear-gradient(145deg, color-mix(in srgb, var(--bank-accent) 7%, var(--bg-2)), var(--bg-2) 38%); }
+.wallet-detail-states { margin-top: 5px; }
+.wallet-detail-states .wallet-state, .wallet-detail-states .wallet-usage, .wallet-detail-states .wallet-source-state { min-height: 21px; padding-inline: 8px; font-size: 9px; }
+.wallet-management { padding-top: 14px; border-top: 1px solid var(--line); }
+.wallet-management button { font-weight: 700; }
+
+/* A fuller but calmer set of bank accents. Manual colour selection stays
+   available; these colours are only the default identity for each institution. */
+.wallet-color-gold   { --wallet-accent: #d6aa55; background: rgba(214,170,85,.17); color: #e9c677; }
+.wallet-color-green  { --wallet-accent: #70aa85; background: rgba(112,170,133,.16); color: #98cba7; }
+.wallet-color-blue   { --wallet-accent: #789fc4; background: rgba(120,159,196,.16); color: #a9c5df; }
+.wallet-color-cyan   { --wallet-accent: #63aeb5; background: rgba(99,174,181,.16); color: #91cbd0; }
+.wallet-color-teal   { --wallet-accent: #5ca991; background: rgba(92,169,145,.16); color: #8bc9b6; }
+.wallet-color-purple { --wallet-accent: #9c85bb; background: rgba(156,133,187,.16); color: #c1b2d7; }
+.wallet-color-pink   { --wallet-accent: #ce8296; background: rgba(206,130,150,.16); color: #e5aabd; }
+.wallet-color-red    { --wallet-accent: #c9756e; background: rgba(201,117,110,.16); color: #e1a19a; }
+.wallet-color-orange { --wallet-accent: #d38d5b; background: rgba(211,141,91,.16); color: #e6b185; }
+.wallet-color-slate  { --wallet-accent: #99a6a7; background: rgba(153,166,167,.16); color: #bdc6c5; }
+.wallet-bank-bbva       { --bank-accent: #7397b9; }
+.wallet-bank-bcp        { --bank-accent: #6098ae; }
+.wallet-bank-interbank  { --bank-accent: #70aa85; }
+.wallet-bank-scotiabank { --bank-accent: #c9756e; }
+.wallet-bank-nacion     { --bank-accent: #d6aa55; }
+.wallet-bank-mibanco    { --bank-accent: #d38d5b; }
+.wallet-bank-yape       { --bank-accent: #9c85bb; }
+.wallet-bank-banbif     { --bank-accent: #c9756e; }
+
+.wallet-choices {
+    border-color: rgba(216,173,89,.34);
+    background: linear-gradient(105deg, rgba(216,173,89,.09), var(--bg-2) 44%);
+}
+.wallet-choice-group summary { color: #ebc46d; }
+.wallet-choice-row { gap: 12px; }
+.wallet-choice-row .wallet-secondary:first-of-type { border-color: rgba(89,191,135,.38); color: #99ddb3; }
+
+@media (max-width: 599px) {
+    .wallet-total-meta { align-items: flex-start; flex-direction: column; gap: 6px; }
+    .wallet-list-item { min-height: 74px; grid-template-columns: 36px minmax(0, 1fr) auto; }
+    .wallet-list-icon { width: 34px; height: 34px; }
+    .wallet-list-badges { gap: 4px; }
+    .wallet-state, .wallet-usage { font-size: 7px; padding-inline: 5px; }
+}
+
+/* Product-first landing: a native preview communicates the app better than
+   illustrative decoration and stays visually consistent with the workspace. */
+.home-hero {
+    grid-template-columns: minmax(0, 1.05fr) minmax(340px, .95fr);
+    align-items: center;
+    gap: clamp(34px, 6vw, 82px);
+    padding: clamp(50px, 8vh, 82px) 0 46px;
+}
+.home-copy h1 { max-width: 9ch; font-size: clamp(48px, 5.1vw, 70px); }
+.home-visual { width: min(100%, 460px); justify-self: end; }
+.home-preview {
+    display: grid;
+    gap: 16px;
+    padding: clamp(20px, 3vw, 28px);
+    border: 1px solid var(--line-2);
+    border-radius: 20px;
+    background: linear-gradient(145deg, rgba(216,173,89,.11), transparent 34%), var(--bg-2);
+    box-shadow: 0 24px 64px rgba(0,0,0,.18);
+}
+.home-preview-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text-3); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.home-preview-status { display: inline-flex; align-items: center; gap: 6px; color: var(--income); font-size: 9px; letter-spacing: .06em; }
+.home-preview-status::before { content: ''; width: 6px; height: 6px; border-radius: 99px; background: currentColor; box-shadow: 0 0 0 4px rgba(89,191,135,.11); }
+.home-preview-balance { display: grid; gap: 4px; padding: 18px; border-radius: 14px; background: rgba(216,173,89,.10); }
+.home-preview-balance span, .home-preview-stats span { color: var(--text-2); font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.home-preview-balance strong { font-family: 'IBM Plex Mono', monospace; font-size: clamp(30px, 4vw, 42px); letter-spacing: -.06em; color: var(--text); }
+.home-preview-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home-preview-stats > div { display: grid; gap: 5px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-3); }
+.home-preview-stats strong { font-family: 'IBM Plex Mono', monospace; font-size: 15px; }.is-income { color: var(--income) !important; }.is-expense { color: var(--expense) !important; }
+.home-preview-ledger { display: grid; border-top: 1px solid var(--line); }
+.home-preview-ledger > div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 47px; border-bottom: 1px solid var(--line); }
+.preview-dot { width: 7px; height: 7px; border-radius: 99px; background: currentColor; }
+.home-preview-ledger p { display: grid; gap: 1px; min-width: 0; }.home-preview-ledger p strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }.home-preview-ledger p small { color: var(--text-3); font-size: 10px; }.home-preview-ledger b { font-family: 'IBM Plex Mono', monospace; font-size: 11px; white-space: nowrap; }
+
+/* No empty visual voids: an empty ledger remains a compact next action. */
+#list:has(> .empty) { min-height: 0; }
+.empty-state { min-height: 178px; gap: 8px; padding: 26px 20px; }
+.empty-state h3 { margin-top: 0; }.empty-state p { max-width: 36ch; }
+.empty-state-actions { margin-top: 8px; }
+
+@media (max-width: 700px) {
+    .home-hero { grid-template-columns: 1fr; gap: 28px; padding: 42px 0 34px; }
+    .home-copy h1 { max-width: 10ch; font-size: clamp(43px, 12vw, 58px); }
+    .home-visual { display: block; width: min(100%, 440px); margin: 0 auto; }
+    .home-preview { border-radius: 16px; padding: 18px; }
+}
+@media (max-width: 420px) {
+    .home-preview-stats { grid-template-columns: 1fr; }
+    .home-preview-balance strong { font-size: 30px; }
+}
+
 /* ========================================================================
    PUBLIC HOME — explain the product before asking for an account.
    ======================================================================== */
@@ -2896,6 +3086,403 @@ body { background: var(--bg); }
 .wallet-list-item.is-selected { box-shadow: inset 3px 0 0 var(--wallet-accent), inset 0 0 0 1px color-mix(in srgb, var(--bank-accent) 34%, transparent); }
 .wallet-detail-panel { border-top: 2px solid color-mix(in srgb, var(--bank-accent, var(--line)) 70%, transparent); }
 .wallet-detail-panel .wallet-detail-type { color: var(--bank-accent, var(--gold)); }
+
+/* Intentional interface motion: useful feedback on desktop, tactile feedback on touch. */
+@keyframes konto-rise-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes konto-quiet-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(212,168,67,0); }
+    50% { box-shadow: 0 0 0 5px rgba(212,168,67,.11); }
+}
+
+.motion-ready #home-page .home-header,
+.motion-ready #home-page .home-copy,
+.motion-ready #home-page .home-visual,
+.motion-ready #home-page .home-proof,
+.motion-ready #home-page .home-section,
+.motion-ready #home-page .home-privacy,
+.motion-ready #home-page .home-final-cta {
+    opacity: 0;
+}
+
+.motion-ready #home-page.motion-revealed .home-header { animation: konto-rise-in .42s var(--ease, ease-out) both; }
+.motion-ready #home-page.motion-revealed .home-copy { animation: konto-rise-in .56s .08s var(--ease, ease-out) both; }
+.motion-ready #home-page.motion-revealed .home-visual { animation: konto-rise-in .62s .16s var(--ease, ease-out) both; }
+.motion-ready #home-page.motion-revealed .home-proof { animation: konto-rise-in .52s .22s var(--ease, ease-out) both; }
+.motion-ready #home-page.motion-revealed .home-section,
+.motion-ready #home-page.motion-revealed .home-privacy,
+.motion-ready #home-page.motion-revealed .home-final-cta { animation: konto-rise-in .5s .28s var(--ease, ease-out) both; }
+
+#dashboard-page.motion-enter .dashboard-title-row,
+#dashboard-page.motion-enter .dashboard-overview,
+#wallets-view.motion-enter .wallets-page-heading,
+#wallets-view.motion-enter .wallet-total-card {
+    animation: konto-rise-in .42s var(--ease, ease-out) both;
+}
+
+#dashboard-page.motion-enter .metrics-strip,
+#dashboard-page.motion-enter .ledger-card,
+#wallets-view.motion-enter .wallets-list-panel {
+    animation: konto-rise-in .48s .08s var(--ease, ease-out) both;
+}
+
+#dashboard-page.motion-enter .dashboard-support,
+#wallets-view.motion-enter .wallet-detail-panel {
+    animation: konto-rise-in .52s .14s var(--ease, ease-out) both;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .motion-ready .balance-hero {
+        --motion-x: 50%;
+        --motion-y: 50%;
+        transition: transform .26s var(--ease, ease), box-shadow .26s var(--ease, ease);
+        will-change: transform;
+    }
+    .motion-ready .balance-hero:hover { transform: translateY(-3px); box-shadow: 0 28px 52px rgba(0,0,0,.24); }
+    .motion-ready .balance-hero::after {
+        display: block;
+        inset: 0;
+        z-index: 0;
+        width: auto;
+        height: auto;
+        left: auto;
+        bottom: auto;
+        border-radius: inherit;
+        background: radial-gradient(190px circle at var(--motion-x) var(--motion-y), rgba(255,255,255,.30), transparent 68%);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease;
+    }
+    .motion-ready .balance-hero.has-pointer-motion::after { opacity: 1; }
+    .motion-ready .balance-hero-content,
+    .motion-ready .balance-hero-actions { position: relative; z-index: 1; }
+
+    .motion-ready .overview-stat,
+    .motion-ready .metric-item,
+    .motion-ready .ledger-card,
+    .motion-ready .plan-section,
+    .motion-ready .insights-section,
+    .motion-ready .wallet-list-item,
+    .motion-ready .home-proof article,
+    .motion-ready .home-client-card {
+        transition: transform .22s var(--ease, ease), border-color .22s var(--ease, ease), box-shadow .22s var(--ease, ease);
+    }
+    .motion-ready .overview-stat:hover,
+    .motion-ready .metric-item:hover,
+    .motion-ready .home-proof article:hover,
+    .motion-ready .home-client-card:hover { transform: translateY(-3px); }
+    .motion-ready .ledger-card:hover,
+    .motion-ready .plan-section:hover,
+    .motion-ready .insights-section:hover { transform: translateY(-2px); border-color: var(--line-2); }
+    .motion-ready .wallet-list-item:hover { transform: translateX(4px); }
+    .motion-ready .filter.active { animation: konto-quiet-pulse 1.8s ease-in-out 1; }
+}
+
+@media (hover: none), (pointer: coarse) {
+    .motion-ready button,
+    .motion-ready .home-button,
+    .motion-ready .filter,
+    .motion-ready .wallet-list-item,
+    .motion-ready .home-client-card,
+    .motion-ready .overview-stat,
+    .motion-ready .metric-item {
+        -webkit-tap-highlight-color: transparent;
+        transition: transform .16s ease, background-color .16s ease, border-color .16s ease;
+    }
+    .motion-ready button:active,
+    .motion-ready .home-button:active,
+    .motion-ready .filter:active { transform: scale(.965); }
+    .motion-ready .wallet-list-item:active,
+    .motion-ready .home-client-card:active,
+    .motion-ready .overview-stat:active,
+    .motion-ready .metric-item:active { transform: scale(.985); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+}
+
+/* Tablet is its own composition, not a squeezed desktop workspace. */
+@media (min-width: 768px) and (max-width: 1080px) {
+    #dashboard-page > header {
+        left: 192px;
+        padding-inline: 20px;
+    }
+    .desktop-nav {
+        width: 192px;
+        padding-inline: 10px;
+    }
+    .desktop-nav-logo { margin-inline: 4px; }
+    .desktop-nav .app-nav-link { padding-inline: 10px; }
+    .dashboard-shell,
+    .wallets-shell {
+        width: calc(100% - 192px);
+        margin-left: 192px;
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+    .dashboard-title-row { align-items: flex-start; }
+    .dashboard-title-right { margin-left: auto; }
+    .dashboard-overview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .balance-hero {
+        grid-column: 1 / -1;
+        min-height: 168px;
+        padding: 22px 24px;
+    }
+    .overview-stat { min-height: 122px; padding: 18px; }
+    .balance-hero-actions { flex-wrap: wrap; }
+    .btn-balance-action { flex: 0 1 auto; }
+    .filter-bar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .filter-bar .search-input {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+    .ledger-title-group { flex-wrap: wrap; }
+    .wallets-layout { grid-template-columns: 1fr; }
+    .wallet-detail-panel { position: static; }
+    .wallet-list { max-height: none; overflow: visible; }
+}
+
+@media (min-width: 768px) and (max-width: 900px) {
+    .dashboard-title-row { flex-direction: column; gap: 12px; }
+    .dashboard-title-right,
+    .period-bar { width: 100%; }
+    .period-bar .filter { flex: 1; }
+    .dashboard-support { grid-template-columns: 1fr; }
+    .wallets-layout { grid-template-columns: 1fr; }
+    .wallet-detail-panel { position: static; }
+}
+
+/* Journal illustration: an editorial, animated moment kept on the public home,
+   where it supports the story instead of distracting from real balances. */
+@keyframes journal-art-drift {
+    0%, 100% { transform: rotate(1.5deg) translateY(0); }
+    50% { transform: rotate(.4deg) translateY(-7px); }
+}
+
+@keyframes journal-note-drift {
+    0%, 100% { transform: rotate(var(--note-tilt)) translateY(0); }
+    50% { transform: rotate(calc(var(--note-tilt) * .45)) translateY(-8px); }
+}
+
+@keyframes journal-sparkle {
+    0%, 100% { opacity: .3; transform: scale(.82) rotate(0); }
+    50% { opacity: 1; transform: scale(1.14) rotate(14deg); }
+}
+
+@keyframes journal-mobile-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.012); }
+}
+
+.home-art {
+    isolation: isolate;
+    overflow: visible;
+    background: #efe8d7;
+}
+.home-art img {
+    position: relative;
+    z-index: 0;
+    border-radius: inherit;
+    opacity: 1;
+    filter: saturate(.9) contrast(1.02);
+}
+.home-art-overlay {
+    z-index: 2;
+    border-radius: inherit;
+    background: linear-gradient(to top, rgba(12,15,15,.94) 14%, rgba(12,15,15,.28) 46%, transparent 70%);
+}
+.home-sketch-note {
+    --note-tilt: -4deg;
+    position: absolute;
+    z-index: 3;
+    display: grid;
+    min-width: 126px;
+    gap: 2px;
+    padding: 11px 13px 10px;
+    border: 1px solid rgba(57,46,23,.34);
+    border-radius: 3px;
+    background: rgba(255,248,224,.92);
+    box-shadow: 4px 7px 0 rgba(24,20,12,.18), 0 13px 22px rgba(0,0,0,.15);
+    color: #2c291f;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.2;
+    transform: rotate(var(--note-tilt));
+    pointer-events: none;
+}
+.home-sketch-note::before {
+    content: '';
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    width: 36px;
+    height: 13px;
+    background: rgba(205,173,109,.76);
+    transform: translateX(-50%) rotate(2deg);
+}
+.home-sketch-note i {
+    width: 22px;
+    height: 3px;
+    margin-bottom: 3px;
+    border-radius: 99px;
+    background: #d2a13b;
+}
+.home-sketch-note b { font-size: 11px; font-weight: 700; }
+.home-sketch-note small { color: #6f6755; font-size: 8px; }
+.home-sketch-note-growth { top: 11%; left: -9%; }
+.home-sketch-note-focus { right: -8%; bottom: 25%; --note-tilt: 5deg; }
+.home-sketch-note-focus i { background: #d7654d; }
+.home-sketch-spark {
+    position: absolute;
+    z-index: 3;
+    color: #e3b341;
+    font-size: 27px;
+    line-height: 1;
+    text-shadow: 0 4px 14px rgba(0,0,0,.28);
+    pointer-events: none;
+}
+.home-sketch-spark-one { top: 15%; right: 8%; }
+.home-sketch-spark-two { bottom: 39%; left: 7%; color: #f4f0e8; }
+
+@media (hover: hover) and (pointer: fine) {
+    .motion-ready .home-art { animation: journal-art-drift 6.5s ease-in-out infinite; }
+    .motion-ready .home-sketch-note { animation: journal-note-drift 4.5s ease-in-out infinite; }
+    .motion-ready .home-sketch-note-focus { animation-delay: -1.7s; }
+    .motion-ready .home-sketch-spark { animation: journal-sparkle 2.8s ease-in-out infinite; }
+    .motion-ready .home-sketch-spark-two { animation-delay: -1.2s; }
+    .motion-ready .home-art:hover { animation-play-state: paused; }
+    .motion-ready .home-art:hover .home-sketch-note-growth { transform: rotate(-2deg) translate(6px, -10px); }
+    .motion-ready .home-art:hover .home-sketch-note-focus { transform: rotate(2deg) translate(-5px, -8px); }
+}
+
+@media (max-width: 700px) {
+    .home-visual {
+        display: block;
+        width: min(100%, 390px);
+        margin: 0 auto;
+    }
+    .home-art {
+        aspect-ratio: 4 / 5;
+        transform: none;
+        border-radius: 22px;
+        overflow: hidden;
+    }
+    .home-art img { object-position: center; }
+    .home-art-overlay { padding: 20px; }
+    .home-sketch-note { min-width: 104px; padding: 9px 10px 8px; }
+    .home-sketch-note-growth { top: 8%; left: 4%; }
+    .home-sketch-note-focus { right: 4%; bottom: 27%; }
+    .home-sketch-spark-one { right: 6%; }
+    .home-sketch-spark-two { left: 4%; }
+}
+
+@media (hover: none), (pointer: coarse) {
+    .motion-ready .home-art { animation: journal-mobile-breathe 5s ease-in-out infinite; }
+    .motion-ready .home-sketch-spark { animation: journal-sparkle 3s ease-in-out infinite; }
+    .motion-ready .home-art:active { transform: scale(.985); }
+}
+
+/* Clean editorial treatment for the journal image: no fake data on top of it. */
+@keyframes journal-image-breathe-clean {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.018); }
+}
+
+.home-visual { width: min(100%, 470px); justify-self: end; }
+.home-art {
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border: 1px solid rgba(246,220,143,.32);
+    border-radius: 26px;
+    background: #eee8d9;
+    box-shadow: 0 28px 70px rgba(0,0,0,.24);
+    transform: none;
+}
+.home-art::after {
+    z-index: 1;
+    border: 0;
+    background: linear-gradient(145deg, rgba(255,255,255,.18), transparent 34%, rgba(12,15,15,.18));
+}
+.home-art img {
+    position: relative;
+    z-index: 0;
+    opacity: 1;
+    filter: saturate(.9) contrast(1.02);
+    transition: transform 1.1s cubic-bezier(.2,.8,.2,1), filter .5s ease;
+}
+.motion-ready .home-art { animation: none; }
+
+@media (min-width: 701px) {
+    .home-hero {
+        grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+        min-height: 520px;
+        padding: 70px 0 54px;
+    }
+    .home-proof article { min-height: 132px; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .motion-ready .home-art img { animation: journal-image-breathe-clean 9s ease-in-out infinite; }
+    .motion-ready .home-art:hover img {
+        animation-play-state: paused;
+        transform: scale(1.045);
+        filter: saturate(1) contrast(1.04);
+    }
+}
+
+@media (max-width: 700px) {
+    .home-visual { display: block; width: min(100%, 390px); margin: 0 auto; }
+    .home-art { border-radius: 22px; transform: none; }
+}
+
+@media (hover: none), (pointer: coarse) {
+    .motion-ready .home-art img { animation: journal-image-breathe-clean 9s ease-in-out infinite; }
+    .motion-ready .home-art:active img { transform: scale(1.035); }
+}
+
+/* Public footer: clear product and legal disclosures without marketing noise. */
+.home-footer-pro {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(130px, 1fr));
+    gap: 26px;
+    padding: 42px 0 22px;
+    border-top: 1px solid var(--line);
+}
+.home-footer-pro .footer-brand,
+.home-footer-pro .footer-column { display: grid; align-content: start; gap: 8px; }
+.home-footer-pro .footer-brand strong { color: var(--text); font-size: 14px; }
+.home-footer-pro .footer-brand span { color: var(--text-3); font-size: 11px; }
+.home-footer-pro .footer-column > strong { margin-bottom: 2px; color: var(--text-2); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.home-footer-pro .footer-column a { width: max-content; max-width: 100%; color: var(--text-3); font-size: 12px; font-weight: 500; }
+.footer-legal-note,
+.footer-copyright {
+    grid-column: 1 / -1;
+    max-width: 780px;
+    margin: 2px 0 0;
+    color: var(--text-3);
+    font-size: 11px;
+    line-height: 1.6;
+}
+.footer-copyright { padding-top: 14px; border-top: 1px solid var(--line); }
+
+@media (max-width: 700px) {
+    .home-footer-pro { grid-template-columns: 1fr 1fr; gap: 25px 18px; padding-top: 32px; }
+    .home-footer-pro .footer-brand { grid-column: 1 / -1; }
+    .home-footer-pro .footer-column a { white-space: normal; }
+}
 
 /* Gmail importer, final responsive layer. */
 .gmail-source-controls { padding: 11px 13px; border-radius: 10px; background: var(--bg-3); }

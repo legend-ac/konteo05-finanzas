@@ -1,166 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#6d5bff">
-    <link rel="manifest" href="/manifest.json">
-    <title>Política de Privacidad — Konteo 05</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: #0c0c0f;
-            color: #e0e0e0;
-            padding: 40px 20px;
-            line-height: 1.8;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: #16161a;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 20px;
-            padding: 48px 40px;
-        }
-
-        h1 {
-            font-size: 2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #6d5bff, #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 8px;
-        }
-
-        .update-date {
-            color: #6b7280;
-            margin-bottom: 32px;
-            font-size: 14px;
-        }
-
-        h2 {
-            color: #6d5bff;
-            margin-top: 32px;
-            margin-bottom: 12px;
-            font-size: 1.2rem;
-            font-weight: 700;
-        }
-
-        p,
-        li {
-            color: #9ca3af;
-            font-size: 15px;
-            margin-bottom: 12px;
-        }
-
-        ul {
-            padding-left: 20px;
-        }
-
-        li {
-            margin-bottom: 8px;
-        }
-
-        .back-link {
-            display: inline-block;
-            color: #6d5bff;
-            text-decoration: none;
-            font-weight: 600;
-            margin-top: 32px;
-            padding: 12px 24px;
-            border: 1.5px solid rgba(109, 91, 255, 0.3);
-            border-radius: 10px;
-            transition: all 0.25s;
-        }
-
-        .back-link:hover {
-            background: rgba(109, 91, 255, 0.1);
-            border-color: #6d5bff;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 32px 24px;
-            }
-
-            h1 {
-                font-size: 1.6rem;
-            }
-        }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0e0f">
+    <title>Privacidad y datos personales — Konteo 05</title>
+    <meta name="description" content="Cómo Konteo 05 trata datos personales y datos financieros.">
+    <link rel="stylesheet" href="css/legal.css">
 </head>
-
 <body>
-    <div class="container">
-        <h1>Política de Privacidad</h1>
-        <p class="update-date">Última actualización: Febrero 2026</p>
+    <main class="legal-shell">
+        <a class="legal-back" href="/">← Volver a Konteo 05</a>
+        <p class="legal-eyebrow">Transparencia</p>
+        <h1>Privacidad y datos personales</h1>
+        <p class="legal-updated">Última actualización: 27 de septiembre de 2026</p>
+        <aside class="legal-callout"><strong>Resumen claro.</strong> Konteo almacena solo los datos necesarios para que veas tus movimientos, cuentas, reportes y preferencias. No vende tus datos ni usa tus movimientos para publicidad.</aside>
+        <nav class="legal-index" aria-label="En esta página"><a href="#datos">Datos</a><a href="#finalidad">Finalidad</a><a href="#gmail">Gmail</a><a href="#derechos">Tus derechos</a><a href="#eliminacion">Eliminación</a></nav>
 
-        <h2>1. Información que Recopilamos</h2>
-        <p>En Konteo 05, nos tomamos muy en serio la privacidad de nuestros usuarios. Recopilamos la siguiente
-            información:</p>
-        <ul>
-            <li><strong>Información de cuenta:</strong> Nombre, correo electrónico (necesarios para crear tu cuenta)
-            </li>
-            <li><strong>Datos financieros:</strong> Ingresos y gastos que registres voluntariamente</li>
-            <li><strong>Información técnica:</strong> Tipo de navegador y dispositivo (para mejorar la experiencia)</li>
-        </ul>
-
-        <h2>2. Uso de la Información</h2>
-        <p>Tu información se utiliza exclusivamente para:</p>
-        <ul>
-            <li>Proporcionarte el servicio de gestión financiera</li>
-            <li>Generar reportes y estadísticas personales</li>
-            <li>Mejorar la experiencia de usuario</li>
-            <li>Enviar notificaciones relacionadas con tu cuenta (si las activas)</li>
-        </ul>
-
-        <h2>3. Almacenamiento y Seguridad</h2>
-        <p>Tus datos se almacenan de forma segura en Firebase (Google Cloud) con las siguientes medidas:</p>
-        <ul>
-            <li>Cifrado en tránsito (HTTPS/TLS)</li>
-            <li>Cifrado en reposo en servidores de Google</li>
-            <li>Reglas de seguridad de Firestore: solo TÚ puedes acceder a TUS datos</li>
-            <li>Autenticación segura mediante Firebase Authentication</li>
-        </ul>
-
-        <h2>4. Compartir Información</h2>
-        <p><strong>NO vendemos, alquilamos ni compartimos</strong> tu información personal con terceros. Tus datos
-            financieros son 100% privados.</p>
-
-        <h2>5. Tus Derechos</h2>
-        <p>Tienes derecho a:</p>
-        <ul>
-            <li>Acceder a todos tus datos en cualquier momento</li>
-            <li>Exportar tus datos (Excel/PDF)</li>
-            <li>Solicitar la eliminación de tu cuenta y datos</li>
-            <li>Modificar tu información personal</li>
-        </ul>
-
-        <h2>6. Cookies y Tecnologías</h2>
-        <p>Konteo 05 utiliza almacenamiento local del navegador y Firebase para funcionar. No usamos cookies de terceros
-            ni rastreo publicitario.</p>
-
-        <h2>7. Menores de Edad</h2>
-        <p>Konteo 05 no está dirigido a menores de 18 años. No recopilamos intencionalmente información de menores.</p>
-
-        <h2>8. Cambios en esta Política</h2>
-        <p>Podemos actualizar esta política ocasionalmente. Te notificaremos de cambios significativos.</p>
-
-        <h2>9. Contacto</h2>
-        <p>Para consultas sobre privacidad, contáctanos a través de nuestra plataforma.</p>
-
-        <a href="/" class="back-link">← Volver a Konteo 05</a>
-    </div>
+        <section id="datos"><h2>1. Datos que tratamos</h2><p>Al crear una cuenta, Konteo puede tratar nombre, correo electrónico, identificador de autenticación, preferencias y datos de perfil. Al usar el servicio, trata los movimientos, cuentas, presupuestos, categorías, trazabilidad y reportes que tú registras o confirmas.</p><p>Los datos de movimientos son aportados por ti o derivados de una confirmación explícita durante la revisión de un correo. Konteo no debe usarse para guardar contraseñas, números completos de tarjetas, claves, códigos de seguridad ni información bancaria sensible.</p></section>
+        <section id="finalidad"><h2>2. Para qué usamos los datos</h2><ul><li>Autenticar tu cuenta y aislar tu información de otros usuarios.</li><li>Registrar, organizar, filtrar y exportar tus movimientos.</li><li>Generar el saldo, presupuestos, análisis y trazabilidad que ves en la aplicación.</li><li>Prevenir errores, abusos y problemas de seguridad.</li></ul><p>No usamos los datos financieros para perfiles publicitarios, venta de datos, publicidad dirigida ni decisiones automatizadas de crédito o inversión.</p></section>
+        <section id="almacenamiento"><h2>3. Dónde se almacenan y quién interviene</h2><p>La aplicación usa Firebase Authentication y Cloud Firestore de Google para autenticación y almacenamiento de la cuenta y movimientos. El sitio puede servirse mediante Vercel. Estos proveedores actúan como infraestructura técnica para prestar el servicio.</p><p>Aplicamos controles de acceso por usuario y cifrado en tránsito mediante HTTPS/TLS. Ninguna medida elimina todo riesgo; protege tu contraseña, usa un dispositivo confiable y revisa las sesiones de tu cuenta de Google cuando corresponda.</p></section>
+        <section id="gmail"><h2>4. Conexión opcional con Gmail</h2><p>La importación Gmail es opcional. Solo se solicita el permiso <code>gmail.readonly</code> cuando eliges conectar Gmail. Konteo lee correos relevantes en tu navegador para detectar posibles notificaciones financieras; no envía, elimina, archiva ni modifica correos.</p><p>Los correos detectados se muestran para revisión. Ningún movimiento se guarda hasta que lo confirmas. Para más detalle consulta <a href="gmail-data.html">Uso de Gmail y datos de Google</a>.</p></section>
+        <section id="conservacion"><h2>5. Conservación</h2><p>Conservamos tus datos mientras mantengas la cuenta o hasta que los elimines desde la aplicación. Los registros de auditoría se conservan junto a tu cuenta para explicar cambios de movimientos. Al eliminar la cuenta, la aplicación solicita borrar los datos asociados bajo tu control.</p></section>
+        <section id="derechos"><h2>6. Tus derechos</h2><p>Según la Ley peruana N.° 29733 y su Reglamento, puedes solicitar acceso, información, actualización, rectificación, cancelación, oposición o revocación del consentimiento cuando aplique. Dentro de Konteo puedes revisar, editar, exportar y eliminar datos desde tu cuenta.</p><p>Si necesitas ejercer un derecho que no esté disponible en la interfaz, el responsable del servicio debe proporcionar un canal de privacidad antes de una publicación pública. Consulta el <a href="legal-notice.html">aviso legal</a> para el estado de ese canal.</p></section>
+        <section id="eliminacion"><h2>7. Eliminar tu cuenta</h2><p>Ve a <strong>Perfil → Eliminar todos mis datos</strong>, escribe la confirmación solicitada y confirma. Esta acción elimina la cuenta y datos de aplicación asociados; puede ser irreversible. También puedes exportar tus movimientos antes de eliminar.</p></section>
+        <section><h2>8. Menores y cambios</h2><p>Konteo está dirigido a personas mayores de 18 años. Si se modifica de forma material el tratamiento de datos o el uso de datos de Google, se debe publicar una versión actualizada de esta política y solicitar el consentimiento que corresponda antes de aplicar el nuevo uso.</p></section>
+        <footer class="legal-footer"><a href="terms.html">Términos</a><a href="security.html">Seguridad</a><a href="gmail-data.html">Uso de Gmail</a><a href="legal-notice.html">Aviso legal</a></footer>
+    </main>
 </body>
-
 </html>
