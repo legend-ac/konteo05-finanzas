@@ -16,6 +16,14 @@ const INSTITUTIONS = {
     'caja-tacna': ['Caja Tacna', '#987075'], 'caja-maynas': ['Caja Maynas', '#648875']
 };
 
+export const INSTITUTION_CHOICES = Object.entries(INSTITUTIONS)
+    .map(([value, [label]]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+
+export function isKnownInstitution(value) {
+    return Boolean(institutionKey(value));
+}
+
 export function entitySourceKey(entity) {
     return `custom-${String(entity.id || entity.sender || '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
 }
@@ -37,7 +45,7 @@ function institutionKey(value) {
 function senderInstitution(sender) {
     const email = normalize(sender).match(/[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@([a-z0-9.-]+\.[a-z]{2,})/);
     const domain = email?.[1] || '';
-    const domains = { 'bbva.com.pe': 'bbva', 'bbva.pe': 'bbva', 'interbank.pe': 'interbank', 'interbank.com.pe': 'interbank', 'bcp.com.pe': 'bcp', 'viabcp.com': 'bcp', 'mibanco.com.pe': 'mibanco' };
+    const domains = { 'bbva.com.pe': 'bbva', 'bbva.pe': 'bbva', 'interbank.pe': 'interbank', 'interbank.com.pe': 'interbank', 'netinterbank.com.pe': 'interbank', 'bcp.com.pe': 'bcp', 'viabcp.com': 'bcp', 'mibanco.com.pe': 'mibanco' };
     return Object.entries(domains).find(([host]) => domain === host || domain.endsWith(`.${host}`))?.[1] || '';
 }
 
@@ -57,7 +65,7 @@ export function sourceIdentity(tx = {}, entities = []) {
     const corrected = institutionKey(tx.sourceInstitutionOverride);
     const bank = senderBank || sourceBank || senderInstitution(configured?.sender) || corrected;
     const unresolved = !bank;
-    const name = bank ? INSTITUTIONS[bank][0] : channel === 'Plin' ? 'Plin · banco por identificar' : configured?.name || tx.sourceLabel || 'Origen por identificar';
+    const name = bank ? INSTITUTIONS[bank][0] : channel === 'Plin' ? 'Banco por identificar' : configured?.name || tx.sourceLabel || 'Origen por identificar';
     return {
         bank, channel, unresolved, conflict, name,
         id: bank ? `institution:${bank}` : `unresolved:${source || 'unknown'}`,

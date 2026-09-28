@@ -128,7 +128,7 @@ test('known bank parser wins over a generic configured Plin entity and preserves
         getSubject: () => 'Constancia de operación transferencia PLIN',
         customEntities: [{ id: 'plin', name: 'Plin', sender: 'procesos@bbva.com.pe', active: true }]
     });
-    assert.equal(tx.source, 'plin-bbva');
+    assert.equal(tx.source, 'bbva');
     assert.equal(tx.sourceSender, 'BBVA <procesos@bbva.com.pe>');
     assert.equal(tx.amount, 50);
     assert.equal(tx.date, '2026-09-25');
@@ -334,10 +334,11 @@ test('BBVA PLIN QR receipts from procesos are imported as outgoing PLIN payments
     });
     assert.equal(results.length, 1);
     assert.equal(results[0].type, 'expense');
-    assert.equal(results[0].source, 'plin-bbva');
-    assert.equal(results[0].sourceLabel, 'Plin · BBVA');
+    assert.equal(results[0].source, 'bbva');
+    assert.equal(results[0].sourceLabel, 'BBVA');
+    assert.equal(results[0].paymentChannel, 'Plin');
     assert.equal(results[0].amount, 16);
-    assert.equal(results[0].description, 'Plin a Liz N Poma M');
+    assert.equal(results[0].description, 'Pago a Liz N Poma M');
     assert.equal(results[0].date, '2026-09-26');
     assert.equal(results[0].receiptDateSource, 'receipt');
 });
@@ -358,7 +359,7 @@ test('BBVA QR merchant receipts retain the bank without inventing a Plin channel
     assert.equal(results.length, 1);
     assert.equal(results[0].type, 'expense');
     assert.equal(results[0].source, 'bbva');
-    assert.equal(results[0].sourceLabel, 'BBVA · QR');
+    assert.equal(results[0].sourceLabel, 'BBVA');
     assert.equal(results[0].paymentChannel, 'QR');
     assert.equal(results[0].amount, 42.5);
     assert.equal(results[0].date, '2026-09-27');
@@ -391,12 +392,13 @@ test('BBVA PLIN receipt delivered by the BBVA gateway remains importable', async
     });
     assert.equal(results.length, 1);
     assert.equal(results[0].type, 'expense');
-    assert.equal(results[0].source, 'plin-bbva');
+    assert.equal(results[0].source, 'bbva');
+    assert.equal(results[0].paymentChannel, 'Plin');
     assert.equal(results[0].amount, 50);
-    assert.equal(results[0].description, 'Plin a Andy J Cordova E');
+    assert.equal(results[0].description, 'Pago a Andy J Cordova E');
     assert.equal(results[0].date, '2026-09-25');
 });
-test('Interbank PLIN receipts remain separate from BBVA PLIN receipts', async () => {
+test('Interbank Plin receipts are identified as Interbank even when their destination is BBVA', async () => {
     const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
     const results = parseAllEmails({
         rawMessages: [{ id: 'interbank-plin-1' }],
@@ -404,15 +406,17 @@ test('Interbank PLIN receipts remain separate from BBVA PLIN receipts', async ()
             'Constancia de Pago Plin',
             'Monto y moneda: S/ 23.50',
             'Destinatario: Ana Ruiz',
+            'Destino: BBVA',
             'Fecha y hora: 25/09/2026 13:45'
         ].join('\n'),
-        getSender: () => 'Interbank <servicioalcliente@interbank.com.pe>',
+        getSender: () => 'Interbank Servicio al Cliente <servicioalcliente@netinterbank.com.pe>',
         getDate: () => new Date('2026-09-25T18:45:00Z'),
         getSubject: () => 'Constancia de Pago Plin'
     });
     assert.equal(results.length, 1);
-    assert.equal(results[0].source, 'plin-interbank');
-    assert.equal(results[0].sourceLabel, 'Plin · Interbank');
+    assert.equal(results[0].source, 'interbank');
+    assert.equal(results[0].sourceLabel, 'Interbank');
+    assert.equal(results[0].paymentChannel, 'Plin');
     assert.equal(results[0].amount, 23.5);
 });
 test('Gmail follows page tokens and avoids downloading previously imported messages', async () => {

@@ -64,9 +64,9 @@ test('entity report shows bank cards, collapsed exact days and purpose-built ide
     assert.equal(days[0].tagName, 'details');
     assert.ok(!days[0].open, 'Daily rows must start collapsed');
     assert.equal(days[0].children[1].children.length, 2);
-    assert.match(days[0].textContent, /Canal: Plin/);
+    assert.doesNotMatch(days[0].textContent, /Canal: Plin/);
     renderExpenseAnalysis({ wallets, expenses, selectedEntityIds: ['pending'], resolveIdentity: () => ({ channel: 'Plin', unresolved: true }) });
-    assert.match(elements['expenses-detail-list'].textContent, /Identificar banco/);
+    assert.match(elements['expenses-detail-list'].textContent, /Identificar banco del comprobante/);
     assert.match(elements['expenses-detail-list'].textContent, /no el destino/);
     assert.equal(elements['expenses-selected-total'].textContent, 'S/ 50.00');
 });
@@ -123,7 +123,7 @@ test('account help offers creation only without active accounts, otherwise confi
     assert.equal(accountGuide(false).actionName, 'new-account');
     assert.match(accountGuide(false).body, /pendientes/);
     assert.equal(accountGuide(true).actionName, 'edit-account');
-    assert.match(accountGuide(true).body, /Plin · BBVA y Plin · Interbank/);
+    assert.match(accountGuide(true).body, /BBVA e Interbank/);
 });
 
 test('mascot scenes preserve artwork and have distinct task cues, not interactive fake progress', async () => {

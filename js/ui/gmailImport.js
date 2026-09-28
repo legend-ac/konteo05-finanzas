@@ -124,11 +124,11 @@ function renderHeaderBadge(email) {
 // ─────────────────────────────────────────────
 const SOURCE_ICONS  = { yape:'💜', plin:'🔵', bcp:'🔴', interbank:'🟢', bbva:'🔵', scotiabank:'🔴', banbif:'🟡', nacion:'🔴', mibanco:'🟠', sip:'🔷', binance:'🟡', pagoefectivo:'🟨' };
 const SOURCE_LABELS = { yape:'Yape', plin:'Plin', bcp:'BCP', interbank:'Interbank', bbva:'BBVA', scotiabank:'Scotiabank', banbif:'BanBif', nacion:'Banco de la Nación', mibanco:'MiBanco', sip:'SIP', binance:'Binance', pagoefectivo:'PagoEfectivo' };
-// PLIN is a rail used by different banks; keep the sender bank visible.
+// Legacy records may keep an old source key; the visible entity remains the bank.
 SOURCE_ICONS['plin-bbva'] = '\u{1F537}';
 SOURCE_ICONS['plin-interbank'] = '\u{1F7E6}';
-SOURCE_LABELS['plin-bbva'] = 'Plin · BBVA';
-SOURCE_LABELS['plin-interbank'] = 'Plin · Interbank';
+SOURCE_LABELS['plin-bbva'] = 'BBVA';
+SOURCE_LABELS['plin-interbank'] = 'Interbank';
 
 const EXPENSE_CATEGORIES = [
     ['green', 'Fijo'],

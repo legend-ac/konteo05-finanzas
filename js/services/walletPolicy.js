@@ -7,8 +7,8 @@ const SOURCE_NAMES = {
     banbif: 'BanBif', sip: 'SIP', binance: 'Binance', pagoefectivo: 'PagoEfectivo'
 };
 
-SOURCE_NAMES['plin-bbva'] = 'Plin · BBVA';
-SOURCE_NAMES['plin-interbank'] = 'Plin · Interbank';
+SOURCE_NAMES['plin-bbva'] = 'BBVA';
+SOURCE_NAMES['plin-interbank'] = 'Interbank';
 
 export function walletNeedsReview(wallet) {
     if (!wallet.systemDefault || wallet.userConfirmed || wallet.active === false) return false;

@@ -2,6 +2,7 @@
 // cancelled records never become spending, even when they look like a debit.
 import { fmt, formatBusinessDate, transactionBusinessDate, BUSINESS_TIME_ZONE } from './helpers.js';
 import { isPosted, sumAmounts } from '../services/financialMath.js';
+import { INSTITUTION_CHOICES } from '../services/entityIdentity.js';
 
 export const UNASSIGNED_ENTITY_ID = '__unassigned__';
 
@@ -127,7 +128,7 @@ function appendMovement(container, item, entityName, movementType, identity) {
     const copy = document.createElement('div');
     const title = document.createElement('strong'); title.textContent = item.note || item.counterparty || (movementType === 'income' ? 'Ingreso registrado' : 'Gasto registrado');
     const meta = document.createElement('small');
-    meta.textContent = [...new Set([entityName, identity.channel && `Canal: ${identity.channel}`, identity.accountName && `Cuenta: ${identity.accountName}`, itemTime(item)].filter(Boolean))].join(' · ');
+    meta.textContent = [...new Set([entityName, identity.accountName && `Cuenta: ${identity.accountName}`, itemTime(item)].filter(Boolean))].join(' · ');
     copy.append(title, meta);
     if (identity.accountConflict || identity.conflict) {
         const warning = document.createElement('small'); warning.className = 'expense-identity-warning';
@@ -139,18 +140,18 @@ function appendMovement(container, item, entityName, movementType, identity) {
     }
     if ((identity.unresolved || identity.manuallyIdentified) && identity.channel === 'Plin' && item.id) {
         const disclosure = document.createElement('details'); disclosure.className = 'expense-identify';
-        const trigger = document.createElement('summary'); trigger.textContent = identity.manuallyIdentified ? 'Corregir banco identificado' : 'Identificar banco';
+        const trigger = document.createElement('summary'); trigger.textContent = identity.manuallyIdentified ? 'Corregir banco identificado' : 'Identificar banco del comprobante';
         const form = document.createElement('form'); form.className = 'expense-identify-form';
         form.dataset.identifyMovement = item.id; form.dataset.movementType = movementType;
         const label = document.createElement('label'); label.textContent = 'Banco de origen del comprobante';
         const select = document.createElement('select'); select.name = 'institution'; select.required = true;
-        [['', 'Seleccionar banco…'], ['bbva', 'BBVA'], ['interbank', 'Interbank'], ['scotiabank', 'Scotiabank'], ['banbif', 'BanBif']].forEach(([value, text]) => {
+        [['', 'Seleccionar banco…'], ...INSTITUTION_CHOICES.map(({ value, label }) => [value, label])].forEach(([value, text]) => {
             const option = document.createElement('option'); option.value = value; option.textContent = text; select.append(option);
         });
         select.value = identity.bank || '';
         label.append(select);
         const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Confirmar banco';
-        const help = document.createElement('small'); help.textContent = 'Confirma solo el banco emisor, no el destino. No cambia la cuenta ni el saldo; si no lo sabes, déjalo pendiente.';
+        const help = document.createElement('small'); help.textContent = 'Este correo no conserva un banco emisor verificable. Confirma el banco que envió el comprobante, no el destino. No cambia la cuenta ni el saldo.';
         form.append(label, save, help); disclosure.append(trigger, form); copy.append(disclosure);
     }
     if (identity.manuallyIdentified) {

@@ -287,8 +287,10 @@ function parseInterbank({ body, subject, date, gmailId }) {
         const destination = extractField(text, ['destino']);
         if (amount) {
             const name = displayName(recipient || destination || 'contacto');
-            const tx = genericExpense(amount, `Plin a ${name}`, 'plin-interbank', date, gmailId, text);
-            tx.sourceLabel = 'Plin · Interbank';
+            // The sender is Interbank. Plin is a channel, not another entity.
+            const tx = genericExpense(amount, `Pago a ${name}`, 'interbank', date, gmailId, text);
+            tx.sourceLabel = 'Interbank';
+            tx.paymentChannel = 'Plin';
             return tx;
         }
     }
@@ -325,8 +327,9 @@ function parseBBVA({ body, subject, date, gmailId }) {
             const amount = parseMoney(received[1]);
             if (amount) {
                 const sender = displayName(received[2] || extractField(text, ['ordenante', 'remitente', 'beneficiario']) || 'contacto');
-                const tx = genericIncome(amount, `Plin de ${sender}`, 'plin-bbva', date, gmailId, text);
-                tx.sourceLabel = 'Plin · BBVA';
+                const tx = genericIncome(amount, `Ingreso de ${sender}`, 'bbva', date, gmailId, text);
+                tx.sourceLabel = 'BBVA';
+                tx.paymentChannel = 'Plin';
                 return tx;
             }
         }
@@ -334,11 +337,11 @@ function parseBBVA({ body, subject, date, gmailId }) {
         const amount = payment ? parseMoney(payment[1]) : extractLabeledAmount(text, ['monto', 'importe', 'monto\s+y\s+moneda']) || extractAmount(text);
         if (amount) {
             const recipient = displayName(payment?.[2] || extractField(text, ['destinatario', 'beneficiario', 'comercio', 'establecimiento', 'nombre\s+del\s+comercio']) || 'contacto');
-            const tx = genericExpense(amount, `${plinReceipt ? 'Plin' : 'Pago QR'} a ${recipient}`, plinReceipt ? 'plin-bbva' : 'bbva', date, gmailId, text);
+            const tx = genericExpense(amount, `${plinReceipt ? 'Pago' : 'Pago QR'} a ${recipient}`, 'bbva', date, gmailId, text);
             tx.paymentChannel = plinReceipt ? 'Plin' : 'QR';
-            tx.description = `${plinReceipt ? 'Plin' : 'Pago QR'} a ${recipient}`;
+            tx.description = `${plinReceipt ? 'Pago' : 'Pago QR'} a ${recipient}`;
             tx.receiptDescription = tx.description;
-            tx.sourceLabel = plinReceipt ? 'Plin · BBVA' : 'BBVA · QR';
+            tx.sourceLabel = 'BBVA';
             return tx;
         }
     }
@@ -685,7 +688,7 @@ const PARSER_MAP = [
 export function parseEmail({ message, bodyText, sender, date, subject, customEntities = [] }) {
     sender = String(sender || '').toLowerCase();
     // A configured generic "Plin" sender must not replace a bank-specific parser.
-    const knownBank = sender.match(/@(?:[a-z0-9-]+\.)*(bbva\.com\.pe|bbva\.pe|interbank\.com\.pe|interbank\.pe|mibanco\.com\.pe|viabcp\.com|bcp\.com\.pe)(?=[>\s]|$)/);
+    const knownBank = sender.match(/@(?:[a-z0-9-]+\.)*(bbva\.com\.pe|bbva\.pe|interbank\.com\.pe|interbank\.pe|netinterbank\.com\.pe|mibanco\.com\.pe|viabcp\.com|bcp\.com\.pe)(?=[>\s]|$)/);
     if (knownBank) {
         const parseBank = /bbva/.test(knownBank[1]) ? parseBBVA : /interbank/.test(knownBank[1]) ? parseInterbank : /mibanco/.test(knownBank[1]) ? parseMiBanco : parseBCP;
         try { return parseBank({ body: bodyText, subject, date, gmailId: message.id }); }

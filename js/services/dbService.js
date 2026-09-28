@@ -3,7 +3,7 @@
 import { db, firebase } from '../firebase/config.js';
 import { businessDateString, transactionBusinessDate } from '../ui/helpers.js';
 import { withDeadline } from './asyncControl.js';
-import { sourceIdentity } from './entityIdentity.js';
+import { isKnownInstitution, sourceIdentity } from './entityIdentity.js';
 
 const planCache = new Map();
 const transactionSchemaMode = new Map();
@@ -440,7 +440,7 @@ async function saveTransaction(uid, type, data, editId = null, requestId = null)
 // Identify one legacy Plin receipt without changing amounts, dates or accounts.
 // This is a narrow, audited update, not a rewrite of the transaction snapshot.
 export async function identifyMovementInstitution(uid, type, id, bank) {
-    if (!uid || !id || !['expense', 'income'].includes(type) || !['bbva', 'interbank', 'scotiabank', 'banbif'].includes(bank)) throw new Error('Selecciona un banco de origen válido.');
+    if (!uid || !id || !['expense', 'income'].includes(type) || !isKnownInstitution(bank)) throw new Error('Selecciona un banco de origen válido.');
     const ref = db.collection('transactions').doc(uid).collection(type === 'income' ? 'income' : 'expenses').doc(id);
     const audit = auditRef(uid).doc();
     return withDeadline(() => db.runTransaction(async transaction => {

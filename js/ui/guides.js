@@ -30,7 +30,7 @@ export function budgetGuide(expenseLimit, totalExpenses) {
 export function accountGuide(hasActiveAccounts) {
     return hasActiveAccounts ? {
         title: 'Una cuenta, un origen claro', hint: 'Cómo organizar bancos y billeteras',
-        body: 'Elige una cuenta y revisa si participa en el saldo total y qué fuente tiene vinculada. Plin · BBVA y Plin · Interbank son fuentes distintas: asígnalas al banco que corresponda. Editar la configuración no mueve dinero entre bancos.',
+        body: 'Elige una cuenta y revisa si participa en el saldo total y qué banco tiene vinculado. BBVA e Interbank siguen siendo bancos diferentes aunque sus comprobantes usen Plin. Editar la configuración no mueve dinero entre bancos.',
         action: 'Revisar cuenta seleccionada', actionName: 'edit-account'
     } : {
         title: 'Empieza por una cuenta que uses', hint: 'Te acompaño a configurarla',
