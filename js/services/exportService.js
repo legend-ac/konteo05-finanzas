@@ -215,7 +215,7 @@ export async function exportToExcel({ filter, startDate, endDate } = {}) {
         XLSX.utils.book_append_sheet(wb, ws4, 'Análisis');
 
         XLSX.writeFile(wb, `Konteo05_${fileLabel}_${businessDateString()}.xlsx`);
-        showToast(`✅ Excel descargado — ${periodLabel}`, 'success');
+        showToast(`Excel descargado — ${periodLabel}`, 'success');
     } catch (err) {
         showToast('Error Excel: ' + err.message, 'error');
         console.error('[exportService]', err);
@@ -350,7 +350,7 @@ export async function exportToPDF({ filter, startDate, endDate } = {}) {
         }
 
         doc.save(`Konteo05_${fileLabel}_${businessDateString()}.pdf`);
-        showToast(`✅ PDF generado — ${periodLabel}`, 'success');
+        showToast(`PDF generado — ${periodLabel}`, 'success');
     } catch (err) {
         showToast('Error PDF: ' + err.message, 'error');
         console.error('[exportService]', err);

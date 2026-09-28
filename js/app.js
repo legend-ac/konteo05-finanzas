@@ -734,7 +734,7 @@ document.querySelectorAll('[data-google-auth]').forEach(button => {
 
 async function signOutCurrentUser() {
     if (confirm('¿Cerrar sesión?')) {
-        try { await auth.signOut(); showToast('Sesión cerrada', 'success'); }
+        try { await auth.signOut(); }
         catch (err) { showToast('Error: ' + err.message, 'error'); }
     }
 }
@@ -1775,7 +1775,7 @@ document.getElementById('btn-confirm-delete-all')?.addEventListener('click', asy
         // Limpiar el caché local de IDs de Gmail para que el usuario pueda reimportar sin ver "sin movimientos nuevos"
         clearGmailImportCache();
         closeModal('modal-confirm-delete');
-        showToast('✅ Todos los datos eliminados. Ya puedes reimportar tus movimientos desde Gmail.', 'success');
+        showToast('Todos los datos fueron eliminados. Ya puedes reimportar tus movimientos desde Gmail.', 'success');
         await loadData();
     } catch (err) {
         showToast('Error al eliminar datos: ' + err.message, 'error');

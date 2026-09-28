@@ -436,7 +436,7 @@ function buildModal() {
         </div>
         <div id="gmail-state-error" class="gmail-state hidden">
             <div class="gmail-error-wrap">
-                <div class="gmail-error-icon">⚠️</div>
+                <div class="gmail-error-icon" aria-hidden="true">!</div>
                 <p id="gmail-error-msg"></p>
                 <div class="gmail-consent-actions" style="margin-top:4px">
                     <button id="gmail-btn-retry" class="gmail-btn-secondary">Reintentar</button>
