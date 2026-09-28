@@ -3,6 +3,7 @@
 import { db, firebase } from '../firebase/config.js';
 import { businessDateString, transactionBusinessDate } from '../ui/helpers.js';
 import { withDeadline } from './asyncControl.js';
+import { sourceIdentity } from './entityIdentity.js';
 
 const planCache = new Map();
 const transactionSchemaMode = new Map();
@@ -386,7 +387,7 @@ async function saveTransaction(uid, type, data, editId = null, requestId = null)
     const reference = data.reference || `${type === 'income' ? 'ING' : 'GAS'}-${txRef.id}`;
     const base = cleanObject({
         ...data, amount: Number(data.amount), operationDate, reference,
-        accountAssignmentExplicit: Object.prototype.hasOwnProperty.call(data, 'accountId') ? true : data.accountAssignmentExplicit,
+        accountAssignmentExplicit: typeof data.accountAssignmentExplicit === 'boolean' ? data.accountAssignmentExplicit : (Object.prototype.hasOwnProperty.call(data, 'accountId') ? true : undefined),
         operationType: data.operationType || type, status: data.status || 'completed',
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -436,6 +437,29 @@ async function saveTransaction(uid, type, data, editId = null, requestId = null)
 }
 
 /** Guarda o actualiza un ingreso con trazabilidad inmutable. */
+// Identify one legacy Plin receipt without changing amounts, dates or accounts.
+// This is a narrow, audited update, not a rewrite of the transaction snapshot.
+export async function identifyMovementInstitution(uid, type, id, bank) {
+    if (!uid || !id || !['expense', 'income'].includes(type) || !['bbva', 'interbank', 'scotiabank', 'banbif'].includes(bank)) throw new Error('Selecciona un banco de origen válido.');
+    const ref = db.collection('transactions').doc(uid).collection(type === 'income' ? 'income' : 'expenses').doc(id);
+    const audit = auditRef(uid).doc();
+    return withDeadline(() => db.runTransaction(async transaction => {
+        const current = await transaction.get(ref);
+        if (!current.exists) throw new Error('Este movimiento ya no existe.');
+        const data = current.data();
+        const identity = sourceIdentity({ ...data, sourceInstitutionOverride: '' });
+        if (identity.bank || identity.channel !== 'Plin') throw new Error('El movimiento ya tiene un banco identificado por su fuente.');
+        const patch = { sourceInstitutionOverride: bank, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+        transaction.update(ref, patch);
+        transaction.set(audit, {
+            eventType: 'updated', movementId: id, operationType: type, actorUid: uid,
+            recordedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            before: { sourceInstitutionOverride: data.sourceInstitutionOverride || '' },
+            after: { sourceInstitutionOverride: bank }
+        });
+    }), 30000, 'commit-unconfirmed');
+}
+
 export async function saveIncome(uid, data, editId = null, requestId = null) {
     return saveTransaction(uid, 'income', data, editId, requestId);
 }

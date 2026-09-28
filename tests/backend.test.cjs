@@ -82,6 +82,83 @@ function harness() {
     return { use, docs, context, timestamp, reads: () => collectionReads, setQueryError: error => { queryError = error; } };
 }
 
+test('institution identity separates banks from Plin and merges bank account aliases', async () => {
+    const h = harness(), { movementIdentity } = await h.use('js/services/entityIdentity.js');
+    const wallets = [{ id: 'ib', name: 'Cuenta Interbank', institution: 'Interbank' }, { id: 'bcp', name: 'Cuenta BCP' }];
+    const bbva = movementIdentity({ source: 'gmail:plin-bbva', accountId: 'ib' }, wallets);
+    assert.equal(bbva.id, 'institution:bbva');
+    assert.equal(bbva.channel, 'Plin');
+    assert.equal(bbva.accountConflict, true);
+    assert.equal(movementIdentity({ source: 'gmail:plin-interbank' }).id, 'institution:interbank');
+    assert.equal(movementIdentity({ source: 'gmail:bcp' }).id, movementIdentity({ accountId: 'bcp' }, wallets).id);
+    assert.equal(movementIdentity({ source: 'gmail:plin', accountId: 'ib', accountAssignmentExplicit: true }, wallets).id, 'unresolved:plin');
+    const incoming = movementIdentity({ source: 'gmail:plin', sourceSender: 'BBVA <procesos@bbva.com.pe>', note: 'Destino: Yape Interbank' });
+    assert.equal(incoming.id, 'institution:bbva');
+    assert.equal(movementIdentity({ source: 'gmail:plin', sourceRawText: 'Destino Interbank · Recibe con BBVA' }).id, 'unresolved:plin');
+    assert.equal(movementIdentity({ source: 'gmail:plin', sourceSender: 'x@bbva.com.pe.evil.test' }).id, 'unresolved:plin');
+});
+
+test('Plin cannot link across banks or to an unidentified shared wallet', async () => {
+    const h = harness(), { resolveWalletAccount, walletSuggestions } = await h.use('js/services/walletPolicy.js');
+    const wallets = [
+        { id: 'bbva', name: 'BBVA', sourceKey: 'bbva', active: true, linkSource: true },
+        { id: 'ib', name: 'Interbank', sourceKey: 'interbank', active: true, linkSource: true },
+        { id: 'plin', name: 'Plin', sourceKey: 'plin', active: true, linkSource: true }
+    ];
+    assert.equal(resolveWalletAccount({ source: 'gmail:plin-bbva' }, wallets), 'bbva');
+    assert.equal(resolveWalletAccount({ source: 'gmail:plin-interbank' }, wallets), 'ib');
+    assert.equal(resolveWalletAccount({ source: 'gmail:plin' }, wallets), '');
+    const custom = [{ id: 'bbva', sender: 'procesos@bbva.com.pe', defaultAccountId: 'ib' }];
+    assert.equal(resolveWalletAccount({ source: 'gmail:custom-bbva' }, wallets, custom), '');
+    assert.equal(resolveWalletAccount({ source: 'gmail:plin-bbva' }, [{ ...wallets[1], sourceKey: 'plin-bbva' }]), '');
+    assert.equal(walletSuggestions([], [{ source: 'gmail:plin' }]).length, 0);
+    const suggestions = walletSuggestions([], [{ source: 'gmail:bbva' }, { source: 'gmail:plin-bbva' }]);
+    assert.equal(suggestions.length, 1);
+    assert.equal(suggestions[0].sourceKey, 'bbva');
+    assert.equal(suggestions[0].count, 2);
+});
+
+test('known bank parser wins over a generic configured Plin entity and preserves late receipt time', async () => {
+    const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
+    const [tx] = parseAllEmails({
+        rawMessages: [{ id: 'plin-late' }],
+        decodeBody: () => 'Plineaste S/ 50.00 a Ana Ruiz\nDetalles de tu plineo\nDestino: Yape\nFecha y hora: 25 de septiembre, 2026 23:12',
+        getSender: () => 'BBVA <procesos@bbva.com.pe>',
+        getDate: () => new Date('2026-09-27T10:00:00Z'),
+        getSubject: () => 'Constancia de operación transferencia PLIN',
+        customEntities: [{ id: 'plin', name: 'Plin', sender: 'procesos@bbva.com.pe', active: true }]
+    });
+    assert.equal(tx.source, 'plin-bbva');
+    assert.equal(tx.sourceSender, 'BBVA <procesos@bbva.com.pe>');
+    assert.equal(tx.amount, 50);
+    assert.equal(tx.date, '2026-09-25');
+    assert.equal(tx.occurredAt.toISOString(), '2026-09-26T04:12:00.000Z');
+});
+
+test('manual bank identification is narrow, audited, correctable and cannot replace known provenance', async () => {
+    const h = harness(), api = await h.use('js/services/dbService.js');
+    const ref = 'transactions/u/expenses/old-plin';
+    const original = { source: 'gmail:plin', amount: 50, accountId: 'legacy', date: h.timestamp(new Date('2026-09-25T05:00:00Z')), note: 'Pago' };
+    h.docs.set(ref, original);
+    await api.identifyMovementInstitution('u', 'expense', 'old-plin', 'bbva');
+    assert.equal(h.docs.get(ref).sourceInstitutionOverride, 'bbva');
+    assert.equal(h.docs.get(ref).amount, original.amount);
+    assert.equal(h.docs.get(ref).accountId, original.accountId);
+    assert.equal(h.docs.get(ref).date, original.date);
+    await api.identifyMovementInstitution('u', 'expense', 'old-plin', 'interbank');
+    assert.equal(h.docs.get(ref).sourceInstitutionOverride, 'interbank');
+    assert.equal([...h.docs.keys()].filter(key => key.includes('/auditLogs/')).length, 2);
+    h.docs.set(ref, { ...original, source: 'gmail:plin-bbva' });
+    await assert.rejects(api.identifyMovementInstitution('u', 'expense', 'old-plin', 'interbank'), /ya tiene un banco/);
+    await assert.rejects(api.identifyMovementInstitution('u', 'expense', 'old-plin', 'invalid'), /válido/);
+});
+
+test('import retains automatic assignment flag instead of declaring it a user decision', async () => {
+    const h = harness(), api = await h.use('js/services/dbService.js');
+    await api.saveExpense('u', { amount: 5, category: 'yellow', date: h.timestamp(new Date('2026-09-25')), accountId: '', accountAssignmentExplicit: false }, null, 'automatic');
+    assert.equal(h.docs.get('transactions/u/expenses/automatic').accountAssignmentExplicit, false);
+});
+
 test('concurrent Gmail saves create one movement and one immutable audit', async () => {
     const h = harness(), api = await h.use('js/services/dbService.js');
     const payload = { amount: 12, category: 'yellow', date: h.timestamp(new Date('2026-01-01')), gmailId: 'abc' };
@@ -264,7 +341,7 @@ test('BBVA PLIN QR receipts from procesos are imported as outgoing PLIN payments
     assert.equal(results[0].date, '2026-09-26');
     assert.equal(results[0].receiptDateSource, 'receipt');
 });
-test('BBVA QR merchant receipts are kept as BBVA PLIN even without the word Plin in the subject', async () => {
+test('BBVA QR merchant receipts retain the bank without inventing a Plin channel', async () => {
     const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
     const results = parseAllEmails({
         rawMessages: [{ id: 'bbva-qr-merchant-1' }],
@@ -280,11 +357,20 @@ test('BBVA QR merchant receipts are kept as BBVA PLIN even without the word Plin
     });
     assert.equal(results.length, 1);
     assert.equal(results[0].type, 'expense');
-    assert.equal(results[0].source, 'plin-bbva');
-    assert.equal(results[0].sourceLabel, 'Plin · BBVA');
+    assert.equal(results[0].source, 'bbva');
+    assert.equal(results[0].sourceLabel, 'BBVA · QR');
+    assert.equal(results[0].paymentChannel, 'QR');
     assert.equal(results[0].amount, 42.5);
     assert.equal(results[0].date, '2026-09-27');
 });
+test('Plin advertising does not change a BBVA card operation into a Plin payment', async () => {
+    const h = harness(), { parseEmail } = await h.use('js/services/gmailParser.js');
+    const tx = parseEmail({ message: { id: 'card' }, sender: 'procesos@bbva.com.pe', date: new Date('2026-09-25T15:00:00Z'),
+        subject: 'Consumo con tu tarjeta', bodyText: 'Monto del consumo: S/ 20.00\nComercio: Tienda Central\n¿Necesitas pagar tus servicios? Hazlo con Plin BBVA.' });
+    assert.equal(tx.source, 'bbva');
+    assert.equal(tx.amount, 20);
+});
+
 test('BBVA PLIN receipt delivered by the BBVA gateway remains importable', async () => {
     const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
     const results = parseAllEmails({
@@ -348,4 +434,22 @@ test('Gmail follows page tokens and avoids downloading previously imported messa
     assert.equal(messages[0].id, 'new');
     assert.ok(urls.some(url => url.searchParams.get('pageToken') === 'page2'));
     assert.ok(!urls.some(url => url.pathname.endsWith('/messages/old')));
+});
+
+test('Gmail decoder preserves UTF-8 names and table boundaries in HTML receipts', async () => {
+    const h = harness();
+    h.context.TextDecoder = TextDecoder;
+    h.context.Uint8Array = Uint8Array;
+    h.context.atob = value => Buffer.from(value, 'base64').toString('latin1');
+    h.context.document = { createElement: () => ({
+        set innerHTML(value) { this.value = value; },
+        get innerText() { return this.value.replace(/<[^>]+>/g, '').replace(/\n\s+/g, '\n'); },
+        get textContent() { return this.innerText; }
+    }) };
+    const { decodeEmailBody } = await h.use('js/services/gmailService.js');
+    const html = '<table><tr><td>Plineaste</td><td>S/ 50.00</td></tr><tr><td>Destinatario</td><td>José Núñez</td></tr></table>';
+    const encoded = Buffer.from(html, 'utf8').toString('base64url');
+    const result = decodeEmailBody({ payload: { mimeType: 'text/html', body: { data: encoded } } });
+    assert.match(result, /Plineaste\s+S\/ 50\.00/);
+    assert.match(result, /José Núñez/);
 });

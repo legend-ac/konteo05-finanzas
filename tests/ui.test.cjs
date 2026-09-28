@@ -11,9 +11,9 @@ class Element {
         this.children = [];
         this.attributes = {};
         this.dataset = {};
-        this.style = {};
+        this.style = { setProperty: (key, value) => { this.style[key] = value; } };
         this.className = '';
-        this.classList = { add: value => { this.className += ` ${value}`; } };
+        this.classList = { add: value => { this.className += ` ${value}`; }, toggle: (value, active) => { if (active) this.className += ` ${value}`; } };
     }
     set textContent(value) { this.text = value; this.children = []; }
     get textContent() { return this.text || this.children.map(el => el.textContent).join(''); }
@@ -23,10 +23,11 @@ class Element {
     querySelectorAll() { return []; }
 }
 
-async function renderer(file = 'render.js') {
+async function renderer(file = 'render.js', elements = {}) {
     const context = vm.createContext({
         Date, Intl,
         document: {
+            getElementById: id => elements[id],
             createElement: tag => new Element(tag),
             createElementNS: (_, tag) => new Element(tag),
             createDocumentFragment: () => new Element('fragment')
@@ -45,6 +46,30 @@ async function renderer(file = 'render.js') {
     await module.evaluate();
     return file === 'render.js' ? module.namespace.renderTransactionList : module.namespace;
 }
+
+test('entity report shows bank cards, collapsed exact days and purpose-built identification controls', async () => {
+    const elements = Object.fromEntries(['expense-entity-list', 'expenses-selected-total', 'expenses-selected-meta', 'expenses-entity-selection', 'expenses-detail-list', 'btn-expenses-select-all'].map(id => [id, new Element('div')]));
+    const { renderExpenseAnalysis } = await renderer('dailySpending.js', elements);
+    const wallets = [{ id: 'bbva', name: 'BBVA', color: '#54799c' }, { id: 'pending', name: 'Plin · banco por identificar', unresolved: true }];
+    const expenses = [
+        { id: 'a', accountId: 'bbva', type: 'expense', status: 'completed', amount: 0.1, operationDate: '2026-09-25' },
+        { id: 'b', accountId: 'bbva', type: 'expense', status: 'completed', amount: 0.2, operationDate: '2026-09-25' },
+        { id: 'c', accountId: 'pending', type: 'expense', status: 'completed', amount: 50, operationDate: '2026-09-24' }
+    ];
+    renderExpenseAnalysis({ wallets, expenses, selectedEntityIds: ['bbva'], resolveIdentity: () => ({ channel: 'Plin' }) });
+    assert.equal(elements['expenses-selected-total'].textContent, 'S/ 0.30');
+    assert.equal(elements['expense-entity-list'].children.length, 2);
+    const days = elements['expenses-detail-list'].children;
+    assert.equal(days.length, 1);
+    assert.equal(days[0].tagName, 'details');
+    assert.ok(!days[0].open, 'Daily rows must start collapsed');
+    assert.equal(days[0].children[1].children.length, 2);
+    assert.match(days[0].textContent, /Canal: Plin/);
+    renderExpenseAnalysis({ wallets, expenses, selectedEntityIds: ['pending'], resolveIdentity: () => ({ channel: 'Plin', unresolved: true }) });
+    assert.match(elements['expenses-detail-list'].textContent, /Identificar banco/);
+    assert.match(elements['expenses-detail-list'].textContent, /no el destino/);
+    assert.equal(elements['expenses-selected-total'].textContent, 'S/ 50.00');
+});
 
 test('empty period explains the period, keeps the complete guide and next actions', async () => {
     const render = await renderer();

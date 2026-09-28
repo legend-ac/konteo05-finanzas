@@ -1,5 +1,5 @@
 // Service Worker - Konteo 05
-const CACHE_NAME = 'konteo05-v5.13.0';
+const CACHE_NAME = 'konteo05-v5.14.0';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -22,6 +22,7 @@ const APP_SHELL = [
   '/js/services/asyncControl.js',
   '/js/services/financialMath.js',
   '/js/services/walletPolicy.js',
+  '/js/services/entityIdentity.js',
   '/js/services/exportService.js',
   '/js/services/gmailService.js',
   '/js/services/gmailParser.js',

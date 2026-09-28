@@ -785,6 +785,9 @@ async function doImport() {
                     ? { emailReceivedAt: firebase.firestore.Timestamp.fromDate(tx.emailReceivedAt) } : {}),
                 receiptDateSource: tx.receiptDateSource || 'email_received_fallback',
                 sourceRawText: String(tx.rawText || '').slice(0, 4000),
+                sourceSender: tx.sourceSender || '', sourceLabel: tx.sourceLabel || '',
+                paymentChannel: tx.paymentChannel || '',
+                accountAssignmentExplicit: tx.accountAssignmentExplicit === true,
                 actorUid: uid, status: 'completed', source: `gmail:${tx.source}`, gmailId: tx.gmailId,
                 counterparty: receiptDescription,
                 accountId: resolveWalletAccount(tx, walletOptions, getCustomEntities())

@@ -1,3 +1,5 @@
+import { entitySourceKey, sourceIdentity, canAutoLink } from './entityIdentity.js';
+export { entitySourceKey } from './entityIdentity.js';
 // Source names are display labels, never a list of accounts to create.
 const SOURCE_NAMES = {
     yape: 'Yape', plin: 'Plin', bcp: 'BCP', interbank: 'Interbank', bbva: 'BBVA',
@@ -7,10 +9,6 @@ const SOURCE_NAMES = {
 
 SOURCE_NAMES['plin-bbva'] = 'Plin · BBVA';
 SOURCE_NAMES['plin-interbank'] = 'Plin · Interbank';
-
-export function entitySourceKey(entity) {
-    return `custom-${String(entity.id || entity.sender || '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
-}
 
 export function walletNeedsReview(wallet) {
     if (!wallet.systemDefault || wallet.userConfirmed || wallet.active === false) return false;
@@ -29,23 +27,32 @@ export function resolveWalletAccount(tx, wallets, entities = []) {
     if (tx.accountId || tx.accountAssignmentExplicit) return tx.accountId || '';
     const source = String(tx.source || '').replace(/^gmail:/, '').toLowerCase();
     const entity = entities.find(item => entitySourceKey(item) === source);
-    if (entity?.defaultAccountId && wallets.some(w => w.id === entity.defaultAccountId && isActiveWallet(w))) {
-        return entity.defaultAccountId;
+    if (entity?.defaultAccountId) {
+        const configured = wallets.find(w => w.id === entity.defaultAccountId && isActiveWallet(w));
+        return configured && canAutoLink(tx, configured, entities) ? configured.id : '';
     }
-    const matches = wallets.filter(w => isActiveWallet(w) && w.linkSource === true && w.sourceKey === source);
+    const identity = sourceIdentity(tx, entities);
+    const matches = wallets.filter(w => isActiveWallet(w) && w.linkSource === true &&
+        (w.sourceKey === source || w.sourceKey === identity.sourceKey || w.sourceKey === identity.bank) && canAutoLink(tx, w, entities));
     return matches.length === 1 ? matches[0].id : '';
 }
 
 export function walletSuggestions(wallets, transactions, entities = []) {
     const sources = new Map();
     entities.filter(e => e.active !== false).forEach(entity => {
-        if (!entity.defaultAccountId) sources.set(entitySourceKey(entity), {
-            sourceKey: entitySourceKey(entity), name: entity.name || entity.sender, configured: true, count: 0
+        const identity = sourceIdentity({ source: entitySourceKey(entity) }, entities);
+        if (identity.channel === 'Plin' && identity.unresolved) return;
+        const key = identity.bank || entitySourceKey(entity);
+        if (!entity.defaultAccountId) sources.set(key, {
+            sourceKey: key, name: identity.bank ? identity.name : entity.name || entity.sender, configured: true, count: 0
         });
     });
     transactions.forEach(tx => {
         if (!String(tx.source || '').startsWith('gmail:') || resolveWalletAccount(tx, wallets, entities)) return;
-        const key = tx.source.slice(6).toLowerCase();
+        const identity = sourceIdentity(tx, entities);
+        // Unknown Plin receipts must be identified before proposing a linked account.
+        if (identity.channel === 'Plin' && identity.unresolved) return;
+        const key = identity.bank || identity.sourceKey;
         if (!key) return;
         const entity = entities.find(e => entitySourceKey(e) === key);
         const entry = sources.get(key) || {

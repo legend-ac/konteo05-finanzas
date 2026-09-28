@@ -78,7 +78,8 @@ function buildReceiptDate(day, month, year, hour = 12, minute = 0) {
     const normalizedYear = year < 100 ? 2000 + year : year;
     if (day < 1 || day > 31 || month < 1 || month > 12 || normalizedYear < 2000 || normalizedYear > 2100) return null;
     const date = new Date(`${normalizedYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00-05:00`);
-    return validDate(date) && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : null;
+    const businessDay = `${normalizedYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return validDate(date) && businessDateString(date) === businessDay ? date : null;
 }
 
 function parseReceiptDateValue(raw) {
@@ -315,11 +316,10 @@ function parseInterbank({ body, subject, date, gmailId }) {
 function parseBBVA({ body, subject, date, gmailId }) {
     const text = `${subject}\n${body}`;
 
-    // BBVA sends PLIN / QR receipts from procesos@bbva.com.pe. They are
-    // PLIN operations, not generic BBVA card consumption. Keep their source
-    // separate from Interbank PLIN so accounts and reports stay understandable.
-    const plinQrReceipt = /constancia\s+de\s+operaci[oó]n\s+(?:transferencia\s+)?plin|constancia\s+de\s+pago\s+(?:a\s+)?comercio(?:s)?\s+(?:con\s+)?qr|\bplin(?:easte|eado|ear)?\b|\bplin\b.{0,100}(?:pago\s+con\s+qr|c[oó]digo\s+qr|transferencia|env[ií]o|recib)/i.test(text);
-    if (plinQrReceipt) {
+    // Promotional mentions of Plin do not establish the operation's channel.
+    const plinReceipt = /constancia\s+de\s+operaci[oó]n\s+(?:transferencia\s+)?plin|\bplineaste\s+S\/|detalles\s+de\s+tu\s+plineo|(?:recibiste|te\s+enviaron)\s+(?:un\s+)?plin/i.test(text);
+    const qrReceipt = /constancia\s+de\s+pago\s+(?:a\s+)?comercio(?:s)?\s+(?:con\s+)?qr/i.test(text);
+    if (plinReceipt || qrReceipt) {
         const received = text.match(/(?:recibiste|te\s+enviaron)\s+(?:un\s+)?(?:plin\s+de\s+)?S\/\.?\s*([\d,.]+)(?:\s+de\s+([^\n\r]+))?/i);
         if (received) {
             const amount = parseMoney(received[1]);
@@ -334,10 +334,11 @@ function parseBBVA({ body, subject, date, gmailId }) {
         const amount = payment ? parseMoney(payment[1]) : extractLabeledAmount(text, ['monto', 'importe', 'monto\s+y\s+moneda']) || extractAmount(text);
         if (amount) {
             const recipient = displayName(payment?.[2] || extractField(text, ['destinatario', 'beneficiario', 'comercio', 'establecimiento', 'nombre\s+del\s+comercio']) || 'contacto');
-            const tx = genericExpense(amount, `Plin a ${recipient}`, 'plin-bbva', date, gmailId, text);
-            tx.description = `Plin a ${recipient}`;
+            const tx = genericExpense(amount, `${plinReceipt ? 'Plin' : 'Pago QR'} a ${recipient}`, plinReceipt ? 'plin-bbva' : 'bbva', date, gmailId, text);
+            tx.paymentChannel = plinReceipt ? 'Plin' : 'QR';
+            tx.description = `${plinReceipt ? 'Plin' : 'Pago QR'} a ${recipient}`;
             tx.receiptDescription = tx.description;
-            tx.sourceLabel = 'Plin · BBVA';
+            tx.sourceLabel = plinReceipt ? 'Plin · BBVA' : 'BBVA · QR';
             return tx;
         }
     }
@@ -682,6 +683,14 @@ const PARSER_MAP = [
 // EXPORTS
 // ─────────────────────────────────────────────
 export function parseEmail({ message, bodyText, sender, date, subject, customEntities = [] }) {
+    sender = String(sender || '').toLowerCase();
+    // A configured generic "Plin" sender must not replace a bank-specific parser.
+    const knownBank = sender.match(/@(?:[a-z0-9-]+\.)*(bbva\.com\.pe|bbva\.pe|interbank\.com\.pe|interbank\.pe|mibanco\.com\.pe|viabcp\.com|bcp\.com\.pe)(?=[>\s]|$)/);
+    if (knownBank) {
+        const parseBank = /bbva/.test(knownBank[1]) ? parseBBVA : /interbank/.test(knownBank[1]) ? parseInterbank : /mibanco/.test(knownBank[1]) ? parseMiBanco : parseBCP;
+        try { return parseBank({ body: bodyText, subject, date, gmailId: message.id }); }
+        catch (error) { console.warn('[gmailParser] Error en comprobante bancario:', message.id, error); return null; }
+    }
     const customEntity = customEntities.find(entity => (
         entity?.active !== false &&
         String(entity.sender || '').trim() &&
@@ -736,6 +745,7 @@ export function parseAllEmails({ rawMessages, decodeBody, getSender, getDate, ge
         const transactionDate = receiptDate || emailReceivedAt;
         const tx = parseEmail({ message: msg, bodyText, sender, date: transactionDate, subject, customEntities });
         if (!tx || !(tx.amount > 0 && tx.amount < 1_000_000)) continue;
+        tx.sourceSender = String(sender || '').slice(0, 320);
         tx.receiptDateSource = receiptDate ? 'receipt' : 'email_received_fallback';
         tx.emailReceivedAt = validDate(emailReceivedAt) ? emailReceivedAt : null;
         // Do not use delivery time as operation time. When the receipt only has

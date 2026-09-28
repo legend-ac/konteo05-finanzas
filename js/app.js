@@ -14,9 +14,10 @@ import { renderTransactionList }  from './ui/render.js';
 import { accountGuide, initContextGuides, updateContextGuide } from './ui/guides.js';
 import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
-import { renderExpenseAnalysis, UNASSIGNED_ENTITY_ID } from './ui/dailySpending.js';
+import { renderExpenseAnalysis } from './ui/dailySpending.js';
+import { movementIdentity, sourceIdentity } from './services/entityIdentity.js';
 import * as dbService             from './services/dbService.js';
-import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount, entitySourceKey } from './services/walletPolicy.js';
+import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount } from './services/walletPolicy.js';
 import { isPosted, sumAmounts, summarizeCashflow } from './services/financialMath.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
 import { openGmailImport, openGmailEntities, clearGmailImportCache } from './ui/gmailImport.js';
@@ -151,20 +152,7 @@ function updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, star
 }
 
 function dailyEntityIdFor(item) {
-    const accountId = resolveWalletAccount(item, state.wallets, state.walletEntities);
-    if (accountId) return accountId;
-    const source = String(item?.source || '').replace(/^gmail:/, '').trim().toLowerCase();
-    // Older imports stored BBVA QR/PLIN receipts as generic "bbva". Their
-    // original receipt remains in Firestore, so classify them correctly in
-    // analytics without rewriting a financial record or changing an explicit
-    // wallet assignment.
-    if (source === 'bbva') {
-        const receipt = `${item?.sourceRawText || ''}\n${item?.note || ''}\n${item?.description || ''}`;
-        if (/\bplin(?:easte|eado|ear)?\b|constancia\s+de\s+pago\s+(?:a\s+)?comercio(?:s)?\s+(?:con\s+)?qr|pago\s+con\s+qr/i.test(receipt)) {
-            return 'source:plin-bbva';
-        }
-    }
-    return source ? `source:${source}` : UNASSIGNED_ENTITY_ID;
+    return movementIdentity(item, state.wallets, state.walletEntities).id;
 }
 
 function analyticsEntities() {
@@ -172,24 +160,12 @@ function analyticsEntities() {
         ...(state.expenseData?.expenseItems || []),
         ...(state.expenseData?.incomeItems || [])
     ];
-    const sourceLabels = new Map();
+    const identities = new Map();
     sourceItems.forEach(item => {
-        const id = dailyEntityIdFor(item);
-        if (!id.startsWith('source:') || sourceLabels.has(id)) return;
-        const source = id.slice(7);
-        const configured = state.walletEntities.find(entity => entitySourceKey(entity) === source);
-        const names = {
-            'plin-interbank': 'Plin · Interbank', 'plin-bbva': 'Plin · BBVA',
-            plin: 'Plin', bcp: 'BCP', bbva: 'BBVA', interbank: 'Interbank',
-            yape: 'Yape', mibanco: 'MiBanco', scotiabank: 'Scotiabank', nacion: 'Banco de la Nación'
-        };
-        const normalizedSource = source.replace(/[\s_]+/g, '-');
-        sourceLabels.set(id, configured?.name || names[source] || names[normalizedSource] || item.sourceLabel || source.replace(/[-_]+/g, ' '));
+        const identity = movementIdentity(item, state.wallets, state.walletEntities);
+        identities.set(identity.id, identity);
     });
-    const virtualSources = [...sourceLabels].map(([id, name]) => ({
-        id, name, type: 'wallet', color: 'gold', active: true
-    }));
-    return [...state.wallets, ...virtualSources];
+    return [...identities.values()];
 }
 
 function renderExpenseAnalysisView() {
@@ -199,6 +175,7 @@ function renderExpenseAnalysisView() {
         incomes: state.expenseData?.incomeItems || [],
         selectedEntityIds: state.expenseEntityIds,
         resolveEntityId: dailyEntityIdFor,
+        resolveIdentity: item => movementIdentity(item, state.wallets, state.walletEntities),
         movementType: state.expenseMovementType
     });
 }
@@ -238,14 +215,17 @@ function syncExpenseMovementTypeUi() {
     document.querySelector('.expenses-summary-card')?.classList.toggle('is-income', isIncome);
     document.getElementById('expenses-summary-label').textContent = `${label} seleccionado`;
     document.getElementById('expenses-detail-title').textContent = `${isIncome ? 'Ingresos' : 'Gastos'} por fecha`;
-    document.getElementById('expenses-entities-copy').textContent = `Toca una entidad para ver su total exacto por día. Usa Comparar para combinar varias con ${isIncome ? 'ingresos' : 'gastos'} en este período.`;
+    document.getElementById('expenses-entities-copy').textContent = 'Elige un banco o billetera, revisa sus totales diarios y abre un día para ver los movimientos. Comparar suma solo las entidades que marques.';
     document.getElementById('expenses-summary-rule').textContent = isIncome
         ? 'Transferencias, pendientes, anulados y operaciones entre tus propias cuentas no se incluyen.'
         : 'Transferencias, pendientes, anulados y operaciones entre tus propias cuentas no se incluyen.';
 }
 
+let expenseLoadToken = 0;
 async function loadExpenseAnalysis({ force = false } = {}) {
     if (!state.currentUser) return;
+    const uid = state.currentUser.uid;
+    const token = ++expenseLoadToken;
     if (force) state.expenseData = null;
     const [startDate, endDate] = expensePeriodDates();
     if (!startDate || !endDate) return;
@@ -254,7 +234,8 @@ async function loadExpenseAnalysis({ force = false } = {}) {
     const periodStart = businessDateString(startDate);
     const periodEnd = businessDateString(endDate);
     try {
-        const { incomeItems, expenseItems } = await dbService.getTransactions(state.currentUser.uid, startTs, endTs);
+        const { incomeItems, expenseItems } = await dbService.getTransactions(uid, startTs, endTs);
+        if (state.currentUser?.uid !== uid || token !== expenseLoadToken) return;
         const scoped = items => items.filter(item => {
             const date = transactionBusinessDate(item);
             return !!date && date >= periodStart && date <= periodEnd;
@@ -262,6 +243,7 @@ async function loadExpenseAnalysis({ force = false } = {}) {
         state.expenseData = { expenseItems: scoped(expenseItems), incomeItems: scoped(incomeItems) };
         renderExpenseAnalysisView();
     } catch (error) {
+        if (state.currentUser?.uid !== uid || token !== expenseLoadToken) return;
         console.error('expense analysis error:', error);
         showToast('No se pudo cargar el detalle de gastos', 'error');
     }
@@ -554,6 +536,8 @@ async function editItem(id, type) {
             document.getElementById('income-counterparty').value = data.counterparty || '';
             const src = document.getElementById('income-source');
             if (src) src.value = data.source || 'otros';
+            // Preserve import provenance when changing an income's account.
+            document.getElementById('form-income').dataset.importedSource = data.gmailId || String(data.source || '').startsWith('gmail:') ? data.source || '' : '';
             setAccountOptions('income-account', data.accountId || '');
             document.getElementById('income-edit-id').value = id;
             openModal('modal-income');
@@ -1005,6 +989,7 @@ document.getElementById('sort-select')?.addEventListener('change', e => {
 // OPEN MODALS
 // ──────────────────────────────────────────────
 function openIncomeModal() {
+    delete document.getElementById('form-income').dataset.importedSource;
     resetTransactionFormState(document.getElementById('form-income'));
     const today = todayString();
     document.getElementById('income-date').value  = today;
@@ -1058,8 +1043,16 @@ function openWalletModal(wallet = null) {
     document.getElementById('wallet-opening-balance').value = wallet ? Number(wallet.openingBalance || 0) : '';
     document.getElementById('wallet-include-total').checked = wallet?.includeInTotal !== false;
     document.getElementById('wallet-source-key').value = wallet?.sourceKey || '';
-    document.getElementById('wallet-link-source').checked = wallet?.linkSource === true;
-    document.getElementById('wallet-link-source-row').classList.toggle('hidden', !wallet?.sourceKey);
+    const sourceKey = wallet?.sourceKey || '';
+    const identity = sourceIdentity({ source: sourceKey }, state.walletEntities);
+    const unsafePlinLink = identity.channel === 'Plin' && identity.unresolved;
+    const linkInput = document.getElementById('wallet-link-source');
+    linkInput.checked = !unsafePlinLink && wallet?.linkSource === true;
+    linkInput.disabled = unsafePlinLink;
+    document.getElementById('wallet-link-source-copy').textContent = unsafePlinLink
+        ? 'Plin sin banco confirmado no se vincula automáticamente. Identifica el banco de cada comprobante antes de asociarlo a una cuenta.'
+        : `Vincular solo movimientos de ${identity.name}${identity.channel ? ` · ${identity.channel}` : ''} sin una elección de cuenta y usar esta cuenta en futuras importaciones. Se respetan tus asignaciones previas.`;
+    document.getElementById('wallet-link-source-row').classList.toggle('hidden', !sourceKey);
     openModal('modal-wallet');
 }
 
@@ -1116,6 +1109,8 @@ document.getElementById('wallets-list')?.addEventListener('click', event => {
     renderWallets();
 });
 document.getElementById('wallet-detail')?.addEventListener('click', async event => {
+    const review = event.target.closest('[data-review-wallet-movement]');
+    if (review) { editItem(review.dataset.reviewWalletMovement, review.dataset.movementType); return; }
     const action = event.target.closest('[data-wallet-action]')?.dataset.walletAction;
     if (!action) return;
     const wallet = state.wallets.find(item => item.id === state.selectedWalletId);
@@ -1150,7 +1145,7 @@ document.getElementById('form-wallet')?.addEventListener('submit', async event =
             color: document.getElementById('wallet-color').value,
             openingBalance,
             sourceKey: document.getElementById('wallet-source-key').value || undefined,
-            linkSource: document.getElementById('wallet-link-source').checked,
+            linkSource: !document.getElementById('wallet-link-source').disabled && document.getElementById('wallet-link-source').checked,
             includeInTotal: document.getElementById('wallet-include-total').checked
         }, document.getElementById('wallet-edit-id').value || null);
         state.selectedWalletId = id;
@@ -1252,7 +1247,7 @@ document.getElementById('form-income').onsubmit = async e => {
     try {
         const data = {
             amount, date: firebase.firestore.Timestamp.fromDate(date), operationDate: dateStr,
-            note, source, counterparty, accountId, ...transactionActorData()
+            note, source: editId && form.dataset.importedSource ? form.dataset.importedSource : source, counterparty, accountId, ...transactionActorData()
         };
         await dbService.saveIncome(state.currentUser.uid, data, editId || null, form.dataset.submissionKey || null);
         showToast(editId ? 'Ingreso actualizado' : 'Ingreso guardado', 'success');
@@ -1528,7 +1523,10 @@ function renderWalletDetail() {
     const settingsRows = [
         ['Estado', 'Activa'],
         ['Saldo total', wallet.includeInTotal === false ? 'No incluida' : 'Incluida'],
-        ['Importaciones', wallet.linkSource && wallet.sourceKey ? 'Asignación por fuente vinculada' : 'Asignación manual']
+        ['Importaciones', wallet.linkSource && wallet.sourceKey ? (() => {
+            const identity = sourceIdentity({ source: wallet.sourceKey }, state.walletEntities);
+            return identity.channel === 'Plin' && identity.unresolved ? 'Plin sin banco: vinculación automática detenida' : `${identity.name}${identity.channel ? ` · ${identity.channel}` : ''} · vinculación autorizada`;
+        })() : 'Asignación manual']
     ];
     settingsRows.forEach(([label, value]) => {
         const row = document.createElement('div');
@@ -1570,6 +1568,20 @@ function renderWalletDetail() {
     management.className = 'wallet-management';
     management.innerHTML = '<button type="button" data-wallet-action="edit">Editar cuenta</button><button type="button" data-wallet-action="archive">Archivar cuenta</button>';
     panel.append(heading, balance, actions, stats, settings, recent, management);
+    const conflicts = movements.filter(item => movementIdentity(item, state.wallets, state.walletEntities).accountConflict);
+    if (conflicts.length) {
+        const review = document.createElement('details'); review.className = 'wallet-link-review';
+        const summary = document.createElement('summary'); summary.textContent = `${conflicts.length} movimiento${conflicts.length === 1 ? '' : 's'} con otro banco de origen`;
+        const help = document.createElement('p'); help.textContent = 'La cuenta asignada no coincide con el banco del comprobante. Tus saldos se conservan; revisa la cuenta de cada movimiento antes de corregirla.';
+        review.append(summary, help);
+        conflicts.forEach(item => {
+            const button = document.createElement('button'); button.type = 'button'; button.className = 'expense-review-account';
+            button.dataset.reviewWalletMovement = item.id; button.dataset.movementType = item.type;
+            button.textContent = `${formatBusinessDate(transactionBusinessDate(item))} · ${movementIdentity(item, state.wallets, state.walletEntities).name} · S/ ${fmt(item.amount)} · Revisar cuenta`;
+            review.append(button);
+        });
+        panel.insertBefore(review, recent);
+    }
 }
 
 function renderWalletChoices() {
@@ -1833,6 +1845,32 @@ document.getElementById('search-input')?.addEventListener('input', () => {
 document.getElementById('category-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
 document.getElementById('status-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
 
+document.getElementById('expenses-detail-list')?.addEventListener('submit', async event => {
+    const form = event.target.closest('[data-identify-movement]');
+    if (!form) return;
+    event.preventDefault();
+    if (!state.currentUser || form.dataset.saving === 'true') return;
+    const bank = form.elements.institution.value;
+    const uid = state.currentUser.uid;
+    form.dataset.saving = 'true';
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true; button.textContent = 'Guardando…';
+    try {
+        await dbService.identifyMovementInstitution(uid, form.dataset.movementType, form.dataset.identifyMovement, bank);
+        if (state.currentUser?.uid !== uid) return;
+        dashboardReadCache.clear();
+        state.expenseEntityIds = [`institution:${bank}`];
+        await loadExpenseAnalysis({ force: true });
+        showToast('Banco identificado. La cuenta y el importe no se han modificado.', 'success');
+    } catch (error) { showToast(error.message || 'No se pudo identificar el banco.', 'error'); }
+    finally { delete form.dataset.saving; button.disabled = false; button.textContent = 'Confirmar banco'; }
+});
+
+document.getElementById('expenses-detail-list')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-review-account]');
+    if (button) editItem(button.dataset.reviewAccount, button.dataset.movementType);
+});
+
 document.getElementById('expense-entity-list')?.addEventListener('click', event => {
     const button = event.target.closest('[data-expense-entity-focus]');
     if (!button) return;
@@ -1842,6 +1880,7 @@ document.getElementById('expense-entity-list')?.addEventListener('click', event 
     state.expenseEntityIds = [button.dataset.expenseEntityFocus];
     renderExpenseAnalysisView();
     document.getElementById('expenses-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('expenses-detail-title')?.focus({ preventScroll: true });
 });
 
 document.getElementById('expense-entity-list')?.addEventListener('change', event => {
@@ -1852,6 +1891,7 @@ document.getElementById('expense-entity-list')?.addEventListener('change', event
     input.checked ? current.add(input.dataset.expenseEntityToggle) : current.delete(input.dataset.expenseEntityToggle);
     state.expenseEntityIds = current.size === available.length ? null : [...current];
     renderExpenseAnalysisView();
+    [...document.querySelectorAll('[data-expense-entity-toggle]')].find(element => element.dataset.expenseEntityToggle === input.dataset.expenseEntityToggle)?.focus({ preventScroll: true });
 });
 
 document.getElementById('btn-expenses-select-all')?.addEventListener('click', () => {

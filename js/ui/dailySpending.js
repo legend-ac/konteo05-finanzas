@@ -57,7 +57,7 @@ export function entitySelectionText(options = [], selectedEntityIds = null) {
     if (selectedEntityIds === null) return 'Todas las entidades';
     if (selectedEntityIds.length === 0) return 'Ninguna entidad';
     if (selectedEntityIds.length === 1) return options.find(option => option.id === selectedEntityIds[0])?.name || '1 entidad';
-    return `${selectedEntityIds.length} entidades`;
+    return options.filter(option => selectedEntityIds.includes(option.id)).map(option => option.name).join(' + ') || 'Ninguna entidad en este período';
 }
 
 // Entities appear only after they have a real expense in the chosen period.
@@ -68,7 +68,7 @@ export function expenseEntityOptions(expenses = [], wallets = [], resolveEntityI
         const id = resolveEntityId(item) || UNASSIGNED_ENTITY_ID;
         const current = totals.get(id) || { id, count: 0, total: 0 };
         current.count += 1;
-        current.total += Number(item.amount) || 0;
+        current.total = Math.round((current.total + (Number(item.amount) || 0)) * 100) / 100;
         totals.set(id, current);
     });
     return [...totals.values()].map(item => {
@@ -77,6 +77,7 @@ export function expenseEntityOptions(expenses = [], wallets = [], resolveEntityI
             ...item,
             name: item.id === UNASSIGNED_ENTITY_ID ? 'Sin entidad asignada' : (wallet?.name || 'Entidad no disponible'),
             detail: item.id === UNASSIGNED_ENTITY_ID ? 'Revisa estos movimientos para asignarlos' : `${item.count} ${movementType === 'income' ? 'ingreso' : 'gasto'}${item.count !== 1 ? 's' : ''} confirmado${item.count !== 1 ? 's' : ''}`,
+            unresolved: wallet?.unresolved || false,
             color: wallet?.color || wallet?.bankColor || ''
         };
     }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'es'));
@@ -90,6 +91,7 @@ function appendEntityButton(container, option, selected) {
     button.className = 'expense-entity-focus';
     button.dataset.expenseEntityFocus = option.id;
     button.setAttribute('aria-label', `Ver ${option.name} por día`);
+    button.setAttribute('aria-pressed', String(selected));
     const marker = document.createElement('span');
     marker.className = 'expense-entity-marker';
     if (option.color) marker.style.setProperty('--entity-color', option.color);
@@ -98,6 +100,10 @@ function appendEntityButton(container, option, selected) {
     const name = document.createElement('strong'); name.textContent = option.name;
     const detail = document.createElement('small'); detail.textContent = option.detail;
     copy.append(name, detail);
+    if (option.unresolved) {
+        const pending = document.createElement('small'); pending.textContent = 'Abre un día para identificar el banco';
+        copy.append(pending);
+    }
     const amount = document.createElement('span');
     amount.className = 'expense-entity-amount';
     amount.textContent = `S/ ${fmt(option.total)}`;
@@ -116,19 +122,46 @@ function appendEntityButton(container, option, selected) {
     container.appendChild(card);
 }
 
-function appendMovement(container, item, entityName, movementType) {
+function appendMovement(container, item, entityName, movementType, identity) {
     const row = document.createElement('div'); row.className = 'expense-detail-movement';
     const copy = document.createElement('div');
     const title = document.createElement('strong'); title.textContent = item.note || item.counterparty || (movementType === 'income' ? 'Ingreso registrado' : 'Gasto registrado');
     const meta = document.createElement('small');
-    meta.textContent = [entityName, item.sourceLabel || item.counterparty, itemTime(item)].filter(Boolean).join(' · ');
+    meta.textContent = [...new Set([entityName, identity.channel && `Canal: ${identity.channel}`, identity.accountName && `Cuenta: ${identity.accountName}`, itemTime(item)].filter(Boolean))].join(' · ');
     copy.append(title, meta);
+    if (identity.accountConflict || identity.conflict) {
+        const warning = document.createElement('small'); warning.className = 'expense-identity-warning';
+        warning.textContent = 'Revisar vinculación: el banco del correo no coincide con la cuenta o fuente guardada. Este informe usa el banco del correo; no modifica tus saldos.';
+        copy.append(warning);
+        const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'expense-review-account';
+        edit.textContent = 'Revisar cuenta asignada'; edit.dataset.reviewAccount = item.id; edit.dataset.movementType = movementType;
+        copy.append(edit);
+    }
+    if ((identity.unresolved || identity.manuallyIdentified) && identity.channel === 'Plin' && item.id) {
+        const disclosure = document.createElement('details'); disclosure.className = 'expense-identify';
+        const trigger = document.createElement('summary'); trigger.textContent = identity.manuallyIdentified ? 'Corregir banco identificado' : 'Identificar banco';
+        const form = document.createElement('form'); form.className = 'expense-identify-form';
+        form.dataset.identifyMovement = item.id; form.dataset.movementType = movementType;
+        const label = document.createElement('label'); label.textContent = 'Banco de origen del comprobante';
+        const select = document.createElement('select'); select.name = 'institution'; select.required = true;
+        [['', 'Seleccionar banco…'], ['bbva', 'BBVA'], ['interbank', 'Interbank'], ['scotiabank', 'Scotiabank'], ['banbif', 'BanBif']].forEach(([value, text]) => {
+            const option = document.createElement('option'); option.value = value; option.textContent = text; select.append(option);
+        });
+        select.value = identity.bank || '';
+        label.append(select);
+        const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Confirmar banco';
+        const help = document.createElement('small'); help.textContent = 'Confirma solo el banco emisor, no el destino. No cambia la cuenta ni el saldo; si no lo sabes, déjalo pendiente.';
+        form.append(label, save, help); disclosure.append(trigger, form); copy.append(disclosure);
+    }
+    if (identity.manuallyIdentified) {
+        const confirmed = document.createElement('small'); confirmed.textContent = 'Banco identificado manualmente'; copy.append(confirmed);
+    }
     const amount = document.createElement('b'); amount.textContent = `${movementType === 'income' ? '+' : '−'} S/ ${fmt(Number(item.amount) || 0)}`;
     row.classList.toggle('is-income', movementType === 'income');
     row.append(copy, amount); container.appendChild(row);
 }
 
-export function renderExpenseAnalysis({ wallets = [], expenses = [], incomes = [], selectedEntityIds = null, resolveEntityId = item => item?.accountId || UNASSIGNED_ENTITY_ID, movementType = 'expense' } = {}) {
+export function renderExpenseAnalysis({ wallets = [], expenses = [], incomes = [], selectedEntityIds = null, resolveEntityId = item => item?.accountId || UNASSIGNED_ENTITY_ID, resolveIdentity = () => ({}), movementType = 'expense' } = {}) {
     const entitiesEl = document.getElementById('expense-entity-list');
     const totalEl = document.getElementById('expenses-selected-total');
     const metaEl = document.getElementById('expenses-selected-meta');
@@ -144,6 +177,8 @@ export function renderExpenseAnalysis({ wallets = [], expenses = [], incomes = [
     const visibleOptions = selected === null ? options : options.filter(option => selected.has(option.id));
     const groups = buildDailyMovementGroups(sourceItems, selectedEntityIds, resolveEntityId, movementType);
     const items = groups.flatMap(group => group.items);
+    entitiesEl.classList.toggle('is-income', movementType === 'income');
+    listEl.classList.toggle('is-income', movementType === 'income');
     totalEl.textContent = `S/ ${fmt(sumAmounts(items))}`;
     selectionEl.textContent = entitySelectionText(options, selectedEntityIds);
     metaEl.textContent = `${visibleOptions.length} entidad${visibleOptions.length !== 1 ? 'es' : ''} · ${items.length} ${movementLabel}${items.length !== 1 ? 's' : ''} confirmado${items.length !== 1 ? 's' : ''}`;
@@ -180,7 +215,7 @@ export function renderExpenseAnalysis({ wallets = [], expenses = [], incomes = [
         count.textContent = `${group.items.length} ${movementLabel}${group.items.length !== 1 ? 's' : ''} confirmado${group.items.length !== 1 ? 's' : ''}`;
         summary.append(header, count);
         const movements = document.createElement('div'); movements.className = 'expense-detail-movements';
-        group.items.forEach(item => appendMovement(movements, item, names.get(item.dailyEntityId) || 'Sin entidad asignada', movementType));
+        group.items.forEach(item => appendMovement(movements, item, names.get(item.dailyEntityId) || 'Sin entidad asignada', movementType, resolveIdentity(item)));
         day.append(summary, movements);
         listEl.appendChild(day);
     });

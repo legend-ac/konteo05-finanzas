@@ -353,6 +353,28 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [],
 // ─────────────────────────────────────────────
 // DECODE: Decodifica el body de un email
 // ─────────────────────────────────────────────
+function decodeBase64UrlUtf8(value) {
+    const input = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+    const padded = input + '='.repeat((4 - input.length % 4) % 4);
+    const binary = atob(padded);
+    // atob returns byte-like Latin-1. Financial receipts regularly contain
+    // accents and names, so decode those bytes as UTF-8 before parsing them.
+    const Decoder = globalThis.TextDecoder;
+    if (!Decoder) return binary;
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    return new Decoder('utf-8', { fatal: false }).decode(bytes);
+}
+
+function htmlReceiptText(html) {
+    const tmp = document.createElement('div');
+    // Tables in voucher emails often keep labels and amounts in separate cells.
+    // Preserve their boundaries instead of concatenating e.g. "MontoS/50.00".
+    tmp.innerHTML = String(html || '')
+        .replace(/<br\s*\/?\s*>/gi, '\n')
+        .replace(/<\/(?:p|div|li|tr|td|th|h[1-6])\s*>/gi, '\n');
+    return tmp.innerText || tmp.textContent || '';
+}
+
 export function decodeEmailBody(message) {
     const payload = message.payload;
     if (!payload) return '';
@@ -360,14 +382,10 @@ export function decodeEmailBody(message) {
     const extractText = (part) => {
         if (!part) return '';
         if (part.mimeType === 'text/plain' && part.body?.data) {
-            return atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+            return decodeBase64UrlUtf8(part.body.data);
         }
         if (part.mimeType === 'text/html' && part.body?.data) {
-            const html = atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-            // Extrae texto plano del HTML
-            const tmp = document.createElement('div');
-            tmp.innerHTML = html;
-            return tmp.innerText || tmp.textContent || '';
+            return htmlReceiptText(decodeBase64UrlUtf8(part.body.data));
         }
         if (part.parts) {
             // Bug 5: en multipart/alternative anidado, priorizar text/plain para evitar que
@@ -383,11 +401,9 @@ export function decodeEmailBody(message) {
     };
 
     if (payload.body?.data) {
-        const raw = atob(payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+        const raw = decodeBase64UrlUtf8(payload.body.data);
         if (payload.mimeType === 'text/html') {
-            const tmp = document.createElement('div');
-            tmp.innerHTML = raw;
-            return tmp.innerText || tmp.textContent || '';
+            return htmlReceiptText(raw);
         }
         return raw;
     }

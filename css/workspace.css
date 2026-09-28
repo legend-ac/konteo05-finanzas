@@ -445,7 +445,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 .expenses-section-heading .plan-eyebrow { margin: 0; }
 .expenses-select-all { min-height: 38px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 8px; color: var(--text-2); background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; }
 .expenses-select-all:disabled { opacity: .55; cursor: default; }
-.expense-entity-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-top: 20px; }
+.expense-entity-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; margin-top: 20px; }
 .expense-entity-card { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 11px; color: var(--text); background: var(--bg); transition: border-color .18s ease, background .18s ease, transform .18s ease; }
 .expense-entity-card:hover { border-color: var(--line-2); transform: translateY(-1px); }
 .expense-entity-card.is-selected { border-color: color-mix(in srgb, var(--gold) 70%, var(--line)); background: color-mix(in srgb, var(--gold) 7%, var(--bg)); }
@@ -453,7 +453,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 .expense-entity-focus:hover { background: color-mix(in srgb, var(--gold) 4%, transparent); }
 .expense-entity-marker { width: 8px; height: 32px; border-radius: 99px; background: var(--entity-color, var(--expense)); }
 .expense-entity-copy { min-width: 0; }
-.expense-entity-copy strong, .expense-entity-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expense-entity-copy strong, .expense-entity-copy small { display: block; overflow-wrap: anywhere; }
 .expense-entity-copy strong { font-size: 13px; }
 .expense-entity-copy small { margin-top: 3px; color: var(--text-3); font-size: 11px; }
 .expense-entity-amount { color: var(--expense); font-family: 'IBM Plex Mono', monospace; font-size: 12px; white-space: nowrap; }
@@ -481,6 +481,22 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 .expense-detail-movement strong { font-size: 13px; }
 .expense-detail-movement small { margin-top: 3px; color: var(--text-3); font-size: 11px; line-height: 1.4; }
 .expenses-empty-copy { grid-column: 1 / -1; margin: 0; padding: 18px 0 4px; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.expenses-identity-note { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--text-2); font-size: 12px; line-height: 1.6; max-width: 85ch; }
+.expense-identity-warning { color: var(--expense) !important; max-width: 70ch; }
+.expense-identify { margin-top: 10px; }
+.expense-review-account { display: inline-block; margin-top: 8px; padding: 8px 0; border: 0; background: transparent; color: var(--text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.wallet-link-review { padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 13px; }
+.wallet-link-review > summary { cursor: pointer; color: var(--expense); }
+.wallet-link-review p { color: var(--text-2); line-height: 1.5; }
+.wallet-link-review button { display: block; text-align: left; }
+.expense-identify > summary { padding: 7px 0; color: var(--text-2); font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.expense-identify-form { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; padding: 12px; margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; }
+.expense-identify-form label { display: grid; gap: 6px; flex: 1 1 180px; color: var(--text-2); font-size: 12px; }
+.expense-identify-form select, .expense-identify-form button { min-height: 42px; max-width: 100%; padding: 8px 12px; background: var(--bg); color: var(--text); border: 1px solid var(--line-2); border-radius: 6px; }
+.expense-identify-form button { cursor: pointer; }
+.expense-identify-form small { flex-basis: 100%; }
+.expense-entity-list.is-income .expense-entity-amount, .expenses-detail-list.is-income .expense-detail-day-header strong { color: var(--income); }
+.expense-entity-focus:focus-visible, .expense-detail-day-summary:focus-visible, .expense-identify summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
 @media (max-width: 767px) {
     .expenses-shell { width: min(100% - 28px, 620px); padding: 22px 0 84px; }
     .expenses-page-heading, .expenses-section-heading, .expenses-summary-card { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -496,12 +512,18 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
    below it and use the same navigation geometry as the rest of the app. */
 @media (min-width: 768px) {
     .expenses-shell {
-        width: calc(100% - 256px);
+        width: calc(100% - 232px);
         max-width: 1600px;
-        margin-left: 256px;
+        margin-left: 232px;
         margin-right: 0;
         padding: 112px clamp(28px, 4vw, 64px) 82px;
     }
+}
+@media (min-width: 768px) and (max-width: 1080px) {
+    .expenses-shell { width: calc(100% - 192px); margin-left: 192px; padding-inline: 24px; }
+    .expenses-page-heading { flex-direction: column; gap: 18px; }
+    .expenses-summary-card { grid-template-columns: 1fr; gap: 14px; }
+    .expenses-summary-card p { padding-left: 0; border-left: 0; }
 }
 .mascot-scene, .companion-help summary > .mascot-scene {
     position: relative; display: grid; place-items: center; isolation: isolate;
