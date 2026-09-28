@@ -645,7 +645,7 @@ const PARSER_MAP = [
     // Bancos tradicionales
     { pattern: /viabcp\.com|bcp\.com\.pe/i,     fn: parseBCP },
     { pattern: /interbank\.com\.pe|ibk@/i,      fn: parseInterbank },
-    { pattern: /bbva\.com\.pe|bbva\.pe|bbvacontinental|procesos@bbva|notificaciones-gateway[^@]*@[^@]*bbva/i, fn: parseBBVA },
+    { pattern: /bbva\.com\.pe|bbva\.pe|bbvacontinental|procesos@bbva|notifications?-gateway(?:[^@\s]*@|[^\s]*)[^\s]*bbva/i, fn: parseBBVA },
     { pattern: /scotiabank\.com\.pe/i,          fn: parseScotiabank },
     { pattern: /banbif\.com\.pe/i,              fn: parseBanBif },
     { pattern: /pichincha\.com\.pe/i,           fn: parsePichincha },

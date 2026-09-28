@@ -195,6 +195,7 @@ const SENDERS = [
     'from:procesos@bbva.com.pe',
     'from:noreply@bbva.pe',
     'from:notificaciones-gateway@bbva.com.pe',
+    'from:notifications-gateway-mail-us.bbva.com.pe',
     // ── Scotiabank ──
     'from:notificaciones@scotiabank.com.pe',
     'from:alertas@scotiabank.com.pe',
@@ -290,8 +291,13 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [],
         // BBVA PLIN receipts can be grouped differently by Gmail; query this
         // sender directly so they are not lost inside a large OR search.
         labelledQuery('plin-bbva', `from:procesos@bbva.com.pe newer_than:${safeDays}d`),
+        labelledQuery('plin-bbva-gateway', `from:notifications-gateway-mail-us.bbva.com.pe newer_than:${safeDays}d`),
         labelledQuery('plin-bbva-qr', `(from:procesos@bbva.com.pe OR from:notificaciones@bbva.pe OR from:alertas@bbva.pe) (plin OR "pago con QR" OR "constancia de pago a comercios") newer_than:${safeDays}d`),
         labelledQuery('plin-bbva-subject', `(subject:"Constancia de pago a comercios con QR" OR subject:"Constancia de operacion transferencia PLIN") newer_than:${safeDays}d`),
+        // Fallback for BBVA's mail gateway: Gmail sometimes indexes the
+        // delivered-by address rather than the visible From header. These
+        // subjects are then filtered again by the parser before any import.
+        labelledQuery('plin-bbva-receipt-text', `("Plineaste" OR "Constancia de operación transferencia PLIN") newer_than:${safeDays}d`),
         labelledQuery('sip', `from:no-reply@operaciones.agora.pe newer_than:${safeDays}d`),
         labelledQuery('sip-dominio', `from:operaciones.agora.pe newer_than:${safeDays}d`),
         labelledQuery('plin-interbank', `from:servicioalcliente@interbank.com.pe newer_than:${safeDays}d`),

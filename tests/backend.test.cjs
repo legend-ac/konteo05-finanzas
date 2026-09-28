@@ -285,6 +285,31 @@ test('BBVA QR merchant receipts are kept as BBVA PLIN even without the word Plin
     assert.equal(results[0].amount, 42.5);
     assert.equal(results[0].date, '2026-09-27');
 });
+test('BBVA PLIN receipt delivered by the BBVA gateway remains importable', async () => {
+    const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
+    const results = parseAllEmails({
+        rawMessages: [{ id: 'bbva-gateway-plin-1' }],
+        decodeBody: () => [
+            'Plineaste S/ 50.00 a Andy J Cordova E',
+            'Detalles de tu plineo',
+            'Destino: Yape',
+            'ITF: S/ 0.00',
+            'Fecha y hora: 25 de setiembre, 2026 23:12',
+            'Número de operación: BA53EF0A1DF1'
+        ].join('\n'),
+        // Some Gmail deliveries expose the gateway address instead of the
+        // visible BBVA From header. Both must route to the BBVA parser.
+        getSender: () => 'notifications-gateway-mail-us.bbva.com.pe',
+        getDate: () => new Date('2026-09-26T04:12:00Z'),
+        getSubject: () => 'Constancia de operación transferencia PLIN'
+    });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].type, 'expense');
+    assert.equal(results[0].source, 'plin-bbva');
+    assert.equal(results[0].amount, 50);
+    assert.equal(results[0].description, 'Plin a Andy J Cordova E');
+    assert.equal(results[0].date, '2026-09-25');
+});
 test('Interbank PLIN receipts remain separate from BBVA PLIN receipts', async () => {
     const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
     const results = parseAllEmails({
