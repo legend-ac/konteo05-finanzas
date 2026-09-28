@@ -2067,6 +2067,38 @@ document.addEventListener('keydown', event => {
 // ──────────────────────────────────────────────
 // DELETE ALL USER DATA
 // ──────────────────────────────────────────────
+function setDeleteAccountStatus(message = '', status = '') {
+    const element = document.getElementById('delete-confirm-status');
+    if (!element) return;
+    element.textContent = message;
+    element.hidden = !message;
+    if (status) element.dataset.state = status;
+    else delete element.dataset.state;
+}
+
+function accountDeletionErrorMessage(error) {
+    const code = error?.code || '';
+    if (code === 'auth/popup-closed-by-user' || code === 'konteo/deletion-cancelled') {
+        return 'No se eliminó nada. La verificación de seguridad se canceló antes de terminar.';
+    }
+    if (code === 'auth/popup-blocked') {
+        return 'No se eliminó nada. Permite las ventanas emergentes para Konteo y vuelve a verificar tu cuenta con Google.';
+    }
+    if (code === 'auth/cancelled-popup-request') {
+        return 'La verificación anterior se interrumpió. Espera unos segundos y vuelve a intentarlo.';
+    }
+    if (code === 'auth/user-mismatch') {
+        return 'No se eliminó nada. Verifica con la misma cuenta de Google que usas en Konteo.';
+    }
+    if (code === 'auth/network-request-failed') {
+        return 'No se eliminó nada. Revisa tu conexión y vuelve a intentarlo.';
+    }
+    if (code === 'auth/requires-recent-login') {
+        return 'Para proteger tu cuenta, vuelve a verificar tu identidad antes de eliminarla.';
+    }
+    return 'No se completó la eliminación. La cuenta de acceso sigue activa; inténtalo de nuevo o contacta a soporte si persiste.';
+}
+
 document.getElementById('btn-open-delete-data')?.addEventListener('click', () => {
     closeModal('modal-profile');
     const lbl = document.getElementById('delete-user-email-label');
@@ -2075,6 +2107,7 @@ document.getElementById('btn-open-delete-data')?.addEventListener('click', () =>
     if (inp) inp.value = '';
     const btn = document.getElementById('btn-confirm-delete-all');
     if (btn) btn.disabled = true;
+    setDeleteAccountStatus();
     openModal('modal-confirm-delete');
 });
 document.getElementById('btn-cancel-delete')?.addEventListener('click', () => {
@@ -2105,7 +2138,8 @@ document.getElementById('delete-confirm-input')?.addEventListener('input', e => 
     if (btn) btn.disabled = val !== 'BORRAR';
 });
 async function reauthenticateForAccountDeletion(user) {
-    const providerId = user.providerData?.[0]?.providerId || '';
+    const providers = new Set((user.providerData || []).map(provider => provider.providerId));
+    const providerId = providers.has('google.com') ? 'google.com' : (providers.has('password') ? 'password' : '');
     if (providerId === 'password') {
         const password = window.prompt('Por seguridad, escribe tu contraseña para eliminar la cuenta.');
         if (!password) throw new Error('Se canceló la confirmación de seguridad.');
@@ -2115,6 +2149,7 @@ async function reauthenticateForAccountDeletion(user) {
     }
     if (providerId === 'google.com') {
         const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
         await user.reauthenticateWithPopup(provider);
         return;
     }
@@ -2122,24 +2157,48 @@ async function reauthenticateForAccountDeletion(user) {
 }
 document.getElementById('btn-confirm-delete-all')?.addEventListener('click', async () => {
     if (!state.currentUser) return;
+    const user = state.currentUser;
     const submitBtn = document.getElementById('btn-confirm-delete-all');
+    const cancelBtn = document.getElementById('btn-cancel-delete');
+    const confirmInput = document.getElementById('delete-confirm-input');
+    const modal = document.getElementById('modal-confirm-delete');
+    if (!submitBtn || modal?.dataset.saving === 'true') return;
     const origText = submitBtn.textContent;
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Eliminando...';
+    submitBtn.textContent = 'Verificando...';
+    if (confirmInput) confirmInput.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (modal) {
+        modal.dataset.saving = 'true';
+        modal.setAttribute('aria-busy', 'true');
+    }
     try {
-        await reauthenticateForAccountDeletion(state.currentUser);
+        setDeleteAccountStatus('Confirma tu identidad con Google. No se eliminará nada hasta terminar esta verificación.', 'progress');
+        await reauthenticateForAccountDeletion(user);
+        submitBtn.textContent = 'Eliminando...';
+        setDeleteAccountStatus('Identidad confirmada. Eliminando tu cuenta y tus datos…', 'progress');
         revokeGmailToken();
-        await dbService.deleteAllUserData(state.currentUser.uid);
+        await dbService.deleteAllUserData(user.uid);
         // Limpiar el caché local de IDs de Gmail para que el usuario pueda reimportar sin ver "sin movimientos nuevos"
         clearGmailImportCache();
+        if (modal) {
+            modal.dataset.saving = 'false';
+            modal.removeAttribute('aria-busy');
+        }
         closeModal('modal-confirm-delete');
-        await state.currentUser.delete();
+        await user.delete();
         showToast('Cuenta y datos eliminados definitivamente.', 'success');
-        await auth.signOut();
+        await auth.signOut().catch(() => {});
     } catch (err) {
-        showToast('Error al eliminar la cuenta: ' + err.message, 'error');
+        setDeleteAccountStatus(accountDeletionErrorMessage(err), 'error');
     } finally {
-        submitBtn.disabled = false;
+        if (modal) {
+            modal.dataset.saving = 'false';
+            modal.removeAttribute('aria-busy');
+        }
+        if (confirmInput) confirmInput.disabled = false;
+        if (cancelBtn) cancelBtn.disabled = false;
+        submitBtn.disabled = (confirmInput?.value || '').trim().toUpperCase() !== 'BORRAR';
         submitBtn.textContent = origText;
     }
 });

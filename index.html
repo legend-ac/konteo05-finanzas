@@ -864,13 +864,14 @@
         <p class="danger-modal-warning">
             Se eliminarán permanentemente tus <strong>movimientos, cuentas, presupuestos, preferencias, historial de importaciones y registro de auditoría</strong>. Se revocará el token local de Gmail y se intentará eliminar el acceso de tu cuenta (<strong id="delete-user-email-label"></strong>).
         </p>
+        <p id="delete-confirm-status" class="danger-confirm-status" role="status" aria-live="polite" hidden></p>
         <div class="danger-confirm-field">
             <label for="delete-confirm-input">Escribe <strong>BORRAR</strong> para confirmar:</label>
             <input type="text" id="delete-confirm-input" placeholder="BORRAR" autocomplete="off">
         </div>
         <div class="modal-buttons">
             <button type="button" class="cancel" id="btn-cancel-delete">Cancelar</button>
-            <button type="button" id="btn-confirm-delete-all" class="btn-danger-submit" disabled>Eliminar cuenta definitivamente</button>
+            <button type="button" id="btn-confirm-delete-all" class="btn-danger-submit" disabled>Verificar y eliminar</button>
         </div>
     </div>
 </div>

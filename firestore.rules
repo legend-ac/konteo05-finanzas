@@ -168,9 +168,9 @@ service cloud.firestore {
         (!('includeInTotal' in request.resource.data) || request.resource.data.includeInTotal is bool);
     }
 
-    // An audit event can be created alongside a movement but never changed or
-    // removed from the client. The original movement may be edited/deleted;
-    // this append-only record preserves who did it and when.
+    // Audit events cannot be changed. Their owner can erase them as part of
+    // exercising account deletion; the application exposes no individual
+    // audit-record deletion control.
     match /users/{userId}/auditLogs/{logId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) &&
@@ -179,7 +179,8 @@ service cloud.firestore {
         request.resource.data.movementId is string &&
         request.resource.data.operationType is string &&
         request.resource.data.recordedAt is timestamp;
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isOwner(userId);
     }
   }
 }
