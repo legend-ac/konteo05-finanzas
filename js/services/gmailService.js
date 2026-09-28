@@ -298,6 +298,7 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [],
         // delivered-by address rather than the visible From header. These
         // subjects are then filtered again by the parser before any import.
         labelledQuery('plin-bbva-receipt-text', `("Plineaste" OR "Constancia de operación transferencia PLIN") newer_than:${safeDays}d`),
+        labelledQuery('plin-bbva-detail-text', `in:anywhere "Detalles de tu plineo" newer_than:${safeDays}d`),
         labelledQuery('sip', `from:no-reply@operaciones.agora.pe newer_than:${safeDays}d`),
         labelledQuery('sip-dominio', `from:operaciones.agora.pe newer_than:${safeDays}d`),
         labelledQuery('plin-interbank', `from:servicioalcliente@interbank.com.pe newer_than:${safeDays}d`),

@@ -645,7 +645,7 @@ const PARSER_MAP = [
     // Bancos tradicionales
     { pattern: /viabcp\.com|bcp\.com\.pe/i,     fn: parseBCP },
     { pattern: /interbank\.com\.pe|ibk@/i,      fn: parseInterbank },
-    { pattern: /bbva\.com\.pe|bbva\.pe|bbvacontinental|procesos@bbva|notifications?-gateway(?:[^@\s]*@|[^\s]*)[^\s]*bbva/i, fn: parseBBVA },
+    { pattern: /bbva\.com\.pe|bbva\.pe|bbvacontinental|procesos@bbva|notifications?-gateway[^\s]*bbva/i, fn: parseBBVA },
     { pattern: /scotiabank\.com\.pe/i,          fn: parseScotiabank },
     { pattern: /banbif\.com\.pe/i,              fn: parseBanBif },
     { pattern: /pichincha\.com\.pe/i,           fn: parsePichincha },
@@ -696,6 +696,19 @@ export function parseEmail({ message, bodyText, sender, date, subject, customEnt
         }
     }
     const entry = PARSER_MAP.find(p => p.pattern.test(sender));
+    // BBVA can expose a delivery gateway instead of its normal From address.
+    // The receipt itself is still a strong, exact signal, so do not discard a
+    // valid PLIN voucher merely because that gateway changes its subdomain.
+    const bbvaPlinReceipt = /(?:plineaste\s+S\/|detalles\s+de\s+tu\s+plineo|constancia\s+de\s+operaci[oó]n\s+transferencia\s+plin)/i.test(`${subject}\n${bodyText}`);
+    const looksLikeBbvaGateway = /bbva|procesos|notifications?-gateway/i.test(sender);
+    if (!entry && looksLikeBbvaGateway && bbvaPlinReceipt) {
+        try {
+            return parseBBVA({ body: bodyText, subject, date, sender, gmailId: message.id });
+        } catch (e) {
+            console.warn('[gmailParser] Error en comprobante BBVA PLIN:', message.id, e);
+            return null;
+        }
+    }
     if (!entry) return null;
     try {
         return entry.fn({ body: bodyText, subject, date, sender, gmailId: message.id });
