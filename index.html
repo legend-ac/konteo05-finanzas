@@ -323,7 +323,16 @@
                             <div id="balance" class="balance-number balance-positive" aria-live="polite">S/ 0.00</div>
                             <p class="balance-caption">Balance del per&iacute;odo seleccionado</p>
                         </div>
-
+                        <div class="balance-hero-actions" aria-label="Registrar movimiento">
+                            <button id="btn-income-d" class="btn-balance-action btn-balance-income btn-open-income" type="button">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>Registrar ingreso</span>
+                            </button>
+                            <button id="btn-expense-d" class="btn-balance-action btn-balance-expense btn-open-expense" type="button">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>Registrar gasto</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="overview-stat income-stat">
                         <span>Ingresos</span>
@@ -333,16 +342,6 @@
                         <span>Gastos</span>
                         <strong id="total-expenses">S/ 0.00</strong>
                     </div>
-                </div>
-                <div class="balance-hero-actions">
-                    <button id="btn-income-d" class="btn-balance-action btn-balance-income btn-open-income" type="button">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        <span>Registrar ingreso</span>
-                    </button>
-                    <button id="btn-expense-d" class="btn-balance-action btn-balance-expense btn-open-expense" type="button">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        <span>Registrar gasto</span>
-                    </button>
                 </div>
 
                 <!-- Metrics -->
