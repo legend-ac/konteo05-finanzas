@@ -8,7 +8,10 @@ export const UNASSIGNED_ENTITY_ID = '__unassigned__';
 function itemTime(item) {
     // A document date stored at midnight is a business-day marker, not an
     // actual operation time. Do not present it as the false precision "12 AM".
-    const value = item?.occurredAt?.toDate?.() || item?.createdAt?.toDate?.();
+    // `createdAt` identifies when this app saved the document. It is not the
+    // operation time and can be a midnight placeholder, so never show it as
+    // if it came from the bank or Gmail notification.
+    const value = item?.occurredAt?.toDate?.();
     if (!(value instanceof Date) || Number.isNaN(value.getTime())) return '';
     return new Intl.DateTimeFormat('es-PE', {
         timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', minute: '2-digit', hour12: true

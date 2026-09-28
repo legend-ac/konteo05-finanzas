@@ -480,8 +480,16 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
     .expenses-select-all { width: 100%; }
 }
 
-@media (min-width: 981px) {
-    .expenses-shell { width: calc(100% - 230px); max-width: 1430px; margin-left: 230px; margin-right: 0; padding: 38px 32px 72px; }
+/* The application header is fixed on desktop.  Keep every actionable filter
+   below it and use the same navigation geometry as the rest of the app. */
+@media (min-width: 768px) {
+    .expenses-shell {
+        width: calc(100% - 256px);
+        max-width: 1600px;
+        margin-left: 256px;
+        margin-right: 0;
+        padding: 112px clamp(28px, 4vw, 64px) 82px;
+    }
 }
 .mascot-scene, .companion-help summary > .mascot-scene {
     position: relative; display: grid; place-items: center; isolation: isolate;
