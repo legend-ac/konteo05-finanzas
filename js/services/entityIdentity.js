@@ -49,6 +49,21 @@ function senderInstitution(sender) {
     return Object.entries(domains).find(([host]) => domain === host || domain.endsWith(`.${host}`))?.[1] || '';
 }
 
+function receiptInstitution(rawText) {
+    // Legacy imports did not always retain the From header. Use only issuer
+    // signatures from the voucher itself; recipient and destination fields
+    // must never decide where the money came from.
+    const text = normalize(rawText)
+        .replace(/(?:destino|destinatario|beneficiario|cuenta\s+(?:cargo|destino))\s*[:\-][^\n\r]*/g, ' ');
+    if (/(?:el\s+equipo\s+de\s+bbva|\bbbva\.pe\b|procesos@bbva\.com\.pe|oficinas\s+bbva|©\s*\d{4}\s*bbva)/i.test(text)) return 'bbva';
+    if (/(?:interbank\s+servicio\s+al\s+cliente|netinterbank\.com\.pe|@interbank\.com\.pe|banca\s+(?:movil|móvil)\s+interbank)/i.test(text)) return 'interbank';
+    if (/(?:viabcp\.com|banco\s+de\s+credito\s+del\s+peru)/i.test(text)) return 'bcp';
+    if (/mibanco\.com\.pe/i.test(text)) return 'mibanco';
+    if (/scotiabank\.com\.pe/i.test(text)) return 'scotiabank';
+    if (/banbif\.com\.pe/i.test(text)) return 'banbif';
+    return '';
+}
+
 export function walletInstitution(wallet = {}) {
     return institutionKey(wallet.institution) || institutionKey(wallet.name) || institutionKey(wallet.sourceKey);
 }
@@ -58,12 +73,13 @@ export function sourceIdentity(tx = {}, entities = []) {
     const configured = entities.find(entity => entitySourceKey(entity) === source);
     const senderBank = senderInstitution(tx.sourceSender || '');
     const sourceBank = institutionKey(source);
-    const conflict = !!(senderBank && sourceBank && senderBank !== sourceBank);
+    const receiptBank = receiptInstitution(tx.sourceRawText || '');
+    const conflict = !!((senderBank && sourceBank && senderBank !== sourceBank) || (receiptBank && sourceBank && receiptBank !== sourceBank));
     const channel = /^plin(?:-|$)/.test(source) || normalize(configured?.name) === 'plin' ? 'Plin' : source === 'yape' ? 'Yape' : ['Plin', 'QR'].includes(tx.paymentChannel) ? tx.paymentChannel : '';
     // An explicit, audited correction is allowed only when the original bank
     // is unknown. Sender provenance takes precedence over old source aliases.
     const corrected = institutionKey(tx.sourceInstitutionOverride);
-    const bank = senderBank || sourceBank || senderInstitution(configured?.sender) || corrected;
+    const bank = senderBank || sourceBank || receiptBank || senderInstitution(configured?.sender) || corrected;
     const unresolved = !bank;
     const name = bank ? INSTITUTIONS[bank][0] : channel === 'Plin' ? 'Banco por identificar' : configured?.name || tx.sourceLabel || 'Origen por identificar';
     return {

@@ -94,6 +94,8 @@ test('institution identity separates banks from Plin and merges bank account ali
     assert.equal(movementIdentity({ source: 'gmail:plin', accountId: 'ib', accountAssignmentExplicit: true }, wallets).id, 'unresolved:plin');
     const incoming = movementIdentity({ source: 'gmail:plin', sourceSender: 'BBVA <procesos@bbva.com.pe>', note: 'Destino: Yape Interbank' });
     assert.equal(incoming.id, 'institution:bbva');
+    assert.equal(movementIdentity({ source: 'gmail:plin', sourceRawText: 'Detalles de tu plineo\nEl equipo de BBVA\nwww.bbva.pe' }).id, 'institution:bbva');
+    assert.equal(movementIdentity({ source: 'gmail:plin', sourceRawText: 'Constancia de Pago Plin\nInterbank Servicio al Cliente\nnetinterbank.com.pe\nDestino: BBVA' }).id, 'institution:interbank');
     assert.equal(movementIdentity({ source: 'gmail:plin', sourceRawText: 'Destino Interbank · Recibe con BBVA' }).id, 'unresolved:plin');
     assert.equal(movementIdentity({ source: 'gmail:plin', sourceSender: 'x@bbva.com.pe.evil.test' }).id, 'unresolved:plin');
 });
