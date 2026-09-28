@@ -288,6 +288,7 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [],
         // BBVA PLIN receipts can be grouped differently by Gmail; query this
         // sender directly so they are not lost inside a large OR search.
         labelledQuery('plin-bbva', `from:procesos@bbva.com.pe newer_than:${safeDays}d`),
+        labelledQuery('plin-bbva-qr', `(from:procesos@bbva.com.pe OR from:notificaciones@bbva.pe OR from:alertas@bbva.pe) (plin OR "pago con QR" OR "constancia de pago a comercios") newer_than:${safeDays}d`),
         labelledQuery('sip', `from:no-reply@operaciones.agora.pe newer_than:${safeDays}d`),
         labelledQuery('sip-dominio', `from:operaciones.agora.pe newer_than:${safeDays}d`),
         labelledQuery('plin-interbank', `from:servicioalcliente@interbank.com.pe newer_than:${safeDays}d`),

@@ -318,7 +318,7 @@ function parseBBVA({ body, subject, date, gmailId }) {
     // BBVA sends PLIN / QR receipts from procesos@bbva.com.pe. They are
     // PLIN operations, not generic BBVA card consumption. Keep their source
     // separate from Interbank PLIN so accounts and reports stay understandable.
-    const plinQrReceipt = /constancia\s+de\s+operaci[oó]n\s+transferencia\s+plin|plineaste\s+S\/|\bplin\b.{0,80}(?:pago\s+con\s+qr|c[oó]digo\s+qr)/i.test(text);
+    const plinQrReceipt = /constancia\s+de\s+operaci[oó]n\s+(?:transferencia\s+)?plin|constancia\s+de\s+pago\s+(?:a\s+)?comercio(?:s)?\s+(?:con\s+)?qr|\bplin(?:easte|eado|ear)?\b|\bplin\b.{0,100}(?:pago\s+con\s+qr|c[oó]digo\s+qr|transferencia|env[ií]o|recib)/i.test(text);
     if (plinQrReceipt) {
         const received = text.match(/(?:recibiste|te\s+enviaron)\s+(?:un\s+)?(?:plin\s+de\s+)?S\/\.?\s*([\d,.]+)(?:\s+de\s+([^\n\r]+))?/i);
         if (received) {
@@ -330,10 +330,10 @@ function parseBBVA({ body, subject, date, gmailId }) {
                 return tx;
             }
         }
-        const payment = text.match(/plineaste\s+S\/\.?\s*([\d,.]+)\s+a\s+(.+?)(?=\s+(?:detalles\s+de\s+tu\s+plineo|tipo\s+de\s+operaci[oó]n|destino|itf|fecha\s+y\s+hora)\b|[\n\r]|$)/i);
+        const payment = text.match(/(?:plineaste|enviaste|transferiste|pagaste|realizaste\s+(?:un\s+)?pago)\s+(?:por\s+)?(?:plin\s+)?S\/\.?\s*([\d,.]+)\s+(?:a|en)\s+(.+?)(?=\s+(?:detalles\s+de\s+tu\s+plineo|tipo\s+de\s+operaci[oó]n|destino|itf|fecha\s+y\s+hora|n[uú]mero\s+de\s+operaci[oó]n)\b|[\n\r]|$)/i);
         const amount = payment ? parseMoney(payment[1]) : extractLabeledAmount(text, ['monto', 'importe', 'monto\s+y\s+moneda']) || extractAmount(text);
         if (amount) {
-            const recipient = displayName(payment?.[2] || extractField(text, ['destinatario', 'beneficiario']) || 'contacto');
+            const recipient = displayName(payment?.[2] || extractField(text, ['destinatario', 'beneficiario', 'comercio', 'establecimiento', 'nombre\s+del\s+comercio']) || 'contacto');
             const tx = genericExpense(amount, `Plin a ${recipient}`, 'plin-bbva', date, gmailId, text);
             tx.description = `Plin a ${recipient}`;
             tx.receiptDescription = tx.description;

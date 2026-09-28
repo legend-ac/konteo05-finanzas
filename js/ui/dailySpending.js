@@ -83,11 +83,13 @@ export function expenseEntityOptions(expenses = [], wallets = [], resolveEntityI
 }
 
 function appendEntityButton(container, option, selected) {
+    const card = document.createElement('article');
+    card.className = `expense-entity-card${selected ? ' is-selected' : ''}`;
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `expense-entity-card${selected ? ' is-selected' : ''}`;
-    button.dataset.expenseEntityId = option.id;
-    button.setAttribute('aria-pressed', String(selected));
+    button.className = 'expense-entity-focus';
+    button.dataset.expenseEntityFocus = option.id;
+    button.setAttribute('aria-label', `Ver ${option.name} por día`);
     const marker = document.createElement('span');
     marker.className = 'expense-entity-marker';
     if (option.color) marker.style.setProperty('--entity-color', option.color);
@@ -100,7 +102,18 @@ function appendEntityButton(container, option, selected) {
     amount.className = 'expense-entity-amount';
     amount.textContent = `S/ ${fmt(option.total)}`;
     button.append(marker, copy, amount);
-    container.appendChild(button);
+    const compare = document.createElement('label');
+    compare.className = 'expense-entity-compare';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.dataset.expenseEntityToggle = option.id;
+    input.checked = selected;
+    input.setAttribute('aria-label', `Incluir ${option.name} en la comparación`);
+    const label = document.createElement('span');
+    label.textContent = 'Comparar';
+    compare.append(input, label);
+    card.append(button, compare);
+    container.appendChild(card);
 }
 
 function appendMovement(container, item, entityName, movementType) {
@@ -136,7 +149,7 @@ export function renderExpenseAnalysis({ wallets = [], expenses = [], incomes = [
     metaEl.textContent = `${visibleOptions.length} entidad${visibleOptions.length !== 1 ? 'es' : ''} · ${items.length} ${movementLabel}${items.length !== 1 ? 's' : ''} confirmado${items.length !== 1 ? 's' : ''}`;
     if (selectAllEl) {
         selectAllEl.disabled = !options.length;
-        selectAllEl.textContent = 'Seleccionar todas';
+        selectAllEl.textContent = 'Ver todas';
     }
 
     entitiesEl.textContent = '';
@@ -154,7 +167,10 @@ export function renderExpenseAnalysis({ wallets = [], expenses = [], incomes = [
     }
     const names = new Map(options.map(option => [option.id, option.name]));
     groups.forEach(group => {
-        const day = document.createElement('section'); day.className = 'expense-detail-day';
+        // Each day starts as a compact, exact total. The supporting movements
+        // are intentionally disclosed only when the user asks for that day.
+        const day = document.createElement('details'); day.className = 'expense-detail-day';
+        const summary = document.createElement('summary'); summary.className = 'expense-detail-day-summary';
         const header = document.createElement('div'); header.className = 'expense-detail-day-header';
         const date = document.createElement('h3');
         date.textContent = formatBusinessDate(group.date, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
@@ -162,8 +178,10 @@ export function renderExpenseAnalysis({ wallets = [], expenses = [], incomes = [
         header.append(date, amount);
         const count = document.createElement('small'); count.className = 'expense-detail-count';
         count.textContent = `${group.items.length} ${movementLabel}${group.items.length !== 1 ? 's' : ''} confirmado${group.items.length !== 1 ? 's' : ''}`;
-        day.append(header, count);
-        group.items.forEach(item => appendMovement(day, item, names.get(item.dailyEntityId) || 'Sin entidad asignada', movementType));
+        summary.append(header, count);
+        const movements = document.createElement('div'); movements.className = 'expense-detail-movements';
+        group.items.forEach(item => appendMovement(movements, item, names.get(item.dailyEntityId) || 'Sin entidad asignada', movementType));
+        day.append(summary, movements);
         listEl.appendChild(day);
     });
 }

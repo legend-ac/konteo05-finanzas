@@ -264,6 +264,27 @@ test('BBVA PLIN QR receipts from procesos are imported as outgoing PLIN payments
     assert.equal(results[0].date, '2026-09-26');
     assert.equal(results[0].receiptDateSource, 'receipt');
 });
+test('BBVA QR merchant receipts are kept as BBVA PLIN even without the word Plin in the subject', async () => {
+    const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
+    const results = parseAllEmails({
+        rawMessages: [{ id: 'bbva-qr-merchant-1' }],
+        decodeBody: () => [
+            'Constancia de pago a comercios con QR',
+            'Comercio: Bodega Central',
+            'Monto: S/ 42.50',
+            'Fecha y hora: 27/09/2026 19:21'
+        ].join('\n'),
+        getSender: () => 'BBVA <procesos@bbva.com.pe>',
+        getDate: () => new Date('2026-09-28T00:21:00Z'),
+        getSubject: () => 'Constancia de pago a comercios con QR'
+    });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].type, 'expense');
+    assert.equal(results[0].source, 'plin-bbva');
+    assert.equal(results[0].sourceLabel, 'Plin · BBVA');
+    assert.equal(results[0].amount, 42.5);
+    assert.equal(results[0].date, '2026-09-27');
+});
 test('Interbank PLIN receipts remain separate from BBVA PLIN receipts', async () => {
     const h = harness(), { parseAllEmails } = await h.use('js/services/gmailParser.js');
     const results = parseAllEmails({

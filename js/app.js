@@ -154,6 +154,16 @@ function dailyEntityIdFor(item) {
     const accountId = resolveWalletAccount(item, state.wallets, state.walletEntities);
     if (accountId) return accountId;
     const source = String(item?.source || '').replace(/^gmail:/, '').trim().toLowerCase();
+    // Older imports stored BBVA QR/PLIN receipts as generic "bbva". Their
+    // original receipt remains in Firestore, so classify them correctly in
+    // analytics without rewriting a financial record or changing an explicit
+    // wallet assignment.
+    if (source === 'bbva') {
+        const receipt = `${item?.sourceRawText || ''}\n${item?.note || ''}\n${item?.description || ''}`;
+        if (/\bplin(?:easte|eado|ear)?\b|constancia\s+de\s+pago\s+(?:a\s+)?comercio(?:s)?\s+(?:con\s+)?qr|pago\s+con\s+qr/i.test(receipt)) {
+            return 'source:plin-bbva';
+        }
+    }
     return source ? `source:${source}` : UNASSIGNED_ENTITY_ID;
 }
 
@@ -228,7 +238,7 @@ function syncExpenseMovementTypeUi() {
     document.querySelector('.expenses-summary-card')?.classList.toggle('is-income', isIncome);
     document.getElementById('expenses-summary-label').textContent = `${label} seleccionado`;
     document.getElementById('expenses-detail-title').textContent = `${isIncome ? 'Ingresos' : 'Gastos'} por fecha`;
-    document.getElementById('expenses-entities-copy').textContent = `Solo aparecen las entidades que tienen ${isIncome ? 'ingresos' : 'gastos'} en este período.`;
+    document.getElementById('expenses-entities-copy').textContent = `Toca una entidad para ver su total exacto por día. Usa Comparar para combinar varias con ${isIncome ? 'ingresos' : 'gastos'} en este período.`;
     document.getElementById('expenses-summary-rule').textContent = isIncome
         ? 'Transferencias, pendientes, anulados y operaciones entre tus propias cuentas no se incluyen.'
         : 'Transferencias, pendientes, anulados y operaciones entre tus propias cuentas no se incluyen.';
@@ -1824,12 +1834,22 @@ document.getElementById('category-filter')?.addEventListener('change', renderTra
 document.getElementById('status-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
 
 document.getElementById('expense-entity-list')?.addEventListener('click', event => {
-    const button = event.target.closest('[data-expense-entity-id]');
+    const button = event.target.closest('[data-expense-entity-focus]');
     if (!button) return;
-    const id = button.dataset.expenseEntityId;
-    const available = [...document.querySelectorAll('[data-expense-entity-id]')].map(item => item.dataset.expenseEntityId);
+    // The card itself is the quick, unambiguous path: focus exactly one
+    // institution and read its daily totals. The checkbox below is reserved
+    // for a deliberate comparison of multiple institutions.
+    state.expenseEntityIds = [button.dataset.expenseEntityFocus];
+    renderExpenseAnalysisView();
+    document.getElementById('expenses-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+document.getElementById('expense-entity-list')?.addEventListener('change', event => {
+    const input = event.target.closest('[data-expense-entity-toggle]');
+    if (!input) return;
+    const available = [...document.querySelectorAll('[data-expense-entity-toggle]')].map(item => item.dataset.expenseEntityToggle);
     const current = state.expenseEntityIds === null ? new Set(available) : new Set(state.expenseEntityIds);
-    current.has(id) ? current.delete(id) : current.add(id);
+    input.checked ? current.add(input.dataset.expenseEntityToggle) : current.delete(input.dataset.expenseEntityToggle);
     state.expenseEntityIds = current.size === available.length ? null : [...current];
     renderExpenseAnalysisView();
 });
