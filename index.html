@@ -282,6 +282,10 @@
                 <span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 7H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM4 9h16v8H4V9zM2 5h20a1 1 0 1 0 0-2H4a2 2 0 0 0-2 2v.01z"/></svg></span>
                 Cuentas
             </button>
+            <button class="app-nav-link" data-view="sources" type="button">
+                <span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M7 8h10M7 12h7M7 16h5"/></svg></span>
+                Fuentes Gmail
+            </button>
             <button class="app-nav-link" data-view="expenses" type="button">
                 <span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9m8 10V5m8 14v-7"/></svg></span>
                 Entidades
@@ -532,6 +536,22 @@
             </div>
         </section>
 
+        <section id="sources-view" class="app-view hidden" aria-labelledby="sources-title">
+            <div class="sources-shell">
+                <div class="sources-page-heading">
+                    <div>
+                        <p class="dashboard-eyebrow">Importacion Gmail</p>
+                        <h1 id="sources-title">Fuentes de correo</h1>
+                        <p>Configura las entidades que deseas reconocer, asigna su destino y pausa las que no quieras incluir. La importacion queda reservada para revisar operaciones.</p>
+                    </div>
+                    <button id="btn-sources-open-import" class="wallet-primary" type="button">Revisar operaciones</button>
+                </div>
+                <div id="gmail-sources-workspace" class="gmail-sources-workspace" aria-live="polite">
+                    <div class="sources-loading"><strong>Cargando configuracion de Gmail...</strong><span>Preparando tus fuentes de correo.</span></div>
+                </div>
+            </div>
+        </section>
+
         <section id="expenses-view" class="app-view hidden" aria-labelledby="expenses-title">
             <div class="expenses-shell">
                 <div class="expenses-page-heading">
@@ -585,6 +605,10 @@
             <button class="app-nav-link" data-view="wallets" type="button">
                 <span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 7H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM4 9h16v8H4V9zM2 5h20a1 1 0 1 0 0-2H4a2 2 0 0 0-2 2v.01z"/></svg></span>
                 <small>Cuentas</small>
+            </button>
+            <button class="app-nav-link" data-view="sources" type="button">
+                <span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M7 8h10M7 12h7M7 16h5"/></svg></span>
+                <small>Gmail</small>
             </button>
             <button class="app-nav-link" data-view="expenses" type="button">
                 <span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9m8 10V5m8 14v-7"/></svg></span>
@@ -807,22 +831,17 @@
             <input type="tel"    id="profile-emergency-contact" placeholder="Contacto de emergencia"    maxlength="20">
             <textarea            id="profile-bio"              placeholder="Sobre m&iacute; (opcional)"         maxlength="240"></textarea>
             <p class="account-meta">Completitud: <strong id="profile-completion">0%</strong></p>
-            <section class="profile-gmail-settings" aria-labelledby="profile-gmail-title">
-                <div>
-                    <span class="profile-section-kicker">Importaci&oacute;n Gmail</span>
-                    <h4 id="profile-gmail-title">Remitentes de Gmail</h4>
-                    <p>Agrega correos oficiales, define su billetera y activa solo los que deseas revisar.</p>
-                </div>
-                <button type="button" id="btn-gmail-entities" class="cancel">Configurar remitentes</button>
-            </section>
             <section class="profile-danger-zone" aria-labelledby="profile-danger-title">
                 <div>
                     <span class="danger-kicker">Zona de peligro</span>
-                    <h4 id="profile-danger-title">Limpiar mi cuenta</h4>
-                    <p>Descarga una copia o elimina de forma permanente tu cuenta, sus movimientos, preferencias y registro de importaciones.</p>
+                    <h4 id="profile-danger-title">Tus datos</h4>
+                    <p>Exporta una copia, borra solo tu informacion financiera o elimina por completo tu cuenta.</p>
                 </div>
-                <button type="button" id="btn-export-all-data" class="cancel">Exportar mis datos</button>
-                <button type="button" id="btn-open-delete-data" class="btn-danger-action">Eliminar cuenta y datos</button>
+                <div class="profile-danger-actions">
+                    <button type="button" id="btn-export-all-data" class="cancel">Exportar mis datos</button>
+                    <button type="button" id="btn-open-clear-data" class="btn-danger-secondary">Borrar datos financieros</button>
+                    <button type="button" id="btn-open-delete-data" class="btn-danger-action">Eliminar cuenta y datos</button>
+                </div>
             </section>
             <div class="modal-buttons">
                 <button type="button" id="btn-open-recovery" class="cancel">Recuperar contrase&ntilde;a</button>
@@ -847,6 +866,32 @@
                 <button type="submit">Enviar enlace</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Limpiar datos financieros, sin eliminar la cuenta -->
+<div id="modal-clear-financial-data" class="modal hidden" role="dialog" aria-labelledby="clear-financial-data-title" aria-modal="true">
+    <div class="modal-content modal-danger-content">
+        <div class="modal-handle"></div>
+        <div class="danger-modal-header">
+            <div class="danger-modal-icon" aria-hidden="true">!</div>
+            <div>
+                <h3 id="clear-financial-data-title">Borrar datos financieros</h3>
+                <p class="danger-modal-sub">Tu cuenta de acceso se conservara.</p>
+            </div>
+        </div>
+        <p class="danger-modal-warning">
+            Se eliminaran permanentemente tus <strong>movimientos, cuentas, presupuestos y registro de auditoria</strong>. Tu perfil, acceso a Konteo, configuracion de Gmail y aceptaciones legales se mantienen.
+        </p>
+        <p id="clear-data-confirm-status" class="danger-confirm-status" role="status" aria-live="polite" hidden></p>
+        <div class="danger-confirm-field">
+            <label for="clear-data-confirm-input">Escribe <strong>LIMPIAR</strong> para confirmar:</label>
+            <input type="text" id="clear-data-confirm-input" placeholder="LIMPIAR" autocomplete="off">
+        </div>
+        <div class="modal-buttons">
+            <button type="button" class="cancel" id="btn-cancel-clear-data">Cancelar</button>
+            <button type="button" id="btn-confirm-clear-data" class="btn-danger-submit" disabled>Borrar datos financieros</button>
+        </div>
     </div>
 </div>
 

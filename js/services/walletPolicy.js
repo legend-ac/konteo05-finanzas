@@ -23,15 +23,35 @@ export function isActiveWallet(wallet) {
     return wallet.active !== false && !walletNeedsReview(wallet);
 }
 
+// Gmail configuration can contain custom senders and known bank rules. Both
+// describe an assignment preference, never a new wallet or institution.
+export function gmailWalletAssignmentRules(gmailImport = {}) {
+    const custom = Array.isArray(gmailImport?.customEntities) ? gmailImport.customEntities : [];
+    const known = Object.entries(gmailImport?.knownEntitySettings || {})
+        .filter(([, setting]) => setting?.defaultAccountId)
+        .map(([sourceKey, setting]) => ({
+            id: `known-${sourceKey}`,
+            sourceKey,
+            defaultAccountId: String(setting.defaultAccountId || ''),
+            active: setting.active !== false,
+            known: true
+        }));
+    return [...custom, ...known];
+}
+
 export function resolveWalletAccount(tx, wallets, entities = []) {
     if (tx.accountId || tx.accountAssignmentExplicit) return tx.accountId || '';
     const source = String(tx.source || '').replace(/^gmail:/, '').toLowerCase();
-    const entity = entities.find(item => entitySourceKey(item) === source);
+    const identity = sourceIdentity(tx, entities);
+    const entity = entities.find(item => (
+        entitySourceKey(item) === source ||
+        String(item.sourceKey || '').toLowerCase() === source ||
+        (item.known === true && String(item.sourceKey || '').toLowerCase() === identity.bank)
+    ));
     if (entity?.defaultAccountId) {
         const configured = wallets.find(w => w.id === entity.defaultAccountId && isActiveWallet(w));
         return configured && canAutoLink(tx, configured, entities) ? configured.id : '';
     }
-    const identity = sourceIdentity(tx, entities);
     const matches = wallets.filter(w => isActiveWallet(w) && w.linkSource === true &&
         (w.sourceKey === source || w.sourceKey === identity.sourceKey || w.sourceKey === identity.bank) && canAutoLink(tx, w, entities));
     return matches.length === 1 ? matches[0].id : '';

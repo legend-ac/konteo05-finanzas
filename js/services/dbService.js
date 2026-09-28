@@ -509,6 +509,49 @@ export async function deleteTransfer(uid, transferId) {
 /**
  * Elimina TODOS los datos de la cuenta de un usuario de forma aislada.
  */
+async function deleteFinancialDocuments(uid) {
+    const [incSnap, expSnap, walletsSnap, auditSnap] = await Promise.all([
+        db.collection('transactions').doc(uid).collection('income').get(),
+        db.collection('transactions').doc(uid).collection('expenses').get(),
+        walletsRef(uid).get(),
+        auditRef(uid).get()
+    ]);
+    const docsToDelete = [...incSnap.docs, ...expSnap.docs, ...walletsSnap.docs, ...auditSnap.docs];
+    for (let i = 0; i < docsToDelete.length; i += 400) {
+        const batch = db.batch();
+        docsToDelete.slice(i, i + 400).forEach(doc => batch.delete(doc.ref));
+        await withDeadline(() => batch.commit(), 30000, 'commit-unconfirmed');
+    }
+}
+
+function clearFinancialCaches(uid) {
+    planCache.delete(uid);
+    transactionSchemaMode.delete(uid);
+    [...pendingReads.keys()]
+        .filter(key => key.includes(`:${uid}`))
+        .forEach(key => pendingReads.delete(key));
+    try { localStorage.removeItem(transactionSchemaStorageKey(uid)); } catch (_) { }
+}
+
+/** Borra datos financieros, pero conserva la cuenta, perfil y configuracion de Gmail. */
+export async function clearFinancialData(uid) {
+    if (!uid) throw new Error('No hay una cuenta activa para limpiar.');
+    await deleteFinancialDocuments(uid);
+    await Promise.all([
+        db.collection('plans').doc(uid).delete(),
+        db.collection('budgets').doc(uid).delete(),
+        db.collection('transactions').doc(uid).delete(),
+        db.collection('users').doc(uid).set({
+            planConfig: firebase.firestore.FieldValue.delete(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true })
+    ]);
+    if (typeof db.waitForPendingWrites === 'function') {
+        await withDeadline(() => db.waitForPendingWrites(), 30000, 'commit-unconfirmed');
+    }
+    clearFinancialCaches(uid);
+}
+
 export async function deleteAllUserData(uid) {
     if (!uid) return;
     const userRef = db.collection('users').doc(uid);
@@ -530,10 +573,11 @@ export async function deleteAllUserData(uid) {
     // Resetear SOLO el plan financiero — NO tocar gmailImport para que el usuario no pierda su conexión Gmail
     await Promise.all([
         db.collection('plans').doc(uid).delete().catch(() => {}),
+        db.collection('budgets').doc(uid).delete().catch(() => {}),
         db.collection('transactions').doc(uid).delete().catch(() => {}),
         userRef.delete()
     ]);
-    planCache.delete(uid);
+    clearFinancialCaches(uid);
 }
 
 export async function exportAllUserData(uid) {

@@ -73,7 +73,7 @@ export function sourceIdentity(tx = {}, entities = []) {
     const configured = entities.find(entity => entitySourceKey(entity) === source);
     const senderBank = senderInstitution(tx.sourceSender || '');
     const sourceBank = institutionKey(source);
-    const receiptBank = receiptInstitution(tx.sourceRawText || '');
+    const receiptBank = receiptInstitution(tx.sourceRawText || tx.rawText || '');
     const conflict = !!((senderBank && sourceBank && senderBank !== sourceBank) || (receiptBank && sourceBank && receiptBank !== sourceBank));
     const channel = /^plin(?:-|$)/.test(source) || normalize(configured?.name) === 'plin' ? 'Plin' : source === 'yape' ? 'Yape' : ['Plin', 'QR'].includes(tx.paymentChannel) ? tx.paymentChannel : '';
     // An explicit, audited correction is allowed only when the original bank

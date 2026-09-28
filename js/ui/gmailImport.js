@@ -12,12 +12,14 @@ import {
     getEmailDate,
     getEmailSubject,
     getConnectedEmail,
+    KNOWN_GMAIL_ENTITIES,
 } from '../services/gmailService.js';
 
 import { parseAllEmails } from '../services/gmailParser.js';
 import { db, firebase }   from '../firebase/config.js';
 import { saveIncome, saveExpense, getImportedGmailIds, getWallets } from '../services/dbService.js';
-import { isActiveWallet, resolveWalletAccount } from '../services/walletPolicy.js';
+import { isActiveWallet, resolveWalletAccount, gmailWalletAssignmentRules } from '../services/walletPolicy.js';
+import { sourceIdentity } from '../services/entityIdentity.js';
 import { businessDateToDate } from './helpers.js';
 import { mountMascots, reactMascot, releaseMascots } from './mascot.js';
 import { runLimited, withDeadline } from '../services/asyncControl.js';
@@ -33,11 +35,12 @@ let gmailPreference   = null;
 let walletOptions     = [];
 let initializedUid    = null;
 let initialization    = null;
+let sourceWorkspaceBound = false;
+let editingCustomEntityId = null;
 window.addEventListener('konteo:wallets-changed', event => {
     if (event.detail?.uid !== currentUid) return;
     walletOptions = event.detail.wallets;
-    const select = document.getElementById('gmail-entity-account');
-    if (select) select.innerHTML = walletOptionsHtml(select.value);
+    renderSourcesWorkspace();
 });
 
 let isSearching       = false;  // guard: evita búsquedas paralelas por doble-click
@@ -49,6 +52,20 @@ async function getGmailPref() {
     try {
         const doc = await withDeadline(() => db.collection('users').doc(currentUid).get());
         gmailPreference = doc.exists ? (doc.data().gmailImport || null) : null;
+        // This switch belonged to the retired import modal.  The source
+        // workspace now owns the scope, so keeping it true would make a
+        // legacy preference contradict the visible bank toggles.
+        if (gmailPreference?.onlyConfiguredEntities === true) {
+            gmailPreference = { ...gmailPreference, onlyConfiguredEntities: false };
+            db.collection('users').doc(currentUid).set({
+                gmailImport: {
+                    ...gmailPreference,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }
+            }, { merge: true }).catch(error => {
+                console.warn('[gmailImport] No se pudo migrar una preferencia antigua:', error);
+            });
+        }
         return gmailPreference;
     } catch {
         gmailPreference = null;
@@ -57,13 +74,18 @@ async function getGmailPref() {
 }
 
 async function saveGmailPref(data) {
+    const previous = gmailPreference;
     try {
         gmailPreference = { ...(gmailPreference || {}), ...data };
         await db.collection('users').doc(currentUid).set(
             { gmailImport: { ...gmailPreference, updatedAt: firebase.firestore.FieldValue.serverTimestamp() } },
             { merge: true }
         );
-    } catch (e) { console.warn('[gmailImport] No se pudo guardar preferencia:', e); }
+    } catch (e) {
+        gmailPreference = previous;
+        console.warn('[gmailImport] No se pudo guardar preferencia:', e);
+        throw e;
+    }
 }
 
 async function disconnectGmail() {
@@ -147,10 +169,6 @@ function escapeHtml(value) {
     }[char]));
 }
 
-function sourceLabel(source) {
-    return SOURCE_LABELS[source] || source;
-}
-
 function walletOptionsHtml(selected = '', includeEmpty = true) {
     const empty = includeEmpty ? '<option value="">Sin asignar por ahora</option>' : '';
     return empty + walletOptions
@@ -161,7 +179,7 @@ function walletOptionsHtml(selected = '', includeEmpty = true) {
 
 function renderAccountControl(tx, idx) {
     if (tx.reviewOnly || !walletOptions.some(isActiveWallet)) return '';
-    const accountId = resolveWalletAccount(tx, walletOptions, getCustomEntities());
+    const accountId = resolveWalletAccount(tx, walletOptions, getWalletAssignmentRules());
     return `<label class="gmail-account-control" for="gmail-account-${idx}"><span>Billetera</span><select id="gmail-account-${idx}" class="gmail-tx-account" data-idx="${idx}" aria-label="Billetera para este movimiento">${walletOptionsHtml(accountId)}</select></label>`;
 }
 
@@ -216,6 +234,9 @@ function renderTxCard(tx, idx) {
     </article>`;
 }
 
+/* Legacy source-selection controls lived inside the import modal. Kept out
+   of runtime while older deployments finish migrating to source settings. */
+/*
 function getIgnoredSources() {
     return new Set(Array.isArray(gmailPreference?.ignoredSources) ? gmailPreference.ignoredSources : []);
 }
@@ -315,6 +336,7 @@ async function persistSourceChoices() {
 // ─────────────────────────────────────────────
 // MODAL HTML
 // ─────────────────────────────────────────────
+*/
 function buildModal() {
     const old = document.getElementById('modal-gmail-import');
     if (old) { releaseMascots(old); old.remove(); }
@@ -340,8 +362,8 @@ function buildModal() {
                     <summary><span class="mascot-scene" data-mascot="review"><img src="/images/konteo-guide-gmail.jpg" width="88" height="88" alt=""></span><span><strong>Tú revisas, tú decides</strong><span class="companion-link">¿Qué se guarda desde Gmail?</span></span></summary>
                     <p>Primero verás los movimientos detectados. Revisa monto, tipo y cuenta antes de seleccionarlos. Solo se guardan los que confirmas al importar; si falta información, debes revisarla antes.</p>
                 </details>
-                <h4>Conecta tu correo de notificaciones</h4>
-                <p>Konteo revisa correos de bancos y billeteras. Nunca registra un movimiento sin que lo confirmes.</p>
+                <h4>Configura primero tus fuentes de correo</h4>
+                <p>Conecta Gmail y elige las entidades que deseas leer desde Fuentes Gmail. La importacion queda solo para revisar y confirmar operaciones.</p>
                 <div class="gmail-consent-features">
                     <div class="gmail-cf-item">Solo lectura: nunca envía ni borra correos.</div>
                     <div class="gmail-cf-item">Tú decides qué importar antes de guardar.</div>
@@ -352,7 +374,7 @@ function buildModal() {
                     <span>Yape</span><span>Plin</span><span>BCP</span>
                     <span>Interbank</span><span>BBVA</span><span>Scotiabank</span>
                 </div>
-                <div class="gmail-days-row" style="justify-content:center;margin-top:8px">
+                <div class="gmail-days-row" style="justify-content:center;margin-top:8px" hidden>
                     <label for="gmail-days-select">Período a revisar:</label>
                     <select id="gmail-days-select">
                         <option value="7">7 días</option>
@@ -363,12 +385,11 @@ function buildModal() {
                 </div>
             </div>
             <div class="gmail-consent-actions">
-                <button id="gmail-btn-decline" class="gmail-btn-secondary">Ahora no</button>
-                <button id="gmail-btn-connect" class="gmail-btn-primary">
+                <button id="gmail-btn-go-sources" class="gmail-btn-primary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
                     </svg>
-                    Conectar Gmail
+                    Abrir Fuentes Gmail
                 </button>
             </div>
         </div>
@@ -388,16 +409,9 @@ function buildModal() {
                         <option value="90">90 días</option>
                     </select>
                 </div>
-                <label class="gmail-reading-rule">
-                    <input id="gmail-only-configured-entities" type="checkbox">
-                    <span><strong>Usar solo mis remitentes configurados</strong><small id="gmail-reading-rule-summary"></small></span>
-                </label>
-                <p class="gmail-known-sources"><strong>Fuentes reconocidas:</strong> Yape, Plin, BCP, Interbank, BBVA y Scotiabank.</p>
             </div>
             <div class="gmail-consent-actions">
                 <button id="gmail-btn-sync" class="gmail-btn-primary">Revisar correos</button>
-                <button id="gmail-btn-manage-entities" class="gmail-btn-sm" type="button">Configurar remitentes</button>
-                <button id="gmail-btn-disconnect" class="gmail-btn-sm gmail-btn-danger">Desconectar</button>
             </div>
         </div>
         <div id="gmail-state-loading" class="gmail-state hidden">
@@ -419,7 +433,6 @@ function buildModal() {
                     <button id="gmail-deselect-all" class="gmail-btn-sm">Ninguno</button>
                 </div>
             </div>
-            <section id="gmail-source-controls" class="gmail-source-controls hidden" aria-label="Elegir fuentes para importar"></section>
             <div id="gmail-tx-list" class="gmail-tx-list"></div>
             <div class="gmail-actions-row">
                 <button id="gmail-btn-back" class="gmail-btn-secondary">← Volver</button>
@@ -458,6 +471,15 @@ function getActiveCustomEntities() {
     return getCustomEntities().filter(entity => entity?.active !== false);
 }
 
+function getWalletAssignmentRules() {
+    return gmailWalletAssignmentRules({
+        customEntities: getCustomEntities(),
+        knownEntitySettings: gmailPreference?.knownEntitySettings || {}
+    });
+}
+
+/* Legacy modal-based entity management. Settings now live in the workspace. */
+/*
 function isRestrictedToConfiguredEntities() {
     return gmailPreference?.onlyConfiguredEntities === true;
 }
@@ -570,6 +592,284 @@ function closeEntitiesModal() {
     if (importModal?.classList.contains('hidden')) document.body.style.overflow = '';
 }
 
+// The source workspace owns configuration. The import modal only reviews
+// individual operations; it never asks people to decide their Gmail scope.
+*/
+function normalizeEntitySender(value) {
+    return String(value || '').trim().toLowerCase().replace(/^from:/, '');
+}
+
+function getKnownEntitySettings() {
+    const stored = gmailPreference?.knownEntitySettings || {};
+    const legacyIgnored = new Set(Array.isArray(gmailPreference?.ignoredSources) ? gmailPreference.ignoredSources : []);
+    const aliases = { 'plin-bbva': 'bbva', 'plin-interbank': 'interbank' };
+    return KNOWN_GMAIL_ENTITIES.map(entity => {
+        const saved = stored[entity.id] || {};
+        const legacyIgnoredForEntity = legacyIgnored.has(entity.id) || [...legacyIgnored].some(source => (
+            (aliases[source] || source) === entity.id
+        ));
+        return {
+            ...entity,
+            active: saved.active !== false && !legacyIgnoredForEntity,
+            defaultAccountId: String(saved.defaultAccountId || '')
+        };
+    });
+}
+
+function getEnabledKnownEntityIds() {
+    return getKnownEntitySettings().filter(entity => entity.active).map(entity => entity.id);
+}
+
+function knownEntityKeyForTransaction(tx) {
+    const source = String(tx?.source || '').replace(/^gmail:/, '').toLowerCase();
+    const direct = {
+        'plin-bbva': 'bbva', 'plin-interbank': 'interbank',
+        ligo: 'bcp', izipay: 'wallets', tunki: 'wallets', bim: 'wallets',
+        mercadopago: 'wallets', maximo: 'wallets', wise: 'international',
+        payoneer: 'international', falabella: 'cards', ripley: 'cards',
+        oh: 'cards', nu: 'cards', b89: 'digital', kambista: 'digital', uala: 'digital'
+    };
+    if (direct[source]) return direct[source];
+    if (KNOWN_GMAIL_ENTITIES.some(entity => entity.id === source)) return source;
+    if (source.startsWith('caja')) return 'cajas';
+    return '';
+}
+
+function isTransactionFromEnabledKnownEntity(tx) {
+    const enabled = new Set(getEnabledKnownEntityIds());
+    // The issuer is determined from the sender and voucher signature, never
+    // from a recipient or destination shown inside the receipt. This keeps an
+    // Interbank Plin payment to BBVA under Interbank, for example.
+    const identity = sourceIdentity(tx, getWalletAssignmentRules());
+    if (identity.bank && KNOWN_GMAIL_ENTITIES.some(entity => entity.id === identity.bank)) {
+        return enabled.has(identity.bank);
+    }
+    const direct = knownEntityKeyForTransaction(tx);
+    if (direct) return enabled.has(direct);
+    return true;
+}
+
+function knownAccountOptionsHtml(selected = '') {
+    return walletOptionsHtml(selected, true);
+}
+
+function sourceWorkspaceFeedback(message = '', state = '') {
+    const target = document.getElementById('gmail-sources-feedback');
+    if (!target) return;
+    target.textContent = message;
+    target.hidden = !message;
+    if (state) target.dataset.state = state;
+    else delete target.dataset.state;
+}
+
+function customEntityRowsHtml() {
+    const entities = getCustomEntities();
+    if (!entities.length) {
+        return '<p class="gmail-entities-empty">Aun no agregaste remitentes propios. Puedes hacerlo cuando una entidad no aparezca en la lista reconocida.</p>';
+    }
+    return entities.map(entity => `
+        <article class="gmail-entity-row" data-entity-id="${escapeHtml(entity.id)}">
+            <label class="gmail-entity-active">
+                <input type="checkbox" class="gmail-source-custom-toggle" data-entity-id="${escapeHtml(entity.id)}" ${entity.active !== false ? 'checked' : ''}>
+                <span>${entity.active !== false ? 'Activa' : 'Pausada'}</span>
+            </label>
+            <div class="gmail-entity-info">
+                <strong>${escapeHtml(entity.name)}</strong>
+                <span>${escapeHtml(entity.sender)}</span>
+                <small>${entity.defaultType === 'income' ? 'Ingreso' : entity.defaultType === 'expense' ? 'Gasto' : 'Detectar segun el correo'}${entity.defaultAccountId ? ` · ${escapeHtml(walletOptions.find(wallet => wallet.id === entity.defaultAccountId)?.name || 'Cuenta asignada')}` : ''}</small>
+            </div>
+            <div class="gmail-entity-row-actions">
+                <button type="button" class="gmail-entity-edit" data-entity-id="${escapeHtml(entity.id)}">Editar</button>
+                <button type="button" class="gmail-entity-delete" data-entity-id="${escapeHtml(entity.id)}">Eliminar</button>
+            </div>
+        </article>`).join('');
+}
+
+function renderSourcesWorkspace() {
+    const host = document.getElementById('gmail-sources-workspace');
+    if (!host) return;
+    const connected = Boolean(gmailPreference?.enabled && gmailPreference?.email);
+    const knownEntities = getKnownEntitySettings();
+    const activeCount = knownEntities.filter(entity => entity.active).length;
+    const editing = getCustomEntities().find(entity => entity.id === editingCustomEntityId) || null;
+    if (!editing) editingCustomEntityId = null;
+    host.innerHTML = `
+        <div class="gmail-sources-layout">
+            <section class="gmail-source-card">
+                <div class="gmail-source-card-heading">
+                    <div><h2>Conexion</h2><p>La autorizacion se usa solo para revisar correos financieros.</p></div>
+                </div>
+                <div class="gmail-source-connection${connected ? ' is-connected' : ''}">
+                    <div class="gmail-source-connection-head"><span aria-hidden="true"></span><strong>${connected ? escapeHtml(gmailPreference.email) : 'Gmail no conectado'}</strong></div>
+                    <small>${connected ? 'Puedes revisar operaciones cuando quieras; ningun movimiento se guarda sin confirmacion.' : 'Conecta Gmail antes de revisar operaciones.'}</small>
+                    <div class="gmail-source-actions">
+                        <button type="button" class="gmail-btn-primary" data-gmail-source-action="connect">${connected ? 'Reconectar Gmail' : 'Conectar Gmail'}</button>
+                        ${connected ? '<button type="button" class="gmail-btn-secondary" data-gmail-source-action="disconnect">Desconectar</button>' : ''}
+                    </div>
+                </div>
+                <p id="gmail-sources-feedback" class="gmail-entity-feedback" aria-live="polite" hidden></p>
+            </section>
+            <section class="gmail-source-card">
+                <div class="gmail-source-card-heading">
+                    <div><h2>Fuentes reconocidas</h2><p>${activeCount} de ${knownEntities.length} activas. BBVA e Interbank se mantienen separados aunque sus comprobantes usen Plin.</p></div>
+                </div>
+                <div class="gmail-known-sources-list">
+                    ${knownEntities.map(entity => `
+                        <label class="gmail-source-setting" data-known-entity="${escapeHtml(entity.id)}">
+                            <input class="gmail-known-entity-toggle" type="checkbox" data-entity-id="${escapeHtml(entity.id)}" ${entity.active ? 'checked' : ''}>
+                            <span><strong>${escapeHtml(entity.name)}</strong><small>${escapeHtml(entity.detail)}</small></span>
+                            <select class="gmail-known-entity-account" data-entity-id="${escapeHtml(entity.id)}" aria-label="Cuenta predeterminada para ${escapeHtml(entity.name)}" ${entity.active ? '' : 'disabled'}>${knownAccountOptionsHtml(entity.defaultAccountId)}</select>
+                        </label>`).join('')}
+                </div>
+            </section>
+        </div>
+        <section class="gmail-source-card gmail-source-card--wide">
+            <div class="gmail-source-card-heading">
+                <div><h2>Remitentes propios</h2><p>Agrega solo correos oficiales que no esten cubiertos arriba. Puedes editar el nombre, el tipo, el destino o pausarlos sin borrar la regla.</p></div>
+            </div>
+            <form id="gmail-source-entity-form" class="gmail-entity-form">
+                <input id="gmail-source-entity-name" type="text" maxlength="50" placeholder="Nombre visible: Caja Ejemplo" value="${escapeHtml(editing?.name || '')}" required>
+                <input id="gmail-source-entity-sender" type="email" maxlength="120" placeholder="Correo del remitente: alertas@entidad.pe" value="${escapeHtml(editing?.sender || '')}" required>
+                <div class="gmail-entity-form-grid">
+                    <label>Tipo por defecto<select id="gmail-source-entity-type"><option value="auto" ${(!editing || editing.defaultType === 'auto') ? 'selected' : ''}>Detectar segun el correo</option><option value="expense" ${editing?.defaultType === 'expense' ? 'selected' : ''}>Gasto</option><option value="income" ${editing?.defaultType === 'income' ? 'selected' : ''}>Ingreso</option></select></label>
+                    <label>Categoria de gasto<select id="gmail-source-entity-category"><option value="green" ${editing?.defaultCategory === 'green' ? 'selected' : ''}>Fijo</option><option value="yellow" ${(!editing || editing.defaultCategory === 'yellow') ? 'selected' : ''}>Necesario</option><option value="red" ${editing?.defaultCategory === 'red' ? 'selected' : ''}>Antojo</option></select></label>
+                </div>
+                <label>Destino predeterminado<select id="gmail-source-entity-account">${knownAccountOptionsHtml(editing?.defaultAccountId || '')}</select></label>
+                <div class="gmail-entity-form-actions">
+                    ${editing ? '<button type="button" class="gmail-btn-secondary" data-gmail-source-action="cancel-edit">Cancelar edicion</button>' : ''}
+                    <button type="submit" class="gmail-btn-primary">${editing ? 'Guardar cambios' : 'Agregar remitente'}</button>
+                </div>
+            </form>
+            <div class="gmail-entities-list-header"><span class="gmail-results-kicker">Tus remitentes</span><span>Activa o pausa cada uno sin afectar las entidades reconocidas.</span></div>
+            <div id="gmail-sources-custom-list" class="gmail-entities-list">${customEntityRowsHtml()}</div>
+        </section>`;
+    bindSourcesWorkspace(host);
+}
+
+function bindSourcesWorkspace(host) {
+    if (sourceWorkspaceBound || !host) return;
+    sourceWorkspaceBound = true;
+    host.addEventListener('change', async event => {
+        const knownToggle = event.target.closest('.gmail-known-entity-toggle');
+        const knownAccount = event.target.closest('.gmail-known-entity-account');
+        const customToggle = event.target.closest('.gmail-source-custom-toggle');
+        try {
+            if (knownToggle || knownAccount) {
+                const id = (knownToggle || knownAccount).dataset.entityId;
+                // Persist the complete effective state on the first edit so
+                // older ignoredSources preferences migrate without silently
+                // reactivating a bank the person had paused.
+                const settings = Object.fromEntries(getKnownEntitySettings().map(entity => [entity.id, {
+                    active: entity.active,
+                    defaultAccountId: entity.defaultAccountId
+                }]));
+                settings[id] = {
+                    ...(settings[id] || {}),
+                    ...(knownToggle ? { active: knownToggle.checked } : {}),
+                    ...(knownAccount ? { defaultAccountId: knownAccount.value } : {})
+                };
+                await saveGmailPref({ knownEntitySettings: settings, ignoredSources: [], rememberSources: false, onlyConfiguredEntities: false });
+                renderSourcesWorkspace();
+                sourceWorkspaceFeedback('Configuracion guardada.', 'success');
+                return;
+            }
+            if (customToggle) {
+                const entities = getCustomEntities().map(entity => entity.id === customToggle.dataset.entityId
+                    ? { ...entity, active: customToggle.checked } : entity);
+                await saveGmailPref({ customEntities: entities });
+                renderSourcesWorkspace();
+                sourceWorkspaceFeedback('Remitente actualizado.', 'success');
+            }
+        } catch (error) {
+            console.warn('gmail source setting error:', error);
+            sourceWorkspaceFeedback('No se pudo guardar el cambio. Revisa tu conexion e intentalo de nuevo.', 'error');
+        }
+    });
+    host.addEventListener('click', async event => {
+        const action = event.target.closest('[data-gmail-source-action]')?.dataset.gmailSourceAction;
+        const edit = event.target.closest('.gmail-entity-edit');
+        const remove = event.target.closest('.gmail-entity-delete');
+        try {
+            if (action === 'connect') {
+                sourceWorkspaceFeedback('Abriendo autorizacion de Google...', 'progress');
+                await initGmailService();
+                await requestGmailToken();
+                const email = getConnectedEmail();
+                await saveGmailPref({ enabled: true, email });
+                renderHeaderBadge(email);
+                renderSourcesWorkspace();
+                sourceWorkspaceFeedback('Gmail conectado. Ya puedes revisar operaciones.', 'success');
+                return;
+            }
+            if (action === 'disconnect') {
+                await disconnectGmail();
+                renderSourcesWorkspace();
+                sourceWorkspaceFeedback('Gmail se desconecto de este dispositivo.', 'success');
+                return;
+            }
+            if (action === 'cancel-edit') {
+                editingCustomEntityId = null;
+                renderSourcesWorkspace();
+                return;
+            }
+            if (edit) {
+                editingCustomEntityId = edit.dataset.entityId;
+                renderSourcesWorkspace();
+                document.getElementById('gmail-source-entity-name')?.focus();
+                return;
+            }
+            if (remove) {
+                const entity = getCustomEntities().find(item => item.id === remove.dataset.entityId);
+                if (!entity || !window.confirm(`Eliminar ${entity.name}? Ya no se buscara ese remitente.`)) return;
+                await saveGmailPref({ customEntities: getCustomEntities().filter(item => item.id !== entity.id) });
+                if (editingCustomEntityId === entity.id) editingCustomEntityId = null;
+                renderSourcesWorkspace();
+                sourceWorkspaceFeedback('Remitente eliminado.', 'success');
+            }
+        } catch (error) {
+            console.warn('gmail source action error:', error);
+            sourceWorkspaceFeedback(error.message || 'No se pudo completar la accion.', 'error');
+        }
+    });
+    host.addEventListener('submit', async event => {
+        const form = event.target.closest('#gmail-source-entity-form');
+        if (!form) return;
+        event.preventDefault();
+        const name = String(document.getElementById('gmail-source-entity-name')?.value || '').trim();
+        const sender = normalizeEntitySender(document.getElementById('gmail-source-entity-sender')?.value);
+        if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sender)) {
+            sourceWorkspaceFeedback('Ingresa un nombre y un correo oficial valido.', 'error');
+            return;
+        }
+        const duplicate = getCustomEntities().find(entity => entity.sender === sender && entity.id !== editingCustomEntityId);
+        if (duplicate) {
+            sourceWorkspaceFeedback('Ese correo ya esta registrado en tus remitentes.', 'error');
+            return;
+        }
+        const previousEntity = getCustomEntities().find(entity => entity.id === editingCustomEntityId);
+        const payload = {
+            name, sender,
+            defaultType: document.getElementById('gmail-source-entity-type')?.value || 'auto',
+            defaultCategory: document.getElementById('gmail-source-entity-category')?.value || 'yellow',
+            defaultAccountId: document.getElementById('gmail-source-entity-account')?.value || '',
+            active: previousEntity?.active !== false
+        };
+        try {
+            const entities = editingCustomEntityId
+                ? getCustomEntities().map(entity => entity.id === editingCustomEntityId ? { ...entity, ...payload } : entity)
+                : [...getCustomEntities(), { id: `entity-${Date.now().toString(36)}`, ...payload }];
+            await saveGmailPref({ customEntities: entities });
+            const wasEditing = Boolean(editingCustomEntityId);
+            editingCustomEntityId = null;
+            renderSourcesWorkspace();
+            sourceWorkspaceFeedback(wasEditing ? 'Remitente actualizado.' : 'Remitente agregado. Se incluira en la proxima revision.', 'success');
+        } catch (error) {
+            console.warn('gmail custom entity error:', error);
+            sourceWorkspaceFeedback('No se pudo guardar el remitente. Intentalo de nuevo.', 'error');
+        }
+    });
+}
+
 // ─────────────────────────────────────────────
 // NAVEGACIÓN DE ESTADOS
 // ─────────────────────────────────────────────
@@ -646,7 +946,7 @@ async function doSearch(daysBack) {
         // BUG 7 FIX: fetchTransactionEmails solo excluye dbGmailIds (lo ya guardado en Firestore).
         // Así, emails vistos pero no importados en sesión anterior reaparecen al ampliar el período.
         const rawMessages = await fetchTransactionEmails(daysBack, customEntities, {
-            onlyConfiguredEntities: isRestrictedToConfiguredEntities(), existingIds: dbGmailIds
+            enabledKnownEntityIds: getEnabledKnownEntityIds(), existingIds: dbGmailIds
         });
 
         document.getElementById('gmail-loading-msg').textContent = `Analizando ${rawMessages.length} email${rawMessages.length !== 1 ? 's' : ''}…`;
@@ -662,7 +962,7 @@ async function doSearch(daysBack) {
             customEntities,
         });
 
-        showResults(txs);
+        showResults(txs.filter(isTransactionFromEnabledKnownEntity));
     } catch (err) {
         handleError(err);
     } finally {
@@ -709,9 +1009,8 @@ function renderTransactionResults() {
 
 function showResults(txs) {
     pendingTxs  = txs;
-    const ignoredSources = getIgnoredSources();
     selectedIds = new Set(txs.flatMap((tx, i) => (
-        tx.reviewOnly || tx.possibleDuplicate || ignoredSources.has(tx.source) ? [] : [i]
+        tx.reviewOnly || tx.possibleDuplicate ? [] : [i]
     )));
 
     const countEl   = document.getElementById('gmail-found-count');
@@ -723,8 +1022,6 @@ function showResults(txs) {
         const selectionEl = document.getElementById('gmail-selection-summary');
         if (selectionEl) selectionEl.textContent = '';
         if (listEl)  listEl.innerHTML = '<p class="gmail-empty">Todos los movimientos ya fueron importados o no hay emails bancarios en ese período.</p>';
-        const sourceControls = document.getElementById('gmail-source-controls');
-        if (sourceControls) { sourceControls.classList.add('hidden'); sourceControls.innerHTML = ''; }
         if (importBtn) importBtn.disabled = true;
         showState('results');
         return;
@@ -732,7 +1029,6 @@ function showResults(txs) {
 
     updateResultsSummary();
     renderTransactionResults();
-    renderSourceControls();
     updateImportBtn();
     showState('results');
 }
@@ -790,7 +1086,7 @@ async function doImport() {
                 accountAssignmentExplicit: tx.accountAssignmentExplicit === true,
                 actorUid: uid, status: 'completed', source: `gmail:${tx.source}`, gmailId: tx.gmailId,
                 counterparty: receiptDescription,
-                accountId: resolveWalletAccount(tx, walletOptions, getCustomEntities())
+                accountId: resolveWalletAccount(tx, walletOptions, getWalletAssignmentRules())
             };
             if (!tx.gmailId) throw new Error('Un movimiento no tiene identificador de correo; no se guardó.');
             const save = tx.type === 'income' ? saveIncome : saveExpense;
@@ -815,7 +1111,6 @@ async function doImport() {
         if (currentUid !== uid) return;
         updateImportBtn();
         modal.querySelectorAll('.gmail-tx-check').forEach(check => { check.checked = selectedIds.has(Number(check.dataset.idx)); });
-        syncSourceControls();
         const failed = results.find(result => result?.status === 'rejected');
         if (failed) {
             const code = String(failed.reason?.code || '');
@@ -853,6 +1148,9 @@ function handleError(err) {
 function wireListeners(pref) {
     const modal = document.getElementById('modal-gmail-import');
     if (!modal) return;
+    document.getElementById('gmail-modal-close')?.addEventListener('click', closeModal);
+    modal.addEventListener('click', event => { if (event.target === modal) closeModal(); });
+    /* Legacy modal listeners removed: source configuration lives in the workspace.
     const entitiesModal = document.getElementById('modal-gmail-entities');
 
     document.getElementById('gmail-modal-close')?.addEventListener('click', closeModal);
@@ -915,9 +1213,14 @@ function wireListeners(pref) {
         renderEntitiesList();
     });
 
+    */
     document.getElementById('gmail-btn-decline')?.addEventListener('click', async () => {
         await saveGmailPref({ enabled: false, email: null });
         closeModal();
+    });
+    document.getElementById('gmail-btn-go-sources')?.addEventListener('click', () => {
+        closeModal();
+        window.dispatchEvent(new CustomEvent('konteo:open-gmail-sources'));
     });
     document.getElementById('gmail-btn-connect')?.addEventListener('click', () => {
         const days = parseInt(document.getElementById('gmail-days-select')?.value || '30', 10);
@@ -939,13 +1242,11 @@ function wireListeners(pref) {
     document.getElementById('gmail-select-all')?.addEventListener('click', () => {
         selectedIds = new Set(pendingTxs.flatMap((tx, i) => tx.reviewOnly ? [] : [i]));
         modal.querySelectorAll('.gmail-tx-check').forEach(cb => { if (!cb.disabled) cb.checked = true; });
-        syncSourceControls();
         updateImportBtn();
     });
     document.getElementById('gmail-deselect-all')?.addEventListener('click', () => {
         selectedIds.clear();
         modal.querySelectorAll('.gmail-tx-check').forEach(cb => { if (!cb.disabled) cb.checked = false; });
-        syncSourceControls();
         updateImportBtn();
     });
     document.getElementById('gmail-tx-list')?.addEventListener('change', e => {
@@ -969,7 +1270,6 @@ function wireListeners(pref) {
         const idx = parseInt(cb.dataset.idx, 10);
         if (pendingTxs[idx]?.reviewOnly) return;
         if (cb.checked) selectedIds.add(idx); else selectedIds.delete(idx);
-        syncSourceControls();
         updateImportBtn();
     });
     document.getElementById('gmail-tx-list')?.addEventListener('click', e => {
@@ -986,10 +1286,9 @@ function wireListeners(pref) {
         selectedIds.add(idx);
         updateResultsSummary();
         renderTransactionResults();
-        renderSourceControls();
-        syncSourceControls();
         updateImportBtn();
     });
+    /* Import no longer owns source selection; it only handles individual operations.
     document.getElementById('gmail-source-controls')?.addEventListener('change', async e => {
         const sourceCheck = e.target.closest('.gmail-source-check');
         if (sourceCheck) {
@@ -1002,6 +1301,7 @@ function wireListeners(pref) {
             else await saveGmailPref({ ignoredSources: [], rememberSources: false });
         }
     });
+    */
     document.getElementById('gmail-btn-import')?.addEventListener('click', doImport);
     document.getElementById('gmail-btn-back')?.addEventListener('click', () => {
         showState(pref?.enabled ? 'connected' : 'consent');
@@ -1029,9 +1329,9 @@ export async function initGmailImport(uid) {
     const pref = await getGmailPref();
     walletOptions = await getWallets(uid).catch(() => []);
     buildModal();
-    buildEntitiesModal();
     wireListeners(pref);
     renderHeaderBadge(pref?.enabled ? pref.email : null);
+    renderSourcesWorkspace();
     initGmailService().catch(() => {});
     initializedUid = uid;
     })();
@@ -1052,7 +1352,6 @@ export async function openGmailImport(uid) {
     if (gmailPreference?.enabled && gmailPreference?.email) {
         if (emailEl) emailEl.textContent = gmailPreference.email;
         showState('connected');
-        renderReadingRule();
     } else {
         showState('consent');
     }
@@ -1062,8 +1361,10 @@ export async function openGmailImport(uid) {
 export async function openGmailEntities(uid) {
     await initGmailImport(uid);
     if (!uid || currentUid !== uid) return;
-    document.getElementById('modal-profile')?.classList.add('hidden');
-    openEntitiesModal();
+    await getGmailPref();
+    walletOptions = await getWallets(uid).catch(() => walletOptions);
+    renderHeaderBadge(gmailPreference?.enabled ? gmailPreference.email : null);
+    renderSourcesWorkspace();
 }
 
 /**
@@ -1072,6 +1373,9 @@ export async function openGmailEntities(uid) {
  */
 export function clearGmailImportCache() {
     importedGmailIds = new Set();
+    pendingTxs = [];
+    selectedIds = new Set();
+    isSearching = false;
     if (currentUid) {
         try { sessionStorage.removeItem(`konteo_gmail_${currentUid}`); } catch {}
     }

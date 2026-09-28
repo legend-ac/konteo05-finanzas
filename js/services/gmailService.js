@@ -249,6 +249,39 @@ const SENDERS = [
     'from:no-reply@pagoefectivo.pe',
 ];
 
+// Registro unico de fuentes conocidas. Cada grupo controla exactamente los
+// remitentes que se consultan; asi una entidad desactivada no queda escondida
+// dentro de una busqueda global. Plin es un canal: BBVA e Interbank mantienen
+// sus propias fuentes y recibos, mientras que Plin sin banco queda separado.
+export const KNOWN_GMAIL_ENTITIES = [
+    { id: 'yape', name: 'Yape', detail: 'Billetera digital', senders: ['from:noreply@yape.com.pe', 'from:notificaciones@yape.pe'] },
+    { id: 'plin', name: 'Plin sin banco confirmado', detail: 'Solo recibos sin banco de origen', senders: ['from:notificaciones@plin.pe'] },
+    { id: 'bcp', name: 'BCP', detail: 'Incluye Ligo', senders: ['from:notificaciones@notificaciones.viabcp.com', 'from:alertas@viabcp.com', 'from:noreply@viabcp.com', 'from:bcp@viabcp.com', 'from:notificaciones@notificacionesbcp.com.pe', 'from:hola@ligo.pe', 'from:notificaciones@ligo.pe'] },
+    { id: 'interbank', name: 'Interbank', detail: 'Incluye comprobantes Plin de Interbank', senders: ['from:alertas@interbank.com.pe', 'from:ibk@interbank.com.pe', 'from:notificaciones@interbank.com.pe', 'from:servicioalcliente@interbank.com.pe', 'from:servicioalcliente@netinterbank.com.pe', 'from:ib14680.interbank.com'] },
+    { id: 'bbva', name: 'BBVA', detail: 'Incluye comprobantes Plin de BBVA', senders: ['from:alertas@bbva.pe', 'from:bbva@bbvacontinental.com', 'from:notificaciones@bbva.pe', 'from:procesos@bbva.com.pe', 'from:noreply@bbva.pe', 'from:notificaciones-gateway@bbva.com.pe', 'from:notifications-gateway-mail-us.bbva.com.pe'] },
+    { id: 'scotiabank', name: 'Scotiabank', detail: 'Banco', senders: ['from:notificaciones@scotiabank.com.pe', 'from:alertas@scotiabank.com.pe'] },
+    { id: 'banbif', name: 'BanBif', detail: 'Banco', senders: ['from:notificaciones@banbif.com.pe', 'from:alertas@banbif.com.pe'] },
+    { id: 'pichincha', name: 'Banco Pichincha', detail: 'Banco', senders: ['from:notificaciones@pichincha.com.pe', 'from:alertas@pichincha.com.pe'] },
+    { id: 'nacion', name: 'Banco de la Nacion', detail: 'Banco', senders: ['from:notificaciones@bn.com.pe', 'from:alertas@bn.com.pe', 'from:comunicaciones_BN@bn.com.pe', 'from:BancaMovil_BN@bn.com.pe'] },
+    { id: 'mibanco', name: 'MiBanco', detail: 'Banco', senders: ['from:notificaciones@mibanco.com.pe', 'from:alertas@mibanco.com.pe', 'from:mibanco_digital@mibanco.com.pe'] },
+    { id: 'sip', name: 'SIP / Agora', detail: 'Pagos', senders: ['from:no-reply@operaciones.agora.pe', 'from:operaciones.agora.pe'] },
+    { id: 'pagoefectivo', name: 'PagoEfectivo', detail: 'Pagos', senders: ['from:no-reply@pagoefectivo.pe'] },
+    { id: 'binance', name: 'Binance', detail: 'Activo digital', senders: ['from:do-not-reply@directmail.binance.com'] },
+    { id: 'wallets', name: 'Otras billeteras', detail: 'Izipay, Tunki, BIM y Mercado Pago', senders: ['from:hola@izipay.pe', 'from:notificaciones@tunki.pe', 'from:bim@bim.com.pe', 'from:noreply@mercadopago.com', 'from:notification@mercadolibre.com', 'from:hola@maximo.pe'] },
+    { id: 'international', name: 'Wise y Payoneer', detail: 'Servicios internacionales', senders: ['from:noreply@wise.com', 'from:hello@wise.com', 'from:noreply@payoneer.com', 'from:payoneer@payoneer.com'] },
+    { id: 'cards', name: 'Tarjetas y consumo', detail: 'Falabella, Ripley, Oh! y Nu', senders: ['from:notificaciones@bancofalabella.com.pe', 'from:transaccional@bancofalabella.com.pe', 'from:notificaciones@bancoripley.com.pe', 'from:alertas@bancoripley.com.pe', 'from:notificaciones@financieraoh.com.pe', 'from:alertas@financieraoh.com.pe', 'from:no-reply@nu.com.pe', 'from:hola@nu.com.pe'] },
+    { id: 'digital', name: 'Finanzas digitales', detail: 'B89, Kambista y Uala', senders: ['from:hola@b89.pe', 'from:notificaciones@kambista.com', 'from:hola@ual.la'] },
+    { id: 'cajas', name: 'Cajas municipales', detail: 'Arequipa, Huancayo, Piura y otras', senders: ['from:notificaciones@cajaarequipa.com.pe', 'from:notificaciones@cajahuancayo.com.pe', 'from:notificaciones@cajapiura.com.pe', 'from:notificaciones@cajacusco.pe', 'from:notificaciones@cajatrujillo.com.pe', 'from:notificaciones@cajasullana.com.pe', 'from:notificaciones@cajatacna.com.pe', 'from:notificaciones@cajamaynas.com.pe', 'from:notificaciones@cmac-ica.com.pe'] }
+];
+
+function knownSendersFor(enabledIds) {
+    if (!Array.isArray(enabledIds)) return SENDERS;
+    const enabled = new Set(enabledIds);
+    return KNOWN_GMAIL_ENTITIES
+        .filter(entity => enabled.has(entity.id))
+        .flatMap(entity => entity.senders);
+}
+
 /**
  * Busca emails de transacciones en los últimos N días.
  * @param {number} daysBack - Cuántos días hacia atrás buscar (máx. 90)
@@ -277,10 +310,16 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [],
     const safeDays = Math.max(1, Math.min(90, Number.parseInt(daysBack, 10) || 30));
     const customSenders = getCustomSenders(customEntities);
     const onlyConfiguredEntities = options.onlyConfiguredEntities === true;
+    const enabledKnownEntityIds = Array.isArray(options.enabledKnownEntityIds)
+        ? options.enabledKnownEntityIds : null;
     if (onlyConfiguredEntities && customSenders.length === 0) {
         throw new Error('Activa al menos una entidad antes de limitar la lectura de Gmail.');
     }
-    const senders = [...new Set(onlyConfiguredEntities ? customSenders : [...SENDERS, ...customSenders])];
+    const knownSenders = onlyConfiguredEntities ? [] : knownSendersFor(enabledKnownEntityIds);
+    const senders = [...new Set([...knownSenders, ...customSenders])];
+    if (!senders.length) throw new Error('Activa al menos una fuente de correo antes de revisar Gmail.');
+    const enabledKnown = enabledKnownEntityIds ? new Set(enabledKnownEntityIds) : null;
+    const isKnownEnabled = id => !enabledKnown || enabledKnown.has(id);
     // Gmail puede devolver resultados incompletos cuando una consulta OR contiene
     // demasiados remitentes. Buscamos grupos pequeños y unimos los IDs.
     const groupedQueries = chunk(senders, 8).map((group, index) => (
@@ -307,7 +346,21 @@ export async function fetchTransactionEmails(daysBack = 30, customEntities = [],
         labelledQuery('asunto-sip', `subject:"Realizaste una operación" newer_than:${safeDays}d`),
         labelledQuery('asunto-plin', `subject:"Constancia de Pago Plin" newer_than:${safeDays}d`),
     ];
-    const queries = [...groupedQueries, ...priorityQueries];
+    const priorityEntityByLabel = {
+        'plin-bbva': 'bbva', 'plin-bbva-gateway': 'bbva', 'plin-bbva-qr': 'bbva',
+        'plin-bbva-subject': 'bbva', 'plin-bbva-receipt-text': 'bbva', 'plin-bbva-detail-text': 'bbva',
+        sip: 'sip', 'sip-dominio': 'sip', 'asunto-sip': 'sip',
+        'plin-interbank': 'interbank', 'plin-interbank-subdominio': 'interbank',
+        'asunto-plin': 'plin'
+    };
+    const genericPriorityLabels = new Set([
+        'plin-bbva-subject', 'plin-bbva-receipt-text', 'plin-bbva-detail-text',
+        'asunto-sip', 'asunto-plin'
+    ]);
+    const enabledPriorityQueries = priorityQueries.filter(item => (
+        !genericPriorityLabels.has(item.label) && isKnownEnabled(priorityEntityByLabel[item.label] || '')
+    ));
+    const queries = [...groupedQueries, ...enabledPriorityQueries];
     const results = [];
     for (const batch of chunk(queries, 4)) {
         const batchResults = await Promise.all(batch.map(async ({ label, query }) => {

@@ -17,7 +17,7 @@ import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from '.
 import { renderExpenseAnalysis } from './ui/dailySpending.js';
 import { movementIdentity, sourceIdentity } from './services/entityIdentity.js';
 import * as dbService             from './services/dbService.js';
-import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount } from './services/walletPolicy.js';
+import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount, gmailWalletAssignmentRules } from './services/walletPolicy.js';
 import { isPosted, sumAmounts, summarizeCashflow } from './services/financialMath.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
 import { openGmailImport, openGmailEntities, clearGmailImportCache } from './ui/gmailImport.js';
@@ -98,7 +98,7 @@ function initInterfaceMotion() {
 // workspace separately for each signed-in user so a reload never resets the
 // person to Inicio. This stores only a view name and scroll position locally.
 const WORKSPACE_STORAGE_PREFIX = 'konteo.workspace.';
-const WORKSPACE_VIEWS = new Set(['home', 'wallets', 'expenses']);
+const WORKSPACE_VIEWS = new Set(['home', 'wallets', 'sources', 'expenses']);
 let workspaceScrollTimer = null;
 let workspaceRestoreInProgress = false;
 
@@ -108,6 +108,7 @@ function workspaceStorageKey(uid) {
 
 function currentWorkspaceView() {
     if (!document.getElementById('expenses-view')?.classList.contains('hidden')) return 'expenses';
+    if (!document.getElementById('sources-view')?.classList.contains('hidden')) return 'sources';
     if (!document.getElementById('wallets-view')?.classList.contains('hidden')) return 'wallets';
     return 'home';
 }
@@ -713,6 +714,9 @@ auth.onAuthStateChanged(user => {
                 initialLoads.push(walletsReady.then(() => loadExpenseAnalysis()));
             }
         }
+        if (state.workspaceView === 'sources') {
+            initialLoads.push(openGmailEntities(user.uid));
+        }
         Promise.all(initialLoads).finally(() => restoreWorkspaceScroll(savedWorkspace?.scrollY));
     } else {
         state.currentUser = null;
@@ -1182,10 +1186,17 @@ document.getElementById('profile-btn')?.addEventListener('click', () => {
 });
 
 document.getElementById('btn-gmail-entities')?.addEventListener('click', () => {
-    openGmailEntities(state.currentUser?.uid).catch(error => {
-        showToast(error.message || 'No se pudo abrir los remitentes', 'error');
+    closeModal('modal-profile');
+    changeAppView('sources');
+});
+
+document.getElementById('btn-sources-open-import')?.addEventListener('click', () => {
+    openGmailImport(state.currentUser?.uid).catch(error => {
+        showToast(error.message || 'No se pudo abrir Gmail', 'error');
     });
 });
+
+window.addEventListener('konteo:open-gmail-sources', () => changeAppView('sources'));
 
 document.getElementById('btn-new-wallet')?.addEventListener('click', () => openWalletModal());
 document.getElementById('btn-wallet-transfer')?.addEventListener('click', openTransferModal);
@@ -1808,9 +1819,10 @@ async function loadWallets({ force = false } = {}) {
             dbService.getUserProfile(uid)
         ]);
         if (state.currentUser?.uid !== uid || token !== walletLoadToken) return;
-        const entities = profile?.gmailImport?.customEntities || [];
+        const customEntities = profile?.gmailImport?.customEntities || [];
+        const entities = gmailWalletAssignmentRules(profile?.gmailImport || {});
         state.wallets = wallets;
-        state.walletEntities = entities;
+        state.walletEntities = customEntities;
         walletCache = { uid, loadedAt: Date.now() };
         suggestedWallets = walletSuggestions(wallets, transactions, entities);
         walletTransactions = transactions.map(item => ({
@@ -1838,17 +1850,19 @@ async function loadWallets({ force = false } = {}) {
 function changeAppView(view, { scroll = true, persist = true, load = true } = {}) {
     const nextView = WORKSPACE_VIEWS.has(view) ? view : 'home';
     const isWallets = nextView === 'wallets';
+    const isSources = nextView === 'sources';
     const isExpenses = nextView === 'expenses';
     state.workspaceView = nextView;
-    document.getElementById('home-view')?.classList.toggle('hidden', isWallets || isExpenses);
+    document.getElementById('home-view')?.classList.toggle('hidden', isWallets || isSources || isExpenses);
     document.getElementById('wallets-view')?.classList.toggle('hidden', !isWallets);
+    document.getElementById('sources-view')?.classList.toggle('hidden', !isSources);
     document.getElementById('expenses-view')?.classList.toggle('hidden', !isExpenses);
     document.querySelectorAll('.app-nav-link[data-view]').forEach(button => {
         const active = button.dataset.view === nextView;
         button.classList.toggle('active', active);
         button.toggleAttribute('aria-current', active);
     });
-    replayInterfaceMotion(document.getElementById(isWallets ? 'wallets-view' : (isExpenses ? 'expenses-view' : 'home-view')));
+    replayInterfaceMotion(document.getElementById(isWallets ? 'wallets-view' : (isSources ? 'sources-view' : (isExpenses ? 'expenses-view' : 'home-view'))));
     if (load && isWallets) {
         const list = document.getElementById('wallets-list');
         if (!state.wallets.length && list) {
@@ -1861,6 +1875,13 @@ function changeAppView(view, { scroll = true, persist = true, load = true } = {}
         syncExpenseMovementTypeUi();
         if (!state.wallets.length) loadWallets();
         loadExpenseAnalysis();
+    }
+    if (load && isSources) {
+        openGmailEntities(state.currentUser?.uid).catch(error => {
+            const host = document.getElementById('gmail-sources-workspace');
+            if (host) host.innerHTML = '<div class="sources-loading"><strong>No se pudo abrir la configuracion.</strong><span>Actualiza la pagina e intentalo de nuevo.</span></div>';
+            console.warn('gmail sources error:', error);
+        });
     }
     if (persist) persistWorkspaceState({ view: nextView, scrollY: scroll ? 0 : currentScrollPosition() });
     if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2098,6 +2119,98 @@ function accountDeletionErrorMessage(error) {
     }
     return 'No se completó la eliminación. La cuenta de acceso sigue activa; inténtalo de nuevo o contacta a soporte si persiste.';
 }
+
+function setClearFinancialDataStatus(message = '', status = '') {
+    const element = document.getElementById('clear-data-confirm-status');
+    if (!element) return;
+    element.textContent = message;
+    element.hidden = !message;
+    if (status) element.dataset.state = status;
+    else delete element.dataset.state;
+}
+
+function clearFinancialDataErrorMessage(error) {
+    const code = String(error?.code || error?.message || '');
+    if (code.includes('commit-unconfirmed') || code.includes('unavailable') || code.includes('network')) {
+        return 'No pudimos confirmar la limpieza con Firebase. Algunas colecciones podrian haberse borrado; recarga para revisar el estado y vuelve a intentarlo cuando tengas conexion.';
+    }
+    if (code.includes('permission-denied')) {
+        return 'Firebase no autorizo el borrado. Actualiza la pagina e inicia sesion nuevamente antes de reintentar.';
+    }
+    return 'No se pudo completar la limpieza. Puede haberse borrado una parte; recarga para revisar el estado y vuelve a intentarlo.';
+}
+
+async function refreshAfterFinancialDataClear(uid) {
+    state.currentLoadToken += 1;
+    dashboardReadCache.clear();
+    chartSnapshot = null;
+    walletCache = { uid: null, loadedAt: 0 };
+    walletBalances.clear();
+    walletTransactions = [];
+    suggestedWallets = [];
+    state.dashboardData = null;
+    state.wallets = [];
+    state.walletEntities = [];
+    state.selectedWalletId = null;
+    state.expenseData = null;
+    state.expenseEntityIds = null;
+    state.currentBudget = 0;
+    state.planConfig = { incomeTarget: 0, expenseLimit: 0 };
+    await Promise.all([loadData({ force: true }), loadWallets({ force: true })]);
+    if (state.workspaceView === 'expenses') await loadExpenseAnalysis({ force: true });
+    if (state.workspaceView === 'sources') await openGmailEntities(uid);
+}
+
+document.getElementById('btn-open-clear-data')?.addEventListener('click', () => {
+    closeModal('modal-profile');
+    const input = document.getElementById('clear-data-confirm-input');
+    const button = document.getElementById('btn-confirm-clear-data');
+    if (input) input.value = '';
+    if (button) button.disabled = true;
+    setClearFinancialDataStatus();
+    openModal('modal-clear-financial-data');
+});
+document.getElementById('btn-cancel-clear-data')?.addEventListener('click', () => {
+    closeModal('modal-clear-financial-data');
+});
+document.getElementById('clear-data-confirm-input')?.addEventListener('input', event => {
+    const value = (event.target.value || '').trim().toUpperCase();
+    const button = document.getElementById('btn-confirm-clear-data');
+    if (button) button.disabled = value !== 'LIMPIAR';
+});
+document.getElementById('btn-confirm-clear-data')?.addEventListener('click', async () => {
+    const user = state.currentUser;
+    const modal = document.getElementById('modal-clear-financial-data');
+    const submitButton = document.getElementById('btn-confirm-clear-data');
+    const cancelButton = document.getElementById('btn-cancel-clear-data');
+    const input = document.getElementById('clear-data-confirm-input');
+    if (!user || !modal || !submitButton || modal.dataset.saving === 'true') return;
+    const originalText = submitButton.textContent;
+    modal.dataset.saving = 'true';
+    modal.setAttribute('aria-busy', 'true');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Borrando...';
+    if (input) input.disabled = true;
+    if (cancelButton) cancelButton.disabled = true;
+    setClearFinancialDataStatus('Borrando movimientos, cuentas y presupuestos. Esto puede tomar unos segundos...', 'progress');
+    try {
+        await dbService.clearFinancialData(user.uid);
+        clearGmailImportCache();
+        await refreshAfterFinancialDataClear(user.uid);
+        closeModal('modal-clear-financial-data');
+        showToast('Tus datos financieros se borraron. Tu cuenta y configuracion de Gmail se conservaron.', 'success');
+    } catch (error) {
+        console.error('clear financial data error:', error);
+        setClearFinancialDataStatus(clearFinancialDataErrorMessage(error), 'error');
+    } finally {
+        modal.dataset.saving = 'false';
+        modal.removeAttribute('aria-busy');
+        if (input) input.disabled = false;
+        if (cancelButton) cancelButton.disabled = false;
+        submitButton.disabled = (input?.value || '').trim().toUpperCase() !== 'LIMPIAR';
+        submitButton.textContent = originalText;
+    }
+});
 
 document.getElementById('btn-open-delete-data')?.addEventListener('click', () => {
     closeModal('modal-profile');

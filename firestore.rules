@@ -142,6 +142,12 @@ service cloud.firestore {
       allow create, update: if isOwner(userId) && isValidExpenseData();
     }
 
+    // The root document normally only contains subcollections, but allowing
+    // its owner to remove it lets the data-cleanup flow remove legacy fields.
+    match /transactions/{userId} {
+      allow delete: if isOwner(userId);
+    }
+
     match /transactions/{userId}/{document=**} {
       allow read, write: if false;
     }
