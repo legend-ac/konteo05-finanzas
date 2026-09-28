@@ -94,6 +94,78 @@ function initInterfaceMotion() {
 
 }
 
+// Firebase restores a saved session after the document first paints. Keep the
+// workspace separately for each signed-in user so a reload never resets the
+// person to Inicio. This stores only a view name and scroll position locally.
+const WORKSPACE_STORAGE_PREFIX = 'konteo.workspace.';
+const WORKSPACE_VIEWS = new Set(['home', 'wallets', 'expenses']);
+let workspaceScrollTimer = null;
+let workspaceRestoreInProgress = false;
+
+function workspaceStorageKey(uid) {
+    return `${WORKSPACE_STORAGE_PREFIX}${uid}`;
+}
+
+function currentWorkspaceView() {
+    if (!document.getElementById('expenses-view')?.classList.contains('hidden')) return 'expenses';
+    if (!document.getElementById('wallets-view')?.classList.contains('hidden')) return 'wallets';
+    return 'home';
+}
+
+function currentScrollPosition() {
+    return Math.max(0, Math.round(window.scrollY || document.documentElement.scrollTop || 0));
+}
+
+function readWorkspaceState(uid) {
+    if (!uid) return null;
+    try {
+        const saved = JSON.parse(localStorage.getItem(workspaceStorageKey(uid)) || 'null');
+        if (!saved || !WORKSPACE_VIEWS.has(saved.view)) return null;
+        return {
+            view: saved.view,
+            scrollY: Number.isFinite(Number(saved.scrollY)) ? Math.max(0, Number(saved.scrollY)) : 0
+        };
+    } catch {
+        return null;
+    }
+}
+
+function persistWorkspaceState({ view = state.workspaceView || currentWorkspaceView(), scrollY = currentScrollPosition() } = {}) {
+    const uid = state.currentUser?.uid;
+    if (!uid || !WORKSPACE_VIEWS.has(view)) return;
+    try {
+        localStorage.setItem(workspaceStorageKey(uid), JSON.stringify({
+            view,
+            scrollY: Math.max(0, Math.round(Number(scrollY) || 0)),
+            savedAt: Date.now()
+        }));
+    } catch {
+        // Storage can be disabled by the browser. Navigation must continue.
+    }
+}
+
+function queueWorkspaceScrollPersistence() {
+    if (!state.currentUser || workspaceRestoreInProgress) return;
+    window.clearTimeout(workspaceScrollTimer);
+    workspaceScrollTimer = window.setTimeout(() => persistWorkspaceState(), 140);
+}
+
+function restoreWorkspaceScroll(scrollY) {
+    const target = Math.max(0, Number(scrollY) || 0);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        window.scrollTo({ top: target, behavior: 'auto' });
+        workspaceRestoreInProgress = false;
+        persistWorkspaceState({ scrollY: target });
+    }));
+}
+
+if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+window.addEventListener('scroll', queueWorkspaceScrollPersistence, { passive: true });
+window.addEventListener('pagehide', () => {
+    window.clearTimeout(workspaceScrollTimer);
+    persistWorkspaceState();
+});
+
 // ──────────────────────────────────────────────
 // CONNECTIVITY
 // ──────────────────────────────────────────────
@@ -599,12 +671,18 @@ auth.onAuthStateChanged(user => {
     if (user) {
         state.dashboardData = null;
         state.currentUser = user;
+        const savedWorkspace = readWorkspaceState(user.uid);
+        state.workspaceView = savedWorkspace?.view || 'home';
+        workspaceRestoreInProgress = true;
         ensureAuthenticatedUserDocument(user).then(profile => {
             // Reuse the authentication read instead of immediately reading
             // /users/{uid} again just to populate the profile form.
             if (state.currentUser?.uid === user.uid) loadUserProfile(profile);
         });
         showPage('dashboard');
+        // Startup must not use the normal navigation path: that path scrolls
+        // to the top because it is for an intentional click in the sidebar.
+        changeAppView(state.workspaceView, { scroll: false, persist: false, load: false });
         replayInterfaceMotion(document.getElementById('dashboard-page'));
         document.getElementById('user-name').textContent = user.displayName || '';
 
@@ -627,10 +705,19 @@ auth.onAuthStateChanged(user => {
         const recoveryEl = document.getElementById('recovery-email');
         if (recoveryEl) recoveryEl.value = user.email || '';
 
-        loadData();
+        const initialLoads = [loadData()];
+        if (state.workspaceView === 'wallets' || state.workspaceView === 'expenses') {
+            const walletsReady = loadWallets();
+            initialLoads.push(walletsReady);
+            if (state.workspaceView === 'expenses') {
+                initialLoads.push(walletsReady.then(() => loadExpenseAnalysis()));
+            }
+        }
+        Promise.all(initialLoads).finally(() => restoreWorkspaceScroll(savedWorkspace?.scrollY));
     } else {
         state.currentUser = null;
         state.dashboardData = null;
+        state.workspaceView = 'home';
         showPage('home');
     }
 });
@@ -1748,32 +1835,35 @@ async function loadWallets({ force = false } = {}) {
     }
 }
 
-function changeAppView(view) {
-    const isWallets = view === 'wallets';
-    const isExpenses = view === 'expenses';
+function changeAppView(view, { scroll = true, persist = true, load = true } = {}) {
+    const nextView = WORKSPACE_VIEWS.has(view) ? view : 'home';
+    const isWallets = nextView === 'wallets';
+    const isExpenses = nextView === 'expenses';
+    state.workspaceView = nextView;
     document.getElementById('home-view')?.classList.toggle('hidden', isWallets || isExpenses);
     document.getElementById('wallets-view')?.classList.toggle('hidden', !isWallets);
     document.getElementById('expenses-view')?.classList.toggle('hidden', !isExpenses);
     document.querySelectorAll('.app-nav-link[data-view]').forEach(button => {
-        const active = button.dataset.view === view;
+        const active = button.dataset.view === nextView;
         button.classList.toggle('active', active);
         button.toggleAttribute('aria-current', active);
     });
     replayInterfaceMotion(document.getElementById(isWallets ? 'wallets-view' : (isExpenses ? 'expenses-view' : 'home-view')));
-    if (isWallets) {
+    if (load && isWallets) {
         const list = document.getElementById('wallets-list');
         if (!state.wallets.length && list) {
             list.innerHTML = '<div class="wallet-list-empty"><strong>Cargando tus cuentas...</strong><span>Preparando saldos y movimientos.</span></div>';
         }
         loadWallets();
     }
-    if (isExpenses) {
+    if (load && isExpenses) {
         syncExpensePeriodUi();
         syncExpenseMovementTypeUi();
         if (!state.wallets.length) loadWallets();
         loadExpenseAnalysis();
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (persist) persistWorkspaceState({ view: nextView, scrollY: scroll ? 0 : currentScrollPosition() });
+    if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function refreshFinancialViews() {

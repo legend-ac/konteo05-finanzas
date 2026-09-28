@@ -16,6 +16,7 @@ export const state = {
     expenseMovementType: 'expense',
     expenseData: null,
     selectedWalletId: null,
+    workspaceView: 'home',
     isOnline: navigator.onLine,
     currentSort: localStorage.getItem('konteo.sort') || 'date_desc',
     exportPeriod: localStorage.getItem('konteo.export.period') || 'semanal',
