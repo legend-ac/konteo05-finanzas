@@ -19,6 +19,7 @@ import { db, firebase }   from '../firebase/config.js';
 import { saveIncome, saveExpense, getImportedGmailIds, getWallets } from '../services/dbService.js';
 import { isActiveWallet, resolveWalletAccount } from '../services/walletPolicy.js';
 import { businessDateToDate } from './helpers.js';
+import { mountMascots, reactMascot, releaseMascots } from './mascot.js';
 import { runLimited, withDeadline } from '../services/asyncControl.js';
 
 // ─────────────────────────────────────────────
@@ -316,7 +317,7 @@ async function persistSourceChoices() {
 // ─────────────────────────────────────────────
 function buildModal() {
     const old = document.getElementById('modal-gmail-import');
-    if (old) old.remove();
+    if (old) { releaseMascots(old); old.remove(); }
     const el = document.createElement('div');
     el.id        = 'modal-gmail-import';
     el.className = 'modal hidden';
@@ -336,7 +337,7 @@ function buildModal() {
         <div id="gmail-state-consent" class="gmail-state">
             <div class="gmail-consent-box">
                 <details class="companion-help import-companion">
-                    <summary><img src="/images/konteo-guide-gmail.jpg" width="88" height="88" alt=""><span><strong>Tú revisas, tú decides</strong><span class="companion-link">¿Qué se guarda desde Gmail?</span></span></summary>
+                    <summary><span class="mascot-scene" data-mascot="review"><img src="/images/konteo-guide-gmail.jpg" width="88" height="88" alt=""></span><span><strong>Tú revisas, tú decides</strong><span class="companion-link">¿Qué se guarda desde Gmail?</span></span></summary>
                     <p>Primero verás los movimientos detectados. Revisa monto, tipo y cuenta antes de seleccionarlos. Solo se guardan los que confirmas al importar; si falta información, debes revisarla antes.</p>
                 </details>
                 <h4>Conecta tu correo de notificaciones</h4>
@@ -427,7 +428,7 @@ function buildModal() {
         </div>
         <div id="gmail-state-success" class="gmail-state hidden">
             <div class="gmail-success-wrap">
-                <div class="gmail-success-icon">✅</div>
+                <span class="mascot-scene" data-mascot="confirmed"><img src="/images/konteo-guide-gmail.jpg" width="112" height="112" alt=""></span>
                 <h4 id="gmail-success-title">¡Listo!</h4>
                 <p id="gmail-success-msg"></p>
                 <button id="gmail-btn-done" class="gmail-btn-primary" style="align-self:center;width:auto;padding:0 32px">Ver movimientos</button>
@@ -445,6 +446,7 @@ function buildModal() {
         </div>
     </div>`;
     document.body.appendChild(el);
+    mountMascots(el);
     return el;
 }
 
@@ -576,6 +578,7 @@ function showState(name) {
         const el = document.getElementById(`gmail-state-${s}`);
         if (el) el.classList.toggle('hidden', s !== name);
     });
+    if (name === 'success') reactMascot(document.getElementById('gmail-state-success'));
 }
 
 function openModal()  {

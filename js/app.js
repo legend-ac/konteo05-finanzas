@@ -1426,10 +1426,10 @@ function renderWalletChoices() {
     const archived = state.wallets.filter(w => w.active === false);
     panel.classList.toggle('hidden', !review.length && !suggestedWallets.length && !archived.length);
     if (!review.length && !suggestedWallets.length && !archived.length) return;
-    const heading = document.createElement('h2');
+    const heading = document.createElement('summary');
     heading.textContent = review.length
-        ? 'Acciones pendientes para tus cuentas'
-        : suggestedWallets.length ? 'Cuentas sugeridas' : 'Cuentas archivadas';
+        ? `Revisar cuentas pendientes (${review.length})`
+        : suggestedWallets.length ? `Ver cuentas sugeridas (${suggestedWallets.length})` : `Ver cuentas archivadas (${archived.length})`;
     const description = document.createElement('p');
     description.textContent = review.length
         ? 'Las cuentas pendientes no afectan tu saldo. Decide si las activas, las archivas o creas una cuenta sugerida para movimientos sin asignar.'
@@ -1482,7 +1482,7 @@ function renderWalletChoices() {
         `Pendientes de revisar (${review.length})`,
         review.map(w => addRow(w.name, 'No se usa ni afecta tu saldo hasta que la revises.',
             [['Revisar y activar', 'keep', w.id], ['Archivar', 'archive', w.id]])),
-        { collapsible: true, open: review.length <= 2 }
+        { collapsible: false }
     );
     appendGroup(`Cuentas sugeridas (${suggestedWallets.length})`, suggestedWallets.map(w => addRow(w.name,
         `${w.configured ? 'Entidad configurada' : 'Detectada en tus movimientos'} · ${w.count} movimientos sin asignar`,
@@ -1521,15 +1521,9 @@ function renderWallets() {
     updateContextGuide('accounts-guide', accountGuide(active.length > 0));
     const included = active.filter(wallet => wallet.includeInTotal !== false);
     const total = included.reduce((sum, wallet) => sum + accountBalance(wallet), 0);
-    const reviewCount = state.wallets.filter(walletNeedsReview).length;
     const count = `${active.length} cuenta${active.length !== 1 ? 's' : ''} activa${active.length !== 1 ? 's' : ''}`;
     document.getElementById('wallets-total').textContent = `S/ ${fmt(total)}`;
     document.getElementById('wallets-total-detail').textContent = `${count} · ${included.length} incluida${included.length !== 1 ? 's' : ''} en saldo`;
-    const reviewStatus = document.getElementById('wallets-review-status');
-    if (reviewStatus) {
-        reviewStatus.classList.toggle('hidden', reviewCount === 0);
-        reviewStatus.textContent = reviewCount ? `${reviewCount} por revisar` : '';
-    }
     renderWalletChoices();
     document.getElementById('wallets-count').textContent = `${count} · ${included.length} en saldo total`;
     if (!list) return;
@@ -1772,8 +1766,16 @@ if ('serviceWorker' in navigator) {
     const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
     if (isLocal) {
         navigator.serviceWorker.getRegistrations()
-            .then(regs => regs.forEach(r => r.unregister()))
+            .then(regs => Promise.all(regs.filter(reg => {
+                const worker = reg.active || reg.waiting || reg.installing;
+                return worker && new URL(worker.scriptURL).pathname === '/service-worker.js';
+            }).map(reg => reg.unregister())))
             .catch(() => {});
+        if ('caches' in window) {
+            caches.keys()
+                .then(names => Promise.all(names.filter(name => name.startsWith('konteo05-')).map(name => caches.delete(name))))
+                .catch(() => {});
+        }
     } else {
         const hadController = Boolean(navigator.serviceWorker.controller);
         let refreshingForUpdate = false;

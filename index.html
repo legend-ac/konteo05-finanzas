@@ -136,7 +136,7 @@
                     <h2>Del movimiento al control, sin hojas de cálculo.</h2>
                     <p>Empieza registrando algo pequeño. Konteo crece contigo y no necesita una configuración complicada antes de ser útil.</p>
                     <details class="companion-help home-companion">
-                        <summary><img src="/images/konteo-guide-welcome.jpg" width="112" height="140" loading="lazy" alt=""><span><strong>¿Por dónde empiezo?</strong><span>Una guía para tu primera cuenta</span><span class="companion-link">Ver los primeros pasos</span></span></summary>
+                        <summary><span class="mascot-scene" data-mascot="welcome"><img src="/images/konteo-guide-welcome.jpg" width="96" height="120" loading="lazy" alt=""></span><span><strong>Tu primer paso, acompañado</strong><span>Prepara tu primera cuenta</span><span class="companion-link">Abrir la guía de inicio</span></span></summary>
                         <p>Agrega una cuenta con el nombre que reconozcas y su saldo inicial. Después registra un ingreso o gasto y asígnalo a esa cuenta. Los importes del resumen se calculan con los movimientos que guardas.</p>
                         <button type="button" class="home-button home-button-secondary" data-home-auth="register">Crear mi cuenta</button>
                     </details>
@@ -168,11 +168,7 @@
                     <p class="home-eyebrow">Privacidad y control</p>
                     <h2>Tu correo no se importa a ciegas.</h2>
                     <p>La conexión con Gmail es opcional y de solo lectura. Konto no envía ni elimina correos; muestra los movimientos detectados para que elijas qué guardar. Puedes desconectarla cuando quieras.</p>
-                    <details class="companion-help context-companion privacy-companion">
-                        <summary><img src="/images/konteo-guide-gmail.jpg" width="80" height="80" loading="lazy" alt=""><span><strong>Antes de conectar tu correo</strong><span class="companion-link">Conoce qué vas a autorizar</span></span></summary>
-                        <p>Gmail es opcional. Puedes empezar registrando a mano. Si conectas tu correo, revisa los permisos solicitados por Google y confirma los movimientos que quieras guardar.</p>
-                        <a class="guide-action" href="gmail-data.html">Leer cómo se usan los datos de Gmail</a>
-                    </details>
+                    <a class="guide-action" href="gmail-data.html">Qué autorizas al conectar Gmail</a>
                 </div>
                 <ul>
                     <li><strong>Solo lectura</strong><span>No modifica tu Gmail.</span></li>
@@ -327,16 +323,7 @@
                             <div id="balance" class="balance-number balance-positive" aria-live="polite">S/ 0.00</div>
                             <p class="balance-caption">Balance del per&iacute;odo seleccionado</p>
                         </div>
-                        <div class="balance-hero-actions">
-                            <button id="btn-income-d" class="btn-balance-action btn-balance-income btn-open-income" type="button">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                <span>Registrar ingreso</span>
-                            </button>
-                            <button id="btn-expense-d" class="btn-balance-action btn-balance-expense btn-open-expense" type="button">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                <span>Registrar gasto</span>
-                            </button>
-                        </div>
+
                     </div>
                     <div class="overview-stat income-stat">
                         <span>Ingresos</span>
@@ -346,6 +333,16 @@
                         <span>Gastos</span>
                         <strong id="total-expenses">S/ 0.00</strong>
                     </div>
+                </div>
+                <div class="balance-hero-actions">
+                    <button id="btn-income-d" class="btn-balance-action btn-balance-income btn-open-income" type="button">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>Registrar ingreso</span>
+                    </button>
+                    <button id="btn-expense-d" class="btn-balance-action btn-balance-expense btn-open-expense" type="button">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>Registrar gasto</span>
+                    </button>
                 </div>
 
                 <!-- Metrics -->
@@ -467,10 +464,13 @@
                             </div>
                             <button id="btn-save-plan" class="btn-save-plan" type="button">Guardar</button>
                         </div>
-                        <details id="budget-guide" class="companion-help context-companion">
-                            <summary><img src="/images/konteo-guide-empty.jpg" width="80" height="80" loading="lazy" alt=""><span><strong data-guide-title>Dale un límite a este período</strong><span class="companion-link" data-guide-hint>Cómo empezar con tu presupuesto</span></span></summary>
+                        <details id="budget-guide" class="companion-help context-companion companion-on-demand">
+                            <summary><span><strong data-guide-title>Dale un límite a este período</strong><span class="companion-link" data-guide-hint>Cómo empezar con tu presupuesto</span></span></summary>
+                            <div class="guide-body">
+                            <span class="mascot-scene" data-mascot="record"><img src="/images/konteo-guide-empty.jpg" width="96" height="96" loading="lazy" alt=""></span>
                             <p data-guide-body>Elige tu límite y revisa los gastos del período. Los cambios solo se guardan cuando pulsas Guardar.</p>
                             <button class="guide-action" type="button" data-guide-action="focus" data-guide-target="plan-expense-limit">Escribir mi límite</button>
+                            </div>
                         </details>
                     </div>
 
@@ -504,9 +504,9 @@
                 <section class="wallet-total-card" aria-label="Saldo total de billeteras">
                     <span>Saldo consolidado</span>
                     <strong id="wallets-total">S/ 0.00</strong>
-                    <div class="wallet-total-meta"><small id="wallets-total-detail">0 cuentas activas</small><span id="wallets-review-status" class="hidden"></span></div>
+                    <div class="wallet-total-meta"><small id="wallets-total-detail">0 cuentas activas</small></div>
                 </section>
-                <section id="wallet-choices" class="wallet-choices hidden" aria-label="Elegir cuentas"></section>
+                <details id="wallet-choices" class="wallet-choices hidden" aria-label="Gestionar cuentas pendientes y archivadas"></details>
                 <div class="wallets-layout">
                     <section class="wallets-list-panel" aria-labelledby="wallets-list-title">
                         <div class="wallets-panel-heading">
@@ -514,10 +514,13 @@
                             <button id="btn-wallet-transfer" class="wallet-secondary" type="button">Transferir</button>
                         </div>
                         <div id="wallets-list" class="wallets-list"></div>
-                        <details id="accounts-guide" class="companion-help context-companion">
-                            <summary><img src="/images/konteo-guide-welcome.jpg" width="72" height="90" loading="lazy" alt=""><span><strong data-guide-title>Organiza tus cuentas</strong><span class="companion-link" data-guide-hint>Cómo elegir banco y billetera</span></span></summary>
+                        <details id="accounts-guide" class="companion-help context-companion companion-on-demand">
+                            <summary><span><strong data-guide-title>Organiza tus cuentas</strong><span class="companion-link" data-guide-hint>Cómo elegir banco y billetera</span></span></summary>
+                            <div class="guide-body">
+                            <span class="mascot-scene" data-mascot="welcome"><img src="/images/konteo-guide-welcome.jpg" width="72" height="90" loading="lazy" alt=""></span>
                             <p data-guide-body>Cada cuenta tiene su propio saldo y configuración. Revisa cuáles usas y qué movimientos les asignas.</p>
                             <button class="guide-action" type="button" data-guide-action="new-account">Configurar una cuenta</button>
+                            </div>
                         </details>
                     </section>
                     <aside id="wallet-detail" class="wallet-detail-panel" aria-live="polite"></aside>

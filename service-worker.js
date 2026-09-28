@@ -1,5 +1,5 @@
 // Service Worker - Konteo 05
-const CACHE_NAME = 'konteo05-v5.3.1';
+const CACHE_NAME = 'konteo05-v5.4.0';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -24,6 +24,7 @@ const APP_SHELL = [
   '/js/ui/charts.js',
   '/js/ui/insights.js',
   '/js/ui/guides.js',
+  '/js/ui/mascot.js',
   '/js/ui/gmailImport.js',
   '/images/og-konteo-05.png',
   '/images/konteo-guide-welcome.jpg',
@@ -64,7 +65,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((names) => Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))))
+      .then((names) => Promise.all(names.filter((name) => name.startsWith('konteo05-') && name !== CACHE_NAME).map((name) => caches.delete(name))))
       .then(() => self.clients.claim())
   );
 });
@@ -90,9 +91,10 @@ self.addEventListener('fetch', (event) => {
             }
             return response;
         } catch (_) {
-            const cached = await caches.match(request);
+            const cache = await caches.open(CACHE_NAME);
+            const cached = await cache.match(request);
             if (cached) return cached;
-            if (request.mode === 'navigate') return caches.match('/index.html');
+            if (request.mode === 'navigate') return (await cache.match('/index.html')) || Response.error();
             return Response.error();
         }
     })());

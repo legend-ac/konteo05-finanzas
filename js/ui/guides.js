@@ -1,3 +1,5 @@
+import { initMascots } from './mascot.js';
+
 // Contextual help uses the same local values as the screen. No model, network
 // request or automatic change to financial data is involved.
 const amount = value => new Intl.NumberFormat('es-PE', {
@@ -52,6 +54,7 @@ export function updateContextGuide(id, guide) {
 }
 
 export function initContextGuides({ onNewAccount, onEditAccount } = {}) {
+    initMascots();
     document.addEventListener('click', event => {
         const button = event.target.closest('[data-guide-action]');
         if (!button) return;

@@ -1,3 +1,15 @@
-# Legacy local OAuth callback. The application uses Google Identity Services
-# directly and has no route or reference to this standalone page.
-oauth-callback.html
+# Files used only for development, Firebase deployment, or repository documentation.
+.git/
+node_modules/
+tests/
+.firebase/
+.env*
+*.log
+*.backup
+.tmp-dev-server.cjs
+*.md
+eslint.config.*
+.firebaserc
+firebase.json
+firestore.rules
+firestore.indexes.json

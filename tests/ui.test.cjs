@@ -20,9 +20,10 @@ class Element {
     append(...elements) { this.children.push(...elements); }
     appendChild(element) { this.append(element); return element; }
     setAttribute(key, value) { this.attributes[key] = value; }
+    querySelectorAll() { return []; }
 }
 
-async function renderer() {
+async function renderer(file = 'render.js') {
     const context = vm.createContext({
         Date, Intl,
         document: {
@@ -40,9 +41,9 @@ async function renderer() {
         await module.link((specifier, parent) => load(path.resolve(path.dirname(parent.identifier), specifier)));
         return module;
     }
-    const module = await load(path.join(__dirname, '../js/ui/render.js'));
+    const module = await load(path.join(__dirname, '../js/ui/', file));
     await module.evaluate();
-    return module.namespace.renderTransactionList;
+    return file === 'render.js' ? module.namespace.renderTransactionList : module.namespace;
 }
 
 test('empty period explains the period, keeps the complete guide and next actions', async () => {
@@ -51,7 +52,8 @@ test('empty period explains the period, keeps the complete guide and next action
     render(list, []);
     const empty = list.children[0];
     assert.equal(empty.attributes.role, 'listitem');
-    assert.equal(empty.children[0].src, '/images/konteo-guide-empty.jpg');
+    assert.equal(empty.children[0].children[0].src, '/images/konteo-guide-empty.jpg');
+    assert.equal(empty.children[0].dataset.mascot, 'record');
     const copy = empty.children[1];
     assert.equal(copy.children[0].textContent, 'Este período aún no tiene movimientos');
     assert.match(copy.children[1].textContent, /otro período/);
@@ -77,4 +79,38 @@ test('render replaces the previous empty state, and tolerates a missing list', a
     render(list, [], { hasFilters: true });
     assert.equal(list.children.length, 1);
     assert.doesNotThrow(() => render(null, []));
+});
+
+test('budget help follows no limit, available and exceeded states without changing data', async () => {
+    const { budgetGuide } = await renderer('guides.js');
+    assert.equal(budgetGuide(0, 200).target, 'plan-expense-limit');
+    const available = budgetGuide(100, 40);
+    assert.match(available.body, /60[.,]00/);
+    assert.equal(available.target, 'plan-expense-limit');
+    const exceeded = budgetGuide(100, 120);
+    assert.equal(exceeded.target, 'search-input');
+    assert.match(exceeded.body, /no es tu saldo bancario/);
+    assert.equal(budgetGuide(100, 100).target, 'plan-expense-limit');
+});
+
+test('account help offers creation only without active accounts, otherwise configuration', async () => {
+    const { accountGuide } = await renderer('guides.js');
+    assert.equal(accountGuide(false).actionName, 'new-account');
+    assert.match(accountGuide(false).body, /pendientes/);
+    assert.equal(accountGuide(true).actionName, 'edit-account');
+    assert.match(accountGuide(true).body, /Plin · BBVA y Plin · Interbank/);
+});
+
+test('mascot scenes preserve artwork and have distinct task cues, not interactive fake progress', async () => {
+    const { createMascotScene } = await renderer('mascot.js');
+    const scenes = ['welcome', 'record', 'review', 'confirmed'].map(createMascotScene);
+    for (const scene of scenes) {
+        assert.equal(scene.attributes['aria-hidden'], 'true');
+        assert.equal(scene.children.length, 2);
+        assert.equal(scene.children[0].alt, '');
+        assert.equal(scene.children[0].loading, 'lazy');
+    }
+    assert.match(scenes[1].children[1].innerHTML, /mascot-pencil/);
+    assert.match(scenes[2].children[1].innerHTML, /mascot-scan/);
+    assert.match(scenes[3].children[1].innerHTML, /mascot-tick/);
 });

@@ -1,6 +1,7 @@
 // js/ui/render.js — Compact ledger rows, income source visible, no meta noise
 
 import { formatBusinessDate, transactionBusinessDate } from './helpers.js';
+import { createMascotScene, releaseMascots } from './mascot.js';
 
 const CAT_LABEL = { green: 'Fijo', yellow: 'Necesario', red: 'Antojo' };
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -120,6 +121,7 @@ function createRow(item, index) {
 
 export function renderTransactionList(listEl, filtered, { hasFilters = false } = {}) {
     if (!listEl) return;
+    releaseMascots(listEl);
     listEl.textContent = '';
 
     if (!filtered.length) {
@@ -147,13 +149,8 @@ export function renderTransactionList(listEl, filtered, { hasFilters = false } =
             listEl.append(p);
             return;
         }
-        const guide = document.createElement('img');
-        guide.className = 'empty-state-guide';
-        guide.src = '/images/konteo-guide-empty.jpg';
-        guide.alt = '';
-        guide.width = 120;
-        guide.height = 120;
-        guide.loading = 'lazy';
+        const guide = createMascotScene('record');
+        guide.classList.add('empty-state-guide');
         const actions = document.createElement('div');
         actions.className = 'empty-state-actions';
         // #1 — Mismo texto y clases que la tarjeta de saldo

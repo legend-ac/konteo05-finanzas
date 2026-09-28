@@ -57,7 +57,7 @@
 #dashboard-page #logout-btn { color: var(--text-2) !important; border-color: transparent !important; }
 #dashboard-page #logout-btn:hover { background: var(--bg-3) !important; }
 .home-brand > span, .desktop-nav-mark, .brand-icon { background: #dfbc6a; color: #262318; box-shadow: none; }
-.desktop-nav .app-nav-link { display: flex; justify-content: flex-start; border: 1px solid transparent; }
+.desktop-nav .app-nav-link { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 42px; border: 1px solid transparent; }
 .desktop-nav .app-nav-link.active { background: var(--bg-3); border-color: var(--line); color: var(--text); }
 .desktop-nav .app-nav-link.active > span { color: var(--gold); }
 button:focus-visible, summary:focus-visible, a:focus-visible {
@@ -314,8 +314,6 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 .motion-ready .ledger-card, .motion-ready .wallet-list-item,
 .motion-ready .plan-section, .motion-ready .insights-section { transform: none !important; }
 @media (prefers-reduced-motion: no-preference) {
-    .companion-help img { transition: transform 180ms ease-out; }
-    .companion-help > summary:hover img, .companion-help > summary:focus-visible img { transform: translateY(-3px); }
     .companion-help[open] > p { animation: guide-reveal 180ms ease-out; }
 }
 @keyframes guide-reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
@@ -409,4 +407,65 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
     .wallet-list-item { grid-template-columns: 30px minmax(0, 1fr); }
     .wallet-list-amount { grid-column: 2; }
     .wallet-settings-summary > div { grid-template-columns: 92px minmax(0, 1fr); gap: 8px; }
+}
+
+/* One role at a time. Secondary help is quiet until explicitly opened. */
+.companion-on-demand > summary { grid-template-columns: minmax(0, 1fr); }
+.companion-on-demand:not([open]) > .guide-body { display: none; }
+.companion-on-demand .guide-body { display: grid; grid-template-columns: 80px minmax(0, 1fr); column-gap: 16px; row-gap: 14px; align-items: start; margin-top: 16px; }
+.guide-body > .mascot-scene { grid-column: 1; grid-row: 1 / span 2; }
+.guide-body > p { grid-column: 2; margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.7; }
+.guide-body > .guide-action { grid-column: 2; margin: 0; justify-self: start; }
+#home-view:has(#budget-guide[open]) .empty-state-guide { display: none; }
+#home-view:has(#budget-guide[open]) .empty.empty-state { grid-template-columns: minmax(0, 1fr); }
+.mascot-scene, .companion-help summary > .mascot-scene {
+    position: relative; display: grid; place-items: center; isolation: isolate;
+    width: 108px; max-width: 100%; height: auto; padding: 6px;
+    border-radius: 12px; background: #faf7ed;
+    flex-shrink: 0;
+}
+.mascot-scene img, .home-companion .mascot-scene img {
+    display: block; width: 100%; max-width: 100%; height: auto;
+    object-fit: contain; border-radius: 6px; transform-origin: 50% 85%;
+}
+.mascot-scene.empty-state-guide { width: 120px; height: auto; }
+.home-companion > summary { grid-template-columns: 108px minmax(0, 1fr); }
+.import-companion > summary { grid-template-columns: 100px minmax(0, 1fr); }
+.companion-help summary > span:not(.mascot-scene) { min-width: 0; overflow-wrap: break-word; }
+.companion-help .mascot-scene .mascot-cue, .mascot-scene .mascot-cue {
+    position: absolute; bottom: -6px; right: -6px; display: grid; place-items: center;
+    width: 32px; height: 34px; padding: 4px; z-index: 1;
+    background: var(--bg-2); color: var(--gold); border: 1px solid var(--line-2);
+    border-radius: 8px; pointer-events: none;
+}
+.mascot-cue svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.mascot-scene[data-mascot="confirmed"] .mascot-cue { color: var(--income); }
+.gmail-success-wrap > .mascot-scene { margin: 0 auto 20px; }
+.import-companion .mascot-scene { margin-right: 6px; }
+.companion-help > summary { min-height: 44px; }
+@media (prefers-reduced-motion: no-preference) {
+    .mascot-arrived > img { animation: mascot-greet 1.8s ease-in-out 1; }
+    .mascot-arrived .mascot-ink { stroke-dasharray: 44; animation: mascot-draw 1.2s ease-out 1; }
+    .mascot-arrived .mascot-tick { stroke-dasharray: 32; animation: mascot-draw 1s .2s ease-out backwards; }
+    .mascot-arrived .mascot-pencil { animation: mascot-write .65s .2s ease-in-out 3; }
+    .mascot-arrived .mascot-scan { animation: mascot-scan 1.2s ease-in-out 2; }
+    .companion-help[open] .mascot-scan { animation: mascot-scan-open 1.2s ease-in-out 2; }
+    .companion-help[open] .mascot-pencil { animation: mascot-write-open .65s ease-in-out 3; }
+    .companion-help[open] .mascot-tick { stroke-dasharray: 32; animation: mascot-draw-open 1s ease-out 1; }
+    .guide-action { transition: background 160ms ease, border-color 160ms ease, transform 160ms ease; }
+    .guide-action:active { transform: translateY(1px); }
+}
+@keyframes mascot-greet { 0% { transform: translateY(5px) rotate(-2deg); opacity: .65; } 35% { transform: translateY(-4px) rotate(1deg); opacity: 1; } 70% { transform: translateY(1px) rotate(-.5deg); } 100% { transform: none; } }
+@keyframes mascot-draw { from { stroke-dashoffset: 44; } to { stroke-dashoffset: 0; } }
+@keyframes mascot-draw-open { from { stroke-dashoffset: 32; } to { stroke-dashoffset: 0; } }
+@keyframes mascot-write { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-4px, 2px); } }
+@keyframes mascot-write-open { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-4px, 2px); } }
+@keyframes mascot-scan { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(20px); } }
+@keyframes mascot-scan-open { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(20px); } }
+@media (max-width: 767px) {
+    .mascot-scene.empty-state-guide { width: 88px; }
+    .companion-on-demand .guide-body { grid-template-columns: 64px minmax(0, 1fr); column-gap: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .mascot-scene *, .companion-help[open] > p { animation: none !important; transition: none !important; }
 }
