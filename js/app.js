@@ -168,7 +168,13 @@ function analyticsEntities() {
         if (!id.startsWith('source:') || sourceLabels.has(id)) return;
         const source = id.slice(7);
         const configured = state.walletEntities.find(entity => entitySourceKey(entity) === source);
-        sourceLabels.set(id, configured?.name || item.sourceLabel || source.replace(/[-_]+/g, ' '));
+        const names = {
+            'plin-interbank': 'Plin · Interbank', 'plin-bbva': 'Plin · BBVA',
+            plin: 'Plin', bcp: 'BCP', bbva: 'BBVA', interbank: 'Interbank',
+            yape: 'Yape', mibanco: 'MiBanco', scotiabank: 'Scotiabank', nacion: 'Banco de la Nación'
+        };
+        const normalizedSource = source.replace(/[\s_]+/g, '-');
+        sourceLabels.set(id, configured?.name || names[source] || names[normalizedSource] || item.sourceLabel || source.replace(/[-_]+/g, ' '));
     });
     const virtualSources = [...sourceLabels].map(([id, name]) => ({
         id, name, type: 'wallet', color: 'gold', active: true

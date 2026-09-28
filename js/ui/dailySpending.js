@@ -6,7 +6,9 @@ import { isPosted, sumAmounts } from '../services/financialMath.js';
 export const UNASSIGNED_ENTITY_ID = '__unassigned__';
 
 function itemTime(item) {
-    const value = item?.occurredAt?.toDate?.() || item?.date?.toDate?.() || item?.createdAt?.toDate?.();
+    // A document date stored at midnight is a business-day marker, not an
+    // actual operation time. Do not present it as the false precision "12 AM".
+    const value = item?.occurredAt?.toDate?.() || item?.createdAt?.toDate?.();
     if (!(value instanceof Date) || Number.isNaN(value.getTime())) return '';
     return new Intl.DateTimeFormat('es-PE', {
         timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', minute: '2-digit', hour12: true
@@ -130,8 +132,8 @@ export function renderExpenseAnalysis({ wallets = [], expenses = [], incomes = [
     selectionEl.textContent = entitySelectionText(options, selectedEntityIds);
     metaEl.textContent = `${visibleOptions.length} entidad${visibleOptions.length !== 1 ? 'es' : ''} · ${items.length} ${movementLabel}${items.length !== 1 ? 's' : ''} confirmado${items.length !== 1 ? 's' : ''}`;
     if (selectAllEl) {
-        selectAllEl.disabled = !options.length || selectedEntityIds === null;
-        selectAllEl.textContent = selectedEntityIds === null ? 'Todas seleccionadas' : 'Seleccionar todas';
+        selectAllEl.disabled = !options.length;
+        selectAllEl.textContent = 'Seleccionar todas';
     }
 
     entitiesEl.textContent = '';
