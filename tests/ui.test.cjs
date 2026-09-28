@@ -116,7 +116,7 @@ test('mascot scenes preserve artwork and have distinct task cues, not interactiv
 });
 
 test('daily spending groups only posted purchases by business day and selected entity', async () => {
-    const { buildDailySpendGroups, entitySelectionText, expenseEntityOptions } = await renderer('dailySpending.js');
+    const { buildDailySpendGroups, buildDailyMovementGroups, entitySelectionText, expenseEntityOptions } = await renderer('dailySpending.js');
     const expenses = [
         { id: 'a', type: 'expense', amount: 10.10, operationDate: '2026-09-27', accountId: 'bcp' },
         { id: 'b', type: 'expense', amount: 4.25, operationDate: '2026-09-27', accountId: 'bbva' },
@@ -139,4 +139,9 @@ test('daily spending groups only posted purchases by business day and selected e
     ]);
     assert.equal(JSON.stringify(entities.map(entity => entity.id)), JSON.stringify(['bcp', 'bbva']));
     assert.equal(entities[0].total, 18.1);
+    const incomes = buildDailyMovementGroups([
+        { id: 'income', type: 'income', amount: 500, operationDate: '2026-09-27', accountId: 'bcp' },
+        { id: 'transfer-income', type: 'income', amount: 10, operationDate: '2026-09-27', accountId: 'bcp', transferId: 'x' }
+    ], null, item => item.accountId, 'income');
+    assert.equal(incomes[0].total, 500);
 });

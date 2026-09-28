@@ -16,7 +16,7 @@ import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
 import { renderExpenseAnalysis, UNASSIGNED_ENTITY_ID } from './ui/dailySpending.js';
 import * as dbService             from './services/dbService.js';
-import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount } from './services/walletPolicy.js';
+import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount, entitySourceKey } from './services/walletPolicy.js';
 import { isPosted, sumAmounts, summarizeCashflow } from './services/financialMath.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
 import { openGmailImport, openGmailEntities, clearGmailImportCache } from './ui/gmailImport.js';
@@ -151,15 +151,39 @@ function updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, star
 }
 
 function dailyEntityIdFor(item) {
-    return resolveWalletAccount(item, state.wallets, state.walletEntities) || UNASSIGNED_ENTITY_ID;
+    const accountId = resolveWalletAccount(item, state.wallets, state.walletEntities);
+    if (accountId) return accountId;
+    const source = String(item?.source || '').replace(/^gmail:/, '').trim().toLowerCase();
+    return source ? `source:${source}` : UNASSIGNED_ENTITY_ID;
+}
+
+function analyticsEntities() {
+    const sourceItems = [
+        ...(state.expenseData?.expenseItems || []),
+        ...(state.expenseData?.incomeItems || [])
+    ];
+    const sourceLabels = new Map();
+    sourceItems.forEach(item => {
+        const id = dailyEntityIdFor(item);
+        if (!id.startsWith('source:') || sourceLabels.has(id)) return;
+        const source = id.slice(7);
+        const configured = state.walletEntities.find(entity => entitySourceKey(entity) === source);
+        sourceLabels.set(id, configured?.name || item.sourceLabel || source.replace(/[-_]+/g, ' '));
+    });
+    const virtualSources = [...sourceLabels].map(([id, name]) => ({
+        id, name, type: 'wallet', color: 'gold', active: true
+    }));
+    return [...state.wallets, ...virtualSources];
 }
 
 function renderExpenseAnalysisView() {
     renderExpenseAnalysis({
-        wallets: state.wallets,
+        wallets: analyticsEntities(),
         expenses: state.expenseData?.expenseItems || [],
+        incomes: state.expenseData?.incomeItems || [],
         selectedEntityIds: state.expenseEntityIds,
-        resolveEntityId: dailyEntityIdFor
+        resolveEntityId: dailyEntityIdFor,
+        movementType: state.expenseMovementType
     });
 }
 
@@ -187,6 +211,23 @@ function syncExpensePeriodUi() {
     document.getElementById('expenses-range-panel')?.classList.toggle('hidden', state.expenseFilter !== 'custom');
 }
 
+function syncExpenseMovementTypeUi() {
+    const isIncome = state.expenseMovementType === 'income';
+    document.querySelectorAll('.expense-type').forEach(button => {
+        const active = button.dataset.expenseType === state.expenseMovementType;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    const label = isIncome ? 'Ingreso' : 'Gasto';
+    document.querySelector('.expenses-summary-card')?.classList.toggle('is-income', isIncome);
+    document.getElementById('expenses-summary-label').textContent = `${label} seleccionado`;
+    document.getElementById('expenses-detail-title').textContent = `${isIncome ? 'Ingresos' : 'Gastos'} por fecha`;
+    document.getElementById('expenses-entities-copy').textContent = `Solo aparecen las entidades que tienen ${isIncome ? 'ingresos' : 'gastos'} en este período.`;
+    document.getElementById('expenses-summary-rule').textContent = isIncome
+        ? 'Transferencias, pendientes, anulados y operaciones entre tus propias cuentas no se incluyen.'
+        : 'Transferencias, pendientes, anulados y operaciones entre tus propias cuentas no se incluyen.';
+}
+
 async function loadExpenseAnalysis({ force = false } = {}) {
     if (!state.currentUser) return;
     if (force) state.expenseData = null;
@@ -197,12 +238,12 @@ async function loadExpenseAnalysis({ force = false } = {}) {
     const periodStart = businessDateString(startDate);
     const periodEnd = businessDateString(endDate);
     try {
-        const { expenseItems } = await dbService.getTransactions(state.currentUser.uid, startTs, endTs);
-        const scoped = expenseItems.filter(item => {
+        const { incomeItems, expenseItems } = await dbService.getTransactions(state.currentUser.uid, startTs, endTs);
+        const scoped = items => items.filter(item => {
             const date = transactionBusinessDate(item);
             return !!date && date >= periodStart && date <= periodEnd;
         });
-        state.expenseData = { expenseItems: scoped };
+        state.expenseData = { expenseItems: scoped(expenseItems), incomeItems: scoped(incomeItems) };
         renderExpenseAnalysisView();
     } catch (error) {
         console.error('expense analysis error:', error);
@@ -1700,6 +1741,7 @@ function changeAppView(view) {
     }
     if (isExpenses) {
         syncExpensePeriodUi();
+        syncExpenseMovementTypeUi();
         if (!state.wallets.length) loadWallets();
         loadExpenseAnalysis();
     }
@@ -1800,6 +1842,13 @@ document.querySelectorAll('.expense-period').forEach(button => button.addEventLi
     }
     state.expenseEntityIds = null;
     loadExpenseAnalysis();
+}));
+
+document.querySelectorAll('.expense-type').forEach(button => button.addEventListener('click', () => {
+    state.expenseMovementType = button.dataset.expenseType;
+    state.expenseEntityIds = null;
+    syncExpenseMovementTypeUi();
+    renderExpenseAnalysisView();
 }));
 
 document.getElementById('btn-apply-expenses-range')?.addEventListener('click', () => {

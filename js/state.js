@@ -13,6 +13,7 @@ export const state = {
     expenseFilter: 'today',
     expenseRangeStart: '',
     expenseRangeEnd: '',
+    expenseMovementType: 'expense',
     expenseData: null,
     selectedWalletId: null,
     isOnline: navigator.onLine,

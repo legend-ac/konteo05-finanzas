@@ -284,7 +284,7 @@
             </button>
             <button class="app-nav-link" data-view="expenses" type="button">
                 <span aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9m8 10V5m8 14v-7"/></svg></span>
-                Gastos
+                Entidades
             </button>
         </nav>
 
@@ -537,10 +537,14 @@
                 <div class="expenses-page-heading">
                     <div>
                         <p class="dashboard-eyebrow">Control por entidad</p>
-                        <h1 id="expenses-title">Gastos por entidad</h1>
-                        <p>Revisa solo gastos confirmados. Elige una o varias cuentas para ver el detalle exacto por fecha.</p>
+                        <h1 id="expenses-title">Movimientos por entidad</h1>
+                        <p>Elige gasto o ingreso, selecciona una o varias entidades y revisa el detalle exacto por día.</p>
                     </div>
                     <div class="expenses-period-control">
+                        <div class="movement-type-switch" role="group" aria-label="Tipo de movimiento">
+                            <button class="expense-type active" data-expense-type="expense" type="button" aria-pressed="true">Gastos</button>
+                            <button class="expense-type" data-expense-type="income" type="button" aria-pressed="false">Ingresos</button>
+                        </div>
                         <div class="period-bar" role="group" aria-label="Periodo de gastos">
                             <button class="expense-period active" data-expense-filter="today" type="button" aria-pressed="true">Hoy</button>
                             <button class="expense-period" data-expense-filter="week" type="button" aria-pressed="false">Semana</button>
@@ -555,12 +559,12 @@
                     </div>
                 </div>
                 <section class="expenses-summary-card" aria-live="polite">
-                    <div><span>Gasto seleccionado</span><strong id="expenses-selected-total">S/ 0.00</strong><small id="expenses-selected-meta">0 entidades · 0 gastos confirmados</small></div>
-                    <p>Transferencias, pendientes, anulados y operaciones entre tus propias cuentas no se incluyen.</p>
+                    <div><span id="expenses-summary-label">Gasto seleccionado</span><strong id="expenses-selected-total">S/ 0.00</strong><small id="expenses-selected-meta">0 entidades · 0 gastos confirmados</small></div>
+                    <p id="expenses-summary-rule">Transferencias, pendientes, anulados y operaciones entre tus propias cuentas no se incluyen.</p>
                 </section>
                 <section class="expenses-entity-section" aria-labelledby="expenses-entities-title">
                     <div class="expenses-section-heading">
-                        <div><p class="plan-eyebrow">Entidades detectadas</p><h2 id="expenses-entities-title">Elige qué entidades comparar</h2><p>Solo aparecen las entidades que tienen gastos en este período.</p></div>
+                        <div><p class="plan-eyebrow">Entidades detectadas</p><h2 id="expenses-entities-title">Elige qué entidades comparar</h2><p id="expenses-entities-copy">Solo aparecen las entidades que tienen gastos en este período.</p></div>
                         <button id="btn-expenses-select-all" class="expenses-select-all" type="button">Todas seleccionadas</button>
                     </div>
                     <div id="expense-entity-list" class="expense-entity-list" role="group" aria-label="Seleccionar entidades con gastos"></div>
@@ -583,7 +587,7 @@
             </button>
             <button class="app-nav-link" data-view="expenses" type="button">
                 <span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9m8 10V5m8 14v-7"/></svg></span>
-                <small>Gastos</small>
+                <small>Entidades</small>
             </button>
         </nav>
 

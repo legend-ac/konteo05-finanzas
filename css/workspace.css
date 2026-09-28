@@ -425,6 +425,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 .expenses-page-heading h1, .expenses-section-heading h2 { margin: 5px 0 8px; color: var(--text); }
 .expenses-page-heading > div > p:last-child, .expenses-section-heading > div > p:last-child { max-width: 650px; margin: 0; color: var(--text-2); line-height: 1.55; }
 .expenses-period-control { flex: 0 0 auto; }
+.movement-type-switch { display: inline-flex; gap: 4px; margin: 0 0 10px auto; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); }.expense-type { height: 32px; padding: 0 12px; border: 0; border-radius: 7px; color: var(--text-2); background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; }.expense-type.active { color: #201807; background: var(--gold); }
 .expenses-period-control .period-bar { margin: 0; }
 .expenses-range-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 330px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); }
 .expenses-range-panel label { display: grid; gap: 5px; color: var(--text-3); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
@@ -434,6 +435,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 .expenses-summary-card span, .expenses-summary-card small { display: block; color: var(--text-3); font-size: 12px; }
 .expenses-summary-card strong { display: block; margin: 5px 0; color: var(--expense); font-family: 'IBM Plex Mono', monospace; font-size: clamp(26px, 4vw, 36px); letter-spacing: -.05em; }
 .expenses-summary-card p { max-width: 390px; margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.expenses-summary-card.is-income { border-left-color: var(--income); }.expenses-summary-card.is-income strong { color: var(--income); }
 .expenses-entity-section, .expenses-detail-section { margin-top: 18px; padding: 24px 26px; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); }
 .expenses-section-heading h2 { font-size: 20px; }
 .expenses-section-heading .plan-eyebrow { margin: 0; }
@@ -460,6 +462,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 .expense-detail-movement { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 12px 0 0; }
 .expense-detail-movement + .expense-detail-movement { margin-top: 10px; border-top: 1px dashed var(--line); }
 .expense-detail-movement strong, .expense-detail-movement small { display: block; overflow-wrap: anywhere; }
+.expense-detail-movement.is-income b { color: var(--income); }
 .expense-detail-movement strong { font-size: 13px; }
 .expense-detail-movement small { margin-top: 3px; color: var(--text-3); font-size: 11px; line-height: 1.4; }
 .expenses-empty-copy { grid-column: 1 / -1; margin: 0; padding: 18px 0 4px; color: var(--text-2); font-size: 13px; line-height: 1.55; }
@@ -467,6 +470,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
     .expenses-shell { width: min(100% - 28px, 620px); padding: 22px 0 84px; }
     .expenses-page-heading, .expenses-section-heading, .expenses-summary-card { display: grid; gap: 16px; }
     .expenses-period-control, .expenses-range-panel { width: 100%; }
+    .movement-type-switch { display: flex; width: 100%; margin-right: 0; }.expense-type { flex: 1; }
     .expenses-summary-card, .expenses-entity-section, .expenses-detail-section { padding: 18px 16px; border-radius: 14px; }
     .expense-entity-list { grid-template-columns: 1fr; }
     .expenses-select-all { width: 100%; }
