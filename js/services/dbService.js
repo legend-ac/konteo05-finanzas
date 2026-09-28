@@ -487,14 +487,16 @@ export async function deleteTransfer(uid, transferId) {
  */
 export async function deleteAllUserData(uid) {
     if (!uid) return;
-    const [incSnap, expSnap, walletsSnap] = await Promise.all([
+    const userRef = db.collection('users').doc(uid);
+    const [incSnap, expSnap, walletsSnap, auditSnap] = await Promise.all([
         db.collection('transactions').doc(uid).collection('income').get(),
         db.collection('transactions').doc(uid).collection('expenses').get(),
-        walletsRef(uid).get()
+        walletsRef(uid).get(),
+        auditRef(uid).get()
     ]);
 
     // Eliminar documentos en lotes
-    const docsToDelete = [...incSnap.docs, ...expSnap.docs, ...walletsSnap.docs];
+    const docsToDelete = [...incSnap.docs, ...expSnap.docs, ...walletsSnap.docs, ...auditSnap.docs];
     for (let i = 0; i < docsToDelete.length; i += 400) {
         const batch = db.batch();
         docsToDelete.slice(i, i + 400).forEach(doc => batch.delete(doc.ref));
@@ -502,16 +504,20 @@ export async function deleteAllUserData(uid) {
     }
 
     // Resetear SOLO el plan financiero — NO tocar gmailImport para que el usuario no pierda su conexión Gmail
-    try {
-        await db.collection('plans').doc(uid).delete();
-    } catch (_) {}
-
-    await db.collection('users').doc(uid).set({
-        monthlyTarget: 0,
-        planConfig: { incomeTarget: 0, expenseLimit: 0 },
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    await Promise.all([
+        db.collection('plans').doc(uid).delete().catch(() => {}),
+        db.collection('transactions').doc(uid).delete().catch(() => {}),
+        userRef.delete()
+    ]);
     planCache.delete(uid);
+}
+
+export async function exportAllUserData(uid) {
+    if (!uid) throw new Error('No hay una cuenta activa para exportar.');
+    const [profile, plan, wallets, transactions] = await Promise.all([
+        getUserProfile(uid), getPlan(uid), getWallets(uid), getAllTransactionsOrdered(uid)
+    ]);
+    return { format: 'konteo05-account-export', version: 1, exportedAt: new Date().toISOString(), profile: profile || {}, plan: plan || {}, wallets, transactions };
 }
 
 

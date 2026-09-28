@@ -1,6 +1,5 @@
-// Exact daily spending view. It deliberately counts only posted expenses and
-// excludes transfers: moving money between two of your own entities is not a
-// purchase.
+// Expense analysis by entity. It counts purchases only: transfers, pending and
+// cancelled records never become spending, even when they look like a debit.
 import { fmt, formatBusinessDate, transactionBusinessDate, BUSINESS_TIME_ZONE } from './helpers.js';
 import { isPosted, sumAmounts } from '../services/financialMath.js';
 
@@ -14,14 +13,13 @@ function itemTime(item) {
     }).format(value);
 }
 
-function isRealExpense(item) {
+export function isRealExpense(item) {
     return item?.type === 'expense' && isPosted(item) && !item.isTransfer && !item.transferId && item.operationType !== 'transfer_out';
 }
 
 export function buildDailySpendGroups(expenses = [], selectedEntityIds = null, resolveEntityId = item => item?.accountId || UNASSIGNED_ENTITY_ID) {
     const selected = selectedEntityIds === null ? null : new Set(selectedEntityIds);
     const days = new Map();
-
     expenses.filter(isRealExpense).forEach(item => {
         const entityId = resolveEntityId(item) || UNASSIGNED_ENTITY_ID;
         if (selected && !selected.has(entityId)) return;
@@ -31,139 +29,120 @@ export function buildDailySpendGroups(expenses = [], selectedEntityIds = null, r
         group.items.push({ ...item, dailyEntityId: entityId });
         days.set(date, group);
     });
-
-    return [...days.values()]
-        .map(group => ({
-            ...group,
-            total: sumAmounts(group.items),
-            items: [...group.items].sort((a, b) => {
-                const left = a?.occurredAt?.toMillis?.() || a?.date?.toMillis?.() || 0;
-                const right = b?.occurredAt?.toMillis?.() || b?.date?.toMillis?.() || 0;
-                return right - left;
-            })
-        }))
-        .sort((a, b) => b.date.localeCompare(a.date));
+    return [...days.values()].map(group => ({
+        ...group,
+        total: sumAmounts(group.items),
+        items: [...group.items].sort((a, b) => (b?.occurredAt?.toMillis?.() || b?.date?.toMillis?.() || 0) - (a?.occurredAt?.toMillis?.() || a?.date?.toMillis?.() || 0))
+    })).sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function entitySelectionText(options = [], selectedEntityIds = null) {
     if (selectedEntityIds === null) return 'Todas las entidades';
-    const count = selectedEntityIds.length;
-    if (count === 0) return 'Ninguna entidad';
-    if (count === 1) {
-        const selected = options.find(option => option.id === selectedEntityIds[0]);
-        return selected?.name || '1 entidad';
-    }
-    return `${count} entidades`;
+    if (selectedEntityIds.length === 0) return 'Ninguna entidad';
+    if (selectedEntityIds.length === 1) return options.find(option => option.id === selectedEntityIds[0])?.name || '1 entidad';
+    return `${selectedEntityIds.length} entidades`;
 }
 
-function appendOption(container, option, checked) {
-    const label = document.createElement('label');
-    label.className = 'daily-entity-option';
+// Entities appear only after they have a real expense in the chosen period.
+export function expenseEntityOptions(expenses = [], wallets = [], resolveEntityId = item => item?.accountId || UNASSIGNED_ENTITY_ID) {
+    const walletById = new Map(wallets.filter(wallet => wallet?.id).map(wallet => [wallet.id, wallet]));
+    const totals = new Map();
+    expenses.filter(isRealExpense).forEach(item => {
+        const id = resolveEntityId(item) || UNASSIGNED_ENTITY_ID;
+        const current = totals.get(id) || { id, count: 0, total: 0 };
+        current.count += 1;
+        current.total += Number(item.amount) || 0;
+        totals.set(id, current);
+    });
+    return [...totals.values()].map(item => {
+        const wallet = walletById.get(item.id);
+        return {
+            ...item,
+            name: item.id === UNASSIGNED_ENTITY_ID ? 'Sin entidad asignada' : (wallet?.name || 'Entidad no disponible'),
+            detail: item.id === UNASSIGNED_ENTITY_ID ? 'Revisa estos movimientos para asignarlos' : `${item.count} gasto${item.count !== 1 ? 's' : ''} confirmado${item.count !== 1 ? 's' : ''}`,
+            color: wallet?.color || wallet?.bankColor || ''
+        };
+    }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'es'));
+}
 
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.name = 'daily-entity';
-    input.value = option.id;
-    input.checked = checked;
-
-    const text = document.createElement('span');
-    const strong = document.createElement('strong');
-    strong.textContent = option.name;
-    text.appendChild(strong);
-    if (option.detail) {
-        const detail = document.createElement('small');
-        detail.textContent = option.detail;
-        text.appendChild(detail);
-    }
-    label.append(input, text);
-    container.appendChild(label);
+function appendEntityButton(container, option, selected) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `expense-entity-card${selected ? ' is-selected' : ''}`;
+    button.dataset.expenseEntityId = option.id;
+    button.setAttribute('aria-pressed', String(selected));
+    const marker = document.createElement('span');
+    marker.className = 'expense-entity-marker';
+    if (option.color) marker.style.setProperty('--entity-color', option.color);
+    const copy = document.createElement('span');
+    copy.className = 'expense-entity-copy';
+    const name = document.createElement('strong'); name.textContent = option.name;
+    const detail = document.createElement('small'); detail.textContent = option.detail;
+    copy.append(name, detail);
+    const amount = document.createElement('span');
+    amount.className = 'expense-entity-amount';
+    amount.textContent = `S/ ${fmt(option.total)}`;
+    button.append(marker, copy, amount);
+    container.appendChild(button);
 }
 
 function appendMovement(container, item, entityName) {
-    const row = document.createElement('div');
-    row.className = 'daily-movement';
-
+    const row = document.createElement('div'); row.className = 'expense-detail-movement';
     const copy = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = item.note || item.counterparty || 'Gasto registrado';
+    const title = document.createElement('strong'); title.textContent = item.note || item.counterparty || 'Gasto registrado';
     const meta = document.createElement('small');
-    const metadata = [entityName, item.sourceLabel || item.counterparty, itemTime(item)].filter(Boolean);
-    meta.textContent = metadata.join(' · ');
+    meta.textContent = [entityName, item.sourceLabel || item.counterparty, itemTime(item)].filter(Boolean).join(' · ');
     copy.append(title, meta);
-
-    const amount = document.createElement('b');
-    amount.textContent = `− S/ ${fmt(Number(item.amount) || 0)}`;
-    row.append(copy, amount);
-    container.appendChild(row);
+    const amount = document.createElement('b'); amount.textContent = `− S/ ${fmt(Number(item.amount) || 0)}`;
+    row.append(copy, amount); container.appendChild(row);
 }
 
-export function renderDailySpending({ wallets = [], expenses = [], selectedEntityIds = null, resolveEntityId = item => item?.accountId || UNASSIGNED_ENTITY_ID } = {}) {
-    const optionsEl = document.getElementById('daily-entity-options');
-    const summaryEl = document.getElementById('daily-entity-summary');
-    const selectedEl = document.getElementById('daily-spend-selection');
-    const listEl = document.getElementById('daily-spend-list');
-    const totalEl = document.getElementById('daily-spend-total');
-    if (!optionsEl || !summaryEl || !selectedEl || !listEl || !totalEl) return;
+export function renderExpenseAnalysis({ wallets = [], expenses = [], selectedEntityIds = null, resolveEntityId = item => item?.accountId || UNASSIGNED_ENTITY_ID } = {}) {
+    const entitiesEl = document.getElementById('expense-entity-list');
+    const totalEl = document.getElementById('expenses-selected-total');
+    const metaEl = document.getElementById('expenses-selected-meta');
+    const selectionEl = document.getElementById('expenses-entity-selection');
+    const listEl = document.getElementById('expenses-detail-list');
+    const selectAllEl = document.getElementById('btn-expenses-select-all');
+    if (!entitiesEl || !totalEl || !metaEl || !selectionEl || !listEl) return;
 
-    const assignedIds = new Set(expenses.filter(isRealExpense).map(item => resolveEntityId(item) || UNASSIGNED_ENTITY_ID));
-    const options = wallets
-        // Keep active entities selectable even when their total is zero. An
-        // archived entity remains selectable only if it has history here.
-        .filter(wallet => wallet?.id && (wallet.active !== false || assignedIds.has(wallet.id)))
-        .map(wallet => ({
-            id: wallet.id,
-            name: wallet.name || 'Entidad sin nombre',
-            detail: `${wallet.type === 'wallet' ? 'Billetera' : 'Cuenta bancaria'}${wallet.active === false ? ' · Archivada' : ''}`
-        }));
-    if (assignedIds.has(UNASSIGNED_ENTITY_ID)) {
-        options.push({ id: UNASSIGNED_ENTITY_ID, name: 'Sin entidad asignada', detail: 'Revisa el movimiento para asignarlo' });
-    }
-
-    const selectedSet = selectedEntityIds === null ? null : new Set(selectedEntityIds);
-    optionsEl.textContent = '';
-    options.forEach(option => appendOption(optionsEl, option, selectedSet === null || selectedSet.has(option.id)));
-
-    const selectionText = entitySelectionText(options, selectedEntityIds);
-    summaryEl.textContent = selectionText;
-    selectedEl.textContent = selectionText;
-
+    const options = expenseEntityOptions(expenses, wallets, resolveEntityId);
+    const selected = selectedEntityIds === null ? null : new Set(selectedEntityIds);
+    const visibleOptions = selected === null ? options : options.filter(option => selected.has(option.id));
     const groups = buildDailySpendGroups(expenses, selectedEntityIds, resolveEntityId);
-    const total = sumAmounts(groups.flatMap(group => group.items));
-    totalEl.textContent = `S/ ${fmt(total)}`;
-    listEl.textContent = '';
+    const items = groups.flatMap(group => group.items);
+    totalEl.textContent = `S/ ${fmt(sumAmounts(items))}`;
+    selectionEl.textContent = entitySelectionText(options, selectedEntityIds);
+    metaEl.textContent = `${visibleOptions.length} entidad${visibleOptions.length !== 1 ? 'es' : ''} · ${items.length} gasto${items.length !== 1 ? 's' : ''} confirmado${items.length !== 1 ? 's' : ''}`;
+    if (selectAllEl) {
+        selectAllEl.disabled = !options.length || selectedEntityIds === null;
+        selectAllEl.textContent = selectedEntityIds === null ? 'Todas seleccionadas' : 'Seleccionar todas';
+    }
 
+    entitiesEl.textContent = '';
     if (!options.length) {
-        const empty = document.createElement('p');
-        empty.className = 'daily-spend-empty';
-        empty.textContent = 'Registra gastos con una entidad para ver el detalle por día.';
-        listEl.appendChild(empty);
-        return;
-    }
-    if (!groups.length) {
-        const empty = document.createElement('p');
-        empty.className = 'daily-spend-empty';
-        empty.textContent = selectedEntityIds?.length === 0
-            ? 'Selecciona al menos una entidad.'
-            : 'No hay gastos confirmados para las entidades elegidas en este período.';
-        listEl.appendChild(empty);
-        return;
-    }
+        const empty = document.createElement('p'); empty.className = 'expenses-empty-copy';
+        empty.textContent = 'Las entidades aparecerán aquí cuando tengan gastos confirmados en este período.';
+        entitiesEl.appendChild(empty);
+    } else options.forEach(option => appendEntityButton(entitiesEl, option, selected === null || selected.has(option.id)));
 
+    listEl.textContent = '';
+    if (!groups.length) {
+        const empty = document.createElement('p'); empty.className = 'expenses-empty-copy';
+        empty.textContent = selectedEntityIds?.length === 0 ? 'Selecciona una o más entidades para ver su gasto exacto.' : 'No hay gastos confirmados para las entidades elegidas en este período.';
+        listEl.appendChild(empty); return;
+    }
     const names = new Map(options.map(option => [option.id, option.name]));
     groups.forEach(group => {
-        const day = document.createElement('section');
-        day.className = 'daily-spend-day';
-        const header = document.createElement('div');
-        header.className = 'daily-spend-day-header';
+        const day = document.createElement('section'); day.className = 'expense-detail-day';
+        const header = document.createElement('div'); header.className = 'expense-detail-day-header';
         const date = document.createElement('h3');
         date.textContent = formatBusinessDate(group.date, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
-        const total = document.createElement('strong');
-        total.textContent = `S/ ${fmt(group.total)}`;
-        header.append(date, total);
-        const detail = document.createElement('span');
-        detail.className = 'daily-spend-count';
-        detail.textContent = `${group.items.length} gasto${group.items.length !== 1 ? 's' : ''} confirmado${group.items.length !== 1 ? 's' : ''}`;
-        day.append(header, detail);
+        const amount = document.createElement('strong'); amount.textContent = `S/ ${fmt(group.total)}`;
+        header.append(date, amount);
+        const count = document.createElement('small'); count.className = 'expense-detail-count';
+        count.textContent = `${group.items.length} gasto${group.items.length !== 1 ? 's' : ''} confirmado${group.items.length !== 1 ? 's' : ''}`;
+        day.append(header, count);
         group.items.forEach(item => appendMovement(day, item, names.get(item.dailyEntityId) || 'Sin entidad asignada'));
         listEl.appendChild(day);
     });

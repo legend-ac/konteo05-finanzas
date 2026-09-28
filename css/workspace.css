@@ -419,58 +419,57 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 #home-view:has(#budget-guide[open]) .empty-state-guide { display: none; }
 #home-view:has(#budget-guide[open]) .empty.empty-state { grid-template-columns: minmax(0, 1fr); }
 
-/* Daily spending is an auditable list, not an estimated chart. */
-.daily-spend-section {
-    padding: 22px;
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    background: var(--bg-2);
-}
-.daily-spend-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.daily-spend-heading .plan-eyebrow { margin-bottom: 5px; }
-.daily-spend-heading h2 { margin: 0; }
-.daily-spend-heading > strong { color: var(--expense); font-family: 'IBM Plex Mono', monospace; font-size: 17px; white-space: nowrap; }
-.daily-spend-intro, .daily-spend-current { margin: 10px 0 0; color: var(--text-2); font-size: 12px; line-height: 1.5; }
-.daily-spend-current strong { color: var(--text); font-weight: 650; }
-.daily-entity-filter { position: relative; margin-top: 16px; }
-.daily-entity-filter > summary {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px;
-    padding: 0 12px; border: 1px solid var(--line-2); border-radius: 9px; color: var(--text); cursor: pointer;
-    font-size: 12px; font-weight: 650; list-style: none;
-}
-.daily-entity-filter > summary::-webkit-details-marker { display: none; }
-.daily-entity-filter > summary::after { content: '+'; color: var(--gold); font-size: 17px; font-weight: 400; }
-.daily-entity-filter[open] > summary { border-radius: 9px 9px 0 0; background: var(--bg-3); }
-.daily-entity-filter[open] > summary::after { content: '−'; }
-.daily-entity-menu { border: 1px solid var(--line-2); border-top: 0; border-radius: 0 0 9px 9px; background: var(--bg); }
-.daily-entity-actions { display: flex; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-.daily-entity-actions button { padding: 0; border: 0; background: transparent; color: var(--gold); font-size: 12px; font-weight: 700; cursor: pointer; }
-.daily-entity-actions button:hover { color: var(--text); }
-.daily-entity-options { display: grid; max-height: 176px; overflow-y: auto; }
-.daily-entity-option { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 9px; align-items: start; padding: 10px 12px; cursor: pointer; }
-.daily-entity-option + .daily-entity-option { border-top: 1px solid var(--line); }
-.daily-entity-option:hover { background: var(--bg-3); }
-.daily-entity-option input { width: 15px; height: 15px; margin: 2px 0 0; accent-color: var(--gold); }
-.daily-entity-option strong, .daily-entity-option small { display: block; overflow-wrap: anywhere; }
-.daily-entity-option strong { color: var(--text); font-size: 12px; }
-.daily-entity-option small { margin-top: 2px; color: var(--text-3); font-size: 11px; }
-.daily-spend-list { max-height: 370px; margin-top: 14px; overflow-y: auto; }
-.daily-spend-day { padding: 13px 0; border-top: 1px solid var(--line); }
-.daily-spend-day:first-child { border-top: 0; padding-top: 0; }
-.daily-spend-day-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.daily-spend-day-header h3 { margin: 0; color: var(--text); font-size: 13px; font-weight: 700; text-transform: capitalize; }
-.daily-spend-day-header > strong, .daily-movement > b { color: var(--expense); font-family: 'IBM Plex Mono', monospace; font-size: 12px; white-space: nowrap; }
-.daily-spend-count { display: block; margin-top: 3px; color: var(--text-3); font-size: 11px; }
-.daily-movement { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 10px 0 0; }
-.daily-movement + .daily-movement { border-top: 1px dashed var(--line); margin-top: 10px; }
-.daily-movement strong, .daily-movement small { display: block; overflow-wrap: anywhere; }
-.daily-movement strong { color: var(--text); font-size: 12px; font-weight: 650; }
-.daily-movement small { margin-top: 3px; color: var(--text-3); font-size: 11px; line-height: 1.4; }
-.daily-spend-empty { margin: 0; padding: 18px 0 4px; color: var(--text-2); font-size: 12px; line-height: 1.55; }
-
+/* Dedicated expenses view: entity choices exist only when the data justifies them. */
+.expenses-shell { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 42px 0 72px; }
+.expenses-page-heading, .expenses-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.expenses-page-heading h1, .expenses-section-heading h2 { margin: 5px 0 8px; color: var(--text); }
+.expenses-page-heading > div > p:last-child, .expenses-section-heading > div > p:last-child { max-width: 650px; margin: 0; color: var(--text-2); line-height: 1.55; }
+.expenses-period-control { flex: 0 0 auto; }
+.expenses-period-control .period-bar { margin: 0; }
+.expenses-range-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 330px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); }
+.expenses-range-panel label { display: grid; gap: 5px; color: var(--text-3); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.expenses-range-panel input { width: 100%; min-width: 0; height: 38px; padding: 0 8px; color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-3); }
+.expenses-range-panel button { grid-column: 1 / -1; height: 38px; border: 1px solid var(--gold); border-radius: 8px; color: var(--gold); background: transparent; font-weight: 700; cursor: pointer; }
+.expenses-summary-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 28px; padding: 24px 26px; border: 1px solid var(--line); border-left: 3px solid var(--expense); border-radius: 16px; background: var(--bg-2); }
+.expenses-summary-card span, .expenses-summary-card small { display: block; color: var(--text-3); font-size: 12px; }
+.expenses-summary-card strong { display: block; margin: 5px 0; color: var(--expense); font-family: 'IBM Plex Mono', monospace; font-size: clamp(26px, 4vw, 36px); letter-spacing: -.05em; }
+.expenses-summary-card p { max-width: 390px; margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.expenses-entity-section, .expenses-detail-section { margin-top: 18px; padding: 24px 26px; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); }
+.expenses-section-heading h2 { font-size: 20px; }
+.expenses-section-heading .plan-eyebrow { margin: 0; }
+.expenses-select-all { min-height: 38px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: 8px; color: var(--text-2); background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; }
+.expenses-select-all:disabled { opacity: .55; cursor: default; }
+.expense-entity-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
+.expense-entity-card { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 11px; color: var(--text); background: var(--bg); text-align: left; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.expense-entity-card:hover { border-color: var(--line-2); transform: translateY(-1px); }
+.expense-entity-card.is-selected { border-color: color-mix(in srgb, var(--gold) 70%, var(--line)); background: color-mix(in srgb, var(--gold) 7%, var(--bg)); }
+.expense-entity-marker { width: 8px; height: 32px; border-radius: 99px; background: var(--entity-color, var(--expense)); }
+.expense-entity-copy { min-width: 0; }
+.expense-entity-copy strong, .expense-entity-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expense-entity-copy strong { font-size: 13px; }
+.expense-entity-copy small { margin-top: 3px; color: var(--text-3); font-size: 11px; }
+.expense-entity-amount { color: var(--expense); font-family: 'IBM Plex Mono', monospace; font-size: 12px; white-space: nowrap; }
+.expenses-detail-heading p strong { color: var(--text); }
+.expenses-detail-list { max-width: 820px; margin-top: 20px; }
+.expense-detail-day { padding: 16px 0; border-top: 1px solid var(--line); }
+.expense-detail-day:first-child { padding-top: 0; border-top: 0; }
+.expense-detail-day-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.expense-detail-day-header h3 { margin: 0; color: var(--text); font-size: 14px; text-transform: capitalize; }
+.expense-detail-day-header strong, .expense-detail-movement b { color: var(--expense); font-family: 'IBM Plex Mono', monospace; font-size: 13px; white-space: nowrap; }
+.expense-detail-count { display: block; margin-top: 4px; color: var(--text-3); font-size: 11px; }
+.expense-detail-movement { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 12px 0 0; }
+.expense-detail-movement + .expense-detail-movement { margin-top: 10px; border-top: 1px dashed var(--line); }
+.expense-detail-movement strong, .expense-detail-movement small { display: block; overflow-wrap: anywhere; }
+.expense-detail-movement strong { font-size: 13px; }
+.expense-detail-movement small { margin-top: 3px; color: var(--text-3); font-size: 11px; line-height: 1.4; }
+.expenses-empty-copy { grid-column: 1 / -1; margin: 0; padding: 18px 0 4px; color: var(--text-2); font-size: 13px; line-height: 1.55; }
 @media (max-width: 767px) {
-    .daily-spend-section { padding: 18px 14px; border-radius: 14px; }
-    .daily-spend-list { max-height: none; }
+    .expenses-shell { width: min(100% - 28px, 620px); padding: 22px 0 84px; }
+    .expenses-page-heading, .expenses-section-heading, .expenses-summary-card { display: grid; gap: 16px; }
+    .expenses-period-control, .expenses-range-panel { width: 100%; }
+    .expenses-summary-card, .expenses-entity-section, .expenses-detail-section { padding: 18px 16px; border-radius: 14px; }
+    .expense-entity-list { grid-template-columns: 1fr; }
+    .expenses-select-all { width: 100%; }
 }
 .mascot-scene, .companion-help summary > .mascot-scene {
     position: relative; display: grid; place-items: center; isolation: isolate;

@@ -14,12 +14,15 @@ import { renderTransactionList }  from './ui/render.js';
 import { accountGuide, initContextGuides, updateContextGuide } from './ui/guides.js';
 import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
-import { renderDailySpending, UNASSIGNED_ENTITY_ID } from './ui/dailySpending.js';
+import { renderExpenseAnalysis, UNASSIGNED_ENTITY_ID } from './ui/dailySpending.js';
 import * as dbService             from './services/dbService.js';
 import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount } from './services/walletPolicy.js';
 import { isPosted, sumAmounts, summarizeCashflow } from './services/financialMath.js';
 import { exportToExcel, exportToPDF } from './services/exportService.js';
 import { openGmailImport, openGmailEntities, clearGmailImportCache } from './ui/gmailImport.js';
+import { revokeGmailToken } from './services/gmailService.js';
+
+const LEGAL_VERSION = '2026.09';
 
 // ──────────────────────────────────────────────
 // THEME
@@ -151,13 +154,60 @@ function dailyEntityIdFor(item) {
     return resolveWalletAccount(item, state.wallets, state.walletEntities) || UNASSIGNED_ENTITY_ID;
 }
 
-function renderDailyExpenseView() {
-    renderDailySpending({
+function renderExpenseAnalysisView() {
+    renderExpenseAnalysis({
         wallets: state.wallets,
-        expenses: state.dashboardData?.expenseItems || [],
-        selectedEntityIds: state.dailyEntityIds,
+        expenses: state.expenseData?.expenseItems || [],
+        selectedEntityIds: state.expenseEntityIds,
         resolveEntityId: dailyEntityIdFor
     });
+}
+
+function expensePeriodDates() {
+    const today = todayString();
+    if (state.expenseFilter === 'today') return [startOfBusinessDate(today), endOfBusinessDate(today)];
+    if (state.expenseFilter === 'week') {
+        const start = new Date(startOfBusinessDate(today));
+        start.setUTCDate(start.getUTCDate() - 6);
+        return [start, endOfBusinessDate(today)];
+    }
+    if (state.expenseFilter === 'custom') {
+        if (!state.expenseRangeStart || !state.expenseRangeEnd) return [null, null];
+        return [startOfBusinessDate(state.expenseRangeStart), endOfBusinessDate(state.expenseRangeEnd)];
+    }
+    return [startOfBusinessDate(`${today.slice(0, 7)}-01`), endOfBusinessDate(today)];
+}
+
+function syncExpensePeriodUi() {
+    document.querySelectorAll('.expense-period').forEach(button => {
+        const active = button.dataset.expenseFilter === state.expenseFilter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    document.getElementById('expenses-range-panel')?.classList.toggle('hidden', state.expenseFilter !== 'custom');
+}
+
+async function loadExpenseAnalysis({ force = false } = {}) {
+    if (!state.currentUser) return;
+    if (force) state.expenseData = null;
+    const [startDate, endDate] = expensePeriodDates();
+    if (!startDate || !endDate) return;
+    const startTs = firebase.firestore.Timestamp.fromDate(startDate);
+    const endTs = firebase.firestore.Timestamp.fromDate(endDate);
+    const periodStart = businessDateString(startDate);
+    const periodEnd = businessDateString(endDate);
+    try {
+        const { expenseItems } = await dbService.getTransactions(state.currentUser.uid, startTs, endTs);
+        const scoped = expenseItems.filter(item => {
+            const date = transactionBusinessDate(item);
+            return !!date && date >= periodStart && date <= periodEnd;
+        });
+        state.expenseData = { expenseItems: scoped };
+        renderExpenseAnalysisView();
+    } catch (error) {
+        console.error('expense analysis error:', error);
+        showToast('No se pudo cargar el detalle de gastos', 'error');
+    }
 }
 
 function renderTransactionLedger(incomeItems, expenseItems) {
@@ -382,7 +432,8 @@ async function loadData({ force = false } = {}) {
         document.getElementById('total-expenses') .textContent = `S/ ${fmt(totalExpenses)}`;
         updatePeriodLabel();
         updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems: realExpenseItems, startDate, endDate });
-        renderDailyExpenseView();
+        // The dedicated expense view owns its own period and does not make
+        // the dashboard query or render a second, competing expense panel.
 
         // Cargar configuración del plan antes de renderizar gráficas
         if (plan) {
@@ -570,6 +621,11 @@ document.getElementById('register-form').onsubmit = async e => {
     const birthday = document.getElementById('reg-birthday')?.value || '';
     const password = document.getElementById('reg-password').value;
 
+    if (!document.getElementById('reg-legal-accept')?.checked) {
+        showToast('Debes aceptar los Términos y la Política de Privacidad.', 'error');
+        return;
+    }
+
     if (name.length < 2 || name.length > 50) {
         showToast('El nombre debe tener entre 2 y 50 caracteres', 'error');
         return;
@@ -585,6 +641,7 @@ document.getElementById('register-form').onsubmit = async e => {
         await cred.user.updateProfile({ displayName: safeName });
         await db.collection('users').doc(cred.user.uid).set({
             name: safeName, phone, birthday, currency: 'PEN', monthlyTarget: 0, bio: '',
+            legalAcceptance: { termsVersion: LEGAL_VERSION, privacyVersion: LEGAL_VERSION, acceptedAt: firebase.firestore.FieldValue.serverTimestamp() },
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         showToast('Cuenta creada. Bienvenido a Konteo 05', 'success');
@@ -603,6 +660,22 @@ function authErrorMessage(error) {
     return `No se pudo iniciar con Google: ${error?.message || 'inténtalo de nuevo.'}`;
 }
 
+async function finishGoogleAuthentication(authResult, acceptedTerms = false) {
+    const isNewUser = Boolean(authResult?.additionalUserInfo?.isNewUser);
+    if (isNewUser && !acceptedTerms) {
+        await auth.signOut();
+        showPage('register');
+        throw new Error('Para crear una cuenta con Google debes aceptar los Términos y la Política de Privacidad.');
+    }
+    await ensureAuthenticatedUserDocument(authResult.user);
+    if (isNewUser || acceptedTerms) {
+        await db.collection('users').doc(authResult.user.uid).set({
+            legalAcceptance: { termsVersion: LEGAL_VERSION, privacyVersion: LEGAL_VERSION, acceptedAt: firebase.firestore.FieldValue.serverTimestamp() },
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    }
+}
+
 // Manejar resultado de redirección de Google Auth si existió
 auth.getRedirectResult().then(async result => {
     if (result && result.user) {
@@ -616,6 +689,12 @@ auth.getRedirectResult().then(async result => {
 
 async function signInWithGoogle(button) {
     if (button?.disabled) return;
+    const isRegistration = Boolean(button?.closest('#register-page'));
+    const acceptedTerms = !isRegistration || Boolean(document.getElementById('reg-legal-accept')?.checked);
+    if (!acceptedTerms) {
+        showToast('Acepta los Términos y la Política de Privacidad para crear tu cuenta.', 'error');
+        return;
+    }
     const buttons = [...document.querySelectorAll('[data-google-auth]')];
     const originalText = button?.querySelector('span')?.textContent || 'Continuar con Google';
 
@@ -642,7 +721,7 @@ async function signInWithGoogle(button) {
                     try {
                         const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
                         const authResult = await auth.signInWithCredential(credential);
-                        await ensureAuthenticatedUserDocument(authResult.user);
+                        await finishGoogleAuthentication(authResult, isRegistration);
                         showToast('¡Bienvenido! Sesión iniciada con Google', 'success');
                     } catch (err) {
                         showToast(authErrorMessage(err), 'error');
@@ -664,7 +743,7 @@ async function signInWithGoogle(button) {
                                 try {
                                     const credential = firebase.auth.GoogleAuthProvider.credential(null, resp.access_token);
                                     const authResult = await auth.signInWithCredential(credential);
-                                    await ensureAuthenticatedUserDocument(authResult.user);
+                                    await finishGoogleAuthentication(authResult, isRegistration);
                                     showToast('¡Bienvenido! Sesión iniciada con Google', 'success');
                                 } catch (err) {
                                     showToast(authErrorMessage(err), 'error');
@@ -708,7 +787,7 @@ async function signInWithGoogle(button) {
                     try {
                         const credential = firebase.auth.GoogleAuthProvider.credential(null, token);
                         const authResult = await auth.signInWithCredential(credential);
-                        await ensureAuthenticatedUserDocument(authResult.user);
+                        await finishGoogleAuthentication(authResult, isRegistration);
                         showToast('¡Bienvenido! Sesión iniciada con Google', 'success');
                     } catch (err) {
                         showToast(authErrorMessage(err), 'error');
@@ -833,6 +912,8 @@ if (incomeDateInput)  incomeDateInput.setAttribute('max', todayStr);
 if (expenseDateInput) expenseDateInput.setAttribute('max', todayStr);
 if (rangeStartInput)  rangeStartInput.setAttribute('max', todayStr);
 if (rangeEndInput)    rangeEndInput.setAttribute('max', todayStr);
+document.getElementById('expenses-range-start')?.setAttribute('max', todayStr);
+document.getElementById('expenses-range-end')?.setAttribute('max', todayStr);
 if (rangeStartInput && state.customRangeStart) rangeStartInput.value = state.customRangeStart;
 if (rangeEndInput   && state.customRangeEnd)   rangeEndInput.value   = state.customRangeEnd;
 
@@ -1553,7 +1634,7 @@ function renderWallets() {
     setAccountOptions('expense-account', document.getElementById('expense-account')?.value || '');
     setAccountOptions('transfer-from', state.selectedWalletId || '');
     setAccountOptions('transfer-to', '');
-    renderDailyExpenseView();
+    renderExpenseAnalysisView();
 }
 
 async function loadWallets({ force = false } = {}) {
@@ -1600,14 +1681,16 @@ async function loadWallets({ force = false } = {}) {
 
 function changeAppView(view) {
     const isWallets = view === 'wallets';
-    document.getElementById('home-view')?.classList.toggle('hidden', isWallets);
+    const isExpenses = view === 'expenses';
+    document.getElementById('home-view')?.classList.toggle('hidden', isWallets || isExpenses);
     document.getElementById('wallets-view')?.classList.toggle('hidden', !isWallets);
+    document.getElementById('expenses-view')?.classList.toggle('hidden', !isExpenses);
     document.querySelectorAll('.app-nav-link[data-view]').forEach(button => {
         const active = button.dataset.view === view;
         button.classList.toggle('active', active);
         button.toggleAttribute('aria-current', active);
     });
-    replayInterfaceMotion(document.getElementById(isWallets ? 'wallets-view' : 'home-view'));
+    replayInterfaceMotion(document.getElementById(isWallets ? 'wallets-view' : (isExpenses ? 'expenses-view' : 'home-view')));
     if (isWallets) {
         const list = document.getElementById('wallets-list');
         if (!state.wallets.length && list) {
@@ -1615,13 +1698,20 @@ function changeAppView(view) {
         }
         loadWallets();
     }
+    if (isExpenses) {
+        syncExpensePeriodUi();
+        if (!state.wallets.length) loadWallets();
+        loadExpenseAnalysis();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function refreshFinancialViews() {
     const walletViewIsOpen = !document.getElementById('wallets-view')?.classList.contains('hidden');
+    const expenseViewIsOpen = !document.getElementById('expenses-view')?.classList.contains('hidden');
     const tasks = [loadData({ force: true })];
-    if (walletViewIsOpen) tasks.push(loadWallets({ force: true }));
+    if (walletViewIsOpen || expenseViewIsOpen) tasks.push(loadWallets({ force: true }));
+    if (expenseViewIsOpen) tasks.push(loadExpenseAnalysis({ force: true }));
     await Promise.all(tasks);
 }
 
@@ -1685,18 +1775,44 @@ document.getElementById('search-input')?.addEventListener('input', () => {
 document.getElementById('category-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
 document.getElementById('status-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
 
-document.getElementById('daily-entity-options')?.addEventListener('change', () => {
-    state.dailyEntityIds = [...document.querySelectorAll('input[name="daily-entity"]:checked')]
-        .map(input => input.value);
-    renderDailyExpenseView();
+document.getElementById('expense-entity-list')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-expense-entity-id]');
+    if (!button) return;
+    const id = button.dataset.expenseEntityId;
+    const available = [...document.querySelectorAll('[data-expense-entity-id]')].map(item => item.dataset.expenseEntityId);
+    const current = state.expenseEntityIds === null ? new Set(available) : new Set(state.expenseEntityIds);
+    current.has(id) ? current.delete(id) : current.add(id);
+    state.expenseEntityIds = current.size === available.length ? null : [...current];
+    renderExpenseAnalysisView();
 });
 
-document.getElementById('daily-entity-filter')?.addEventListener('click', event => {
-    const action = event.target.closest('[data-daily-entities]')?.dataset.dailyEntities;
-    if (!action) return;
-    event.preventDefault();
-    state.dailyEntityIds = action === 'all' ? null : [];
-    renderDailyExpenseView();
+document.getElementById('btn-expenses-select-all')?.addEventListener('click', () => {
+    state.expenseEntityIds = null;
+    renderExpenseAnalysisView();
+});
+
+document.querySelectorAll('.expense-period').forEach(button => button.addEventListener('click', () => {
+    state.expenseFilter = button.dataset.expenseFilter;
+    syncExpensePeriodUi();
+    if (state.expenseFilter === 'custom') {
+        document.getElementById('expenses-range-start')?.focus();
+        return;
+    }
+    state.expenseEntityIds = null;
+    loadExpenseAnalysis();
+}));
+
+document.getElementById('btn-apply-expenses-range')?.addEventListener('click', () => {
+    const start = document.getElementById('expenses-range-start')?.value || '';
+    const end = document.getElementById('expenses-range-end')?.value || '';
+    if (!start || !end) { showToast('Define fecha inicio y fin', 'error'); return; }
+    if (start > end) { showToast('La fecha inicio no puede ser mayor que la fin', 'error'); return; }
+    state.expenseRangeStart = start;
+    state.expenseRangeEnd = end;
+    state.expenseFilter = 'custom';
+    state.expenseEntityIds = null;
+    syncExpensePeriodUi();
+    loadExpenseAnalysis();
 });
 
 // ──────────────────────────────────────────────
@@ -1759,11 +1875,46 @@ document.getElementById('btn-open-delete-data')?.addEventListener('click', () =>
 document.getElementById('btn-cancel-delete')?.addEventListener('click', () => {
     closeModal('modal-confirm-delete');
 });
+document.getElementById('btn-export-all-data')?.addEventListener('click', async () => {
+    if (!state.currentUser) return;
+    const button = document.getElementById('btn-export-all-data');
+    const original = button?.textContent;
+    if (button) { button.disabled = true; button.textContent = 'Preparando copia...'; }
+    try {
+        const archive = await dbService.exportAllUserData(state.currentUser.uid);
+        const blob = new window.Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url; link.download = `konteo05-datos-${todayString()}.json`;
+        document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+        showToast('Tu copia de datos se descargó.', 'success');
+    } catch (error) {
+        showToast(`No se pudo exportar: ${error.message}`, 'error');
+    } finally {
+        if (button) { button.disabled = false; button.textContent = original; }
+    }
+});
 document.getElementById('delete-confirm-input')?.addEventListener('input', e => {
     const val = (e.target.value || '').trim().toUpperCase();
     const btn = document.getElementById('btn-confirm-delete-all');
     if (btn) btn.disabled = val !== 'BORRAR';
 });
+async function reauthenticateForAccountDeletion(user) {
+    const providerId = user.providerData?.[0]?.providerId || '';
+    if (providerId === 'password') {
+        const password = window.prompt('Por seguridad, escribe tu contraseña para eliminar la cuenta.');
+        if (!password) throw new Error('Se canceló la confirmación de seguridad.');
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, password);
+        await user.reauthenticateWithCredential(credential);
+        return;
+    }
+    if (providerId === 'google.com') {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await user.reauthenticateWithPopup(provider);
+        return;
+    }
+    throw new Error('Vuelve a iniciar sesión recientemente antes de eliminar la cuenta.');
+}
 document.getElementById('btn-confirm-delete-all')?.addEventListener('click', async () => {
     if (!state.currentUser) return;
     const submitBtn = document.getElementById('btn-confirm-delete-all');
@@ -1771,14 +1922,17 @@ document.getElementById('btn-confirm-delete-all')?.addEventListener('click', asy
     submitBtn.disabled = true;
     submitBtn.textContent = 'Eliminando...';
     try {
+        await reauthenticateForAccountDeletion(state.currentUser);
+        revokeGmailToken();
         await dbService.deleteAllUserData(state.currentUser.uid);
         // Limpiar el caché local de IDs de Gmail para que el usuario pueda reimportar sin ver "sin movimientos nuevos"
         clearGmailImportCache();
         closeModal('modal-confirm-delete');
-        showToast('Todos los datos fueron eliminados. Ya puedes reimportar tus movimientos desde Gmail.', 'success');
-        await loadData();
+        await state.currentUser.delete();
+        showToast('Cuenta y datos eliminados definitivamente.', 'success');
+        await auth.signOut();
     } catch (err) {
-        showToast('Error al eliminar datos: ' + err.message, 'error');
+        showToast('Error al eliminar la cuenta: ' + err.message, 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = origText;

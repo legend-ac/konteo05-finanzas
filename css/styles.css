@@ -248,6 +248,7 @@ input,select,textarea,button { font-family: inherit; font-size: inherit; color: 
 .login-logo h1 { font-size: 20px; font-weight: 700; letter-spacing: -.04em; }
 .login-logo .subtitle { font-size: 13px; color: var(--text-2); margin-top: 3px; }
 .login-box form { display: flex; flex-direction: column; gap: 10px; }
+.auth-legal-consent { display:flex; align-items:flex-start; gap:8px; margin:4px 0 2px; color:var(--text-2); font-size:11px; line-height:1.45; text-align:left; cursor:pointer; }.auth-legal-consent input { width:15px !important; height:15px !important; min-height:15px; margin:1px 0 0; accent-color:var(--gold); }.auth-legal-consent a { color:var(--gold); }
 .login-box input {
     width: 100%; height: 46px; padding: 0 16px;
     background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-sm);
@@ -2986,7 +2987,7 @@ body { background: var(--bg); }
 }
 
 @media (max-width: 767px) {
-    .mobile-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mobile-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     #profile-btn { width: 34px; padding: 0; justify-content: center; }
     #profile-btn .profile-btn-label { display: none; }
     .wallet-total-card { min-height: 104px; }
