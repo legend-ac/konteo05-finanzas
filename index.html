@@ -409,6 +409,29 @@
                 <!-- RIGHT: Plan + Charts -->
                 <aside class="dashboard-support">
 
+                    <section class="daily-spend-section" aria-labelledby="daily-spend-title">
+                        <div class="daily-spend-heading">
+                            <div>
+                                <p class="plan-eyebrow">Control diario</p>
+                                <h2 class="insights-h2" id="daily-spend-title">Gasto exacto por d&iacute;a</h2>
+                            </div>
+                            <strong id="daily-spend-total" aria-live="polite">S/ 0.00</strong>
+                        </div>
+                        <p class="daily-spend-intro">Solo suma gastos confirmados. Transferencias, anulados y pendientes no se incluyen.</p>
+                        <details class="daily-entity-filter" id="daily-entity-filter">
+                            <summary>Entidades: <span id="daily-entity-summary">Todas las entidades</span></summary>
+                            <div class="daily-entity-menu">
+                                <div class="daily-entity-actions">
+                                    <button type="button" data-daily-entities="all">Todas</button>
+                                    <button type="button" data-daily-entities="none">Ninguna</button>
+                                </div>
+                                <div id="daily-entity-options" class="daily-entity-options" role="group" aria-label="Entidades para el gasto diario"></div>
+                            </div>
+                        </details>
+                        <p class="daily-spend-current">Mostrando: <strong id="daily-spend-selection">Todas las entidades</strong></p>
+                        <div id="daily-spend-list" class="daily-spend-list" aria-live="polite"></div>
+                    </section>
+
                     <section class="insights-section" aria-labelledby="insights-title">
                         <div class="insights-heading">
                             <div>

@@ -7,6 +7,9 @@ export const state = {
     currentLoadToken: 0,
     dashboardData: null,
     wallets: [],
+    walletEntities: [],
+    // null means every entity is included; an array is an explicit selection.
+    dailyEntityIds: null,
     selectedWalletId: null,
     isOnline: navigator.onLine,
     currentSort: localStorage.getItem('konteo.sort') || 'date_desc',

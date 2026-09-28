@@ -14,6 +14,7 @@ import { renderTransactionList }  from './ui/render.js';
 import { accountGuide, initContextGuides, updateContextGuide } from './ui/guides.js';
 import { renderCharts }           from './ui/charts.js';
 import { updateStrategyPanel, loadPlanConfigToUi, savePlanConfigFromUi } from './ui/insights.js';
+import { renderDailySpending, UNASSIGNED_ENTITY_ID } from './ui/dailySpending.js';
 import * as dbService             from './services/dbService.js';
 import { isActiveWallet, walletNeedsReview, walletSuggestions, resolveWalletAccount } from './services/walletPolicy.js';
 import { isPosted, sumAmounts, summarizeCashflow } from './services/financialMath.js';
@@ -144,6 +145,19 @@ function updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems, star
     setMetric('metric-savings', savingsRate === null ? '—' : `${savingsRate}%`);
     setMetric('metric-daily-spend', totalExpenses > 0 ? `S/ ${fmt(totalExpenses / elapsedDays)}` : '—');
     setMetric('metric-top-category', top?.[1] > 0 ? categoryLabels[top[0]] : '—');
+}
+
+function dailyEntityIdFor(item) {
+    return resolveWalletAccount(item, state.wallets, state.walletEntities) || UNASSIGNED_ENTITY_ID;
+}
+
+function renderDailyExpenseView() {
+    renderDailySpending({
+        wallets: state.wallets,
+        expenses: state.dashboardData?.expenseItems || [],
+        selectedEntityIds: state.dailyEntityIds,
+        resolveEntityId: dailyEntityIdFor
+    });
 }
 
 function renderTransactionLedger(incomeItems, expenseItems) {
@@ -368,6 +382,7 @@ async function loadData({ force = false } = {}) {
         document.getElementById('total-expenses') .textContent = `S/ ${fmt(totalExpenses)}`;
         updatePeriodLabel();
         updateDashboardMetrics({ totalIncome, totalExpenses, expenseItems: realExpenseItems, startDate, endDate });
+        renderDailyExpenseView();
 
         // Cargar configuración del plan antes de renderizar gráficas
         if (plan) {
@@ -1538,6 +1553,7 @@ function renderWallets() {
     setAccountOptions('expense-account', document.getElementById('expense-account')?.value || '');
     setAccountOptions('transfer-from', state.selectedWalletId || '');
     setAccountOptions('transfer-to', '');
+    renderDailyExpenseView();
 }
 
 async function loadWallets({ force = false } = {}) {
@@ -1557,6 +1573,7 @@ async function loadWallets({ force = false } = {}) {
         if (state.currentUser?.uid !== uid || token !== walletLoadToken) return;
         const entities = profile?.gmailImport?.customEntities || [];
         state.wallets = wallets;
+        state.walletEntities = entities;
         walletCache = { uid, loadedAt: Date.now() };
         suggestedWallets = walletSuggestions(wallets, transactions, entities);
         walletTransactions = transactions.map(item => ({
@@ -1667,6 +1684,20 @@ document.getElementById('search-input')?.addEventListener('input', () => {
 });
 document.getElementById('category-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
 document.getElementById('status-filter')?.addEventListener('change', renderTransactionLedgerFromCache);
+
+document.getElementById('daily-entity-options')?.addEventListener('change', () => {
+    state.dailyEntityIds = [...document.querySelectorAll('input[name="daily-entity"]:checked')]
+        .map(input => input.value);
+    renderDailyExpenseView();
+});
+
+document.getElementById('daily-entity-filter')?.addEventListener('click', event => {
+    const action = event.target.closest('[data-daily-entities]')?.dataset.dailyEntities;
+    if (!action) return;
+    event.preventDefault();
+    state.dailyEntityIds = action === 'all' ? null : [];
+    renderDailyExpenseView();
+});
 
 // ──────────────────────────────────────────────
 // PLAN

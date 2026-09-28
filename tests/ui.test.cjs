@@ -114,3 +114,22 @@ test('mascot scenes preserve artwork and have distinct task cues, not interactiv
     assert.match(scenes[2].children[1].innerHTML, /mascot-scan/);
     assert.match(scenes[3].children[1].innerHTML, /mascot-tick/);
 });
+
+test('daily spending groups only posted purchases by business day and selected entity', async () => {
+    const { buildDailySpendGroups, entitySelectionText } = await renderer('dailySpending.js');
+    const expenses = [
+        { id: 'a', type: 'expense', amount: 10.10, operationDate: '2026-09-27', accountId: 'bcp' },
+        { id: 'b', type: 'expense', amount: 4.25, operationDate: '2026-09-27', accountId: 'bbva' },
+        { id: 'c', type: 'expense', amount: 8, operationDate: '2026-09-26', accountId: 'bcp' },
+        { id: 'pending', type: 'expense', amount: 99, operationDate: '2026-09-27', accountId: 'bcp', status: 'pending' },
+        { id: 'transfer', type: 'expense', amount: 50, operationDate: '2026-09-27', accountId: 'bcp', transferId: 't-1' }
+    ];
+    const all = buildDailySpendGroups(expenses);
+    assert.equal(JSON.stringify(all.map(day => [day.date, day.total, day.items.length])), JSON.stringify([
+        ['2026-09-27', 14.35, 2], ['2026-09-26', 8, 1]
+    ]));
+    const bcp = buildDailySpendGroups(expenses, ['bcp']);
+    assert.equal(JSON.stringify(bcp.map(day => [day.date, day.total])), JSON.stringify([['2026-09-27', 10.1], ['2026-09-26', 8]]));
+    assert.equal(entitySelectionText([{ id: 'bcp', name: 'Cuenta BCP' }], ['bcp']), 'Cuenta BCP');
+    assert.equal(entitySelectionText([], []), 'Ninguna entidad');
+});
