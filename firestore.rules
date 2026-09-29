@@ -64,7 +64,7 @@ service cloud.firestore {
     }
 
     function isValidPlanData() {
-      return request.resource.data.keys().hasOnly(['incomeTarget', 'expenseLimit', 'updatedAt']) &&
+      return request.resource.data.keys().hasOnly(['incomeTarget', 'expenseLimit', 'savingsGoal', 'updatedAt']) &&
         (!('incomeTarget' in request.resource.data) || (
           request.resource.data.incomeTarget is number &&
           request.resource.data.incomeTarget >= 0 &&
@@ -74,6 +74,11 @@ service cloud.firestore {
           request.resource.data.expenseLimit is number &&
           request.resource.data.expenseLimit >= 0 &&
           request.resource.data.expenseLimit <= 999999999
+        )) &&
+        (!('savingsGoal' in request.resource.data) || (
+          request.resource.data.savingsGoal is number &&
+          request.resource.data.savingsGoal >= 0 &&
+          request.resource.data.savingsGoal <= 999999999
         ));
     }
 

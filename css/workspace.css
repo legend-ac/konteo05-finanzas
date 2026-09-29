@@ -37,8 +37,7 @@
 #home-page, #dashboard-page { background: var(--bg); }
 #dashboard-page > header, .desktop-nav { background: var(--bg); }
 .header-actions { gap: 6px; }
-#dashboard-page .header-actions > button,
-#dashboard-page #btn-gmail-import.gmail-connected {
+#dashboard-page .header-actions > button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -50,8 +49,6 @@
     background: transparent;
     box-shadow: none;
 }
-#dashboard-page #btn-gmail-import { border-color: var(--line); }
-#dashboard-page #btn-gmail-import.gmail-connected { border-color: var(--line); }
 #dashboard-page .header-actions > button:hover { color: var(--text); background: var(--bg-3); }
 #dashboard-page #theme-toggle-btn { width: 40px; padding: 0; }
 #dashboard-page #logout-btn { color: var(--text-2) !important; border-color: transparent !important; }
@@ -352,8 +349,6 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
     #dashboard-page > header { padding-inline: 12px; }
     #dashboard-page .header-actions { gap: 2px; }
     #dashboard-page .header-actions #logout-btn { display: none; }
-    #dashboard-page #btn-gmail-import { width: auto; padding-inline: 9px; font-size: 12px; }
-    #dashboard-page #btn-gmail-import span { display: inline; }
     #dashboard-page #profile-btn { padding-inline: 10px; }
     .dashboard-shell, .wallets-shell { width: 100%; margin: 0; padding: 22px 14px 88px; }
     .dashboard-title-row { align-items: stretch; gap: 16px; }
@@ -575,4 +570,94 @@ button:focus-visible, summary:focus-visible, a:focus-visible {
 }
 @media (prefers-reduced-motion: reduce) {
     .mascot-scene *, .companion-help[open] > p { animation: none !important; transition: none !important; }
+}
+
+/* Information architecture pass: controls are available when needed, not
+   permanently competing with financial information. */
+.period-picker {
+    position: relative;
+    display: inline-block;
+    min-width: 146px;
+}
+.period-picker > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 38px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    color: var(--text-2);
+    background: var(--bg-2);
+    font-size: 12px;
+    cursor: pointer;
+    list-style: none;
+}
+.period-picker > summary::-webkit-details-marker { display: none; }
+.period-picker > summary::after { content: '⌄'; margin-left: 10px; color: var(--text-3); font-size: 15px; }
+.period-picker > summary strong { color: var(--text); font-size: 12px; font-weight: 700; }
+.period-picker[open] > summary { border-color: var(--gold); color: var(--text); }
+.period-picker[open] > summary::after { transform: rotate(180deg); }
+.dashboard-title-right .period-picker .period-bar { margin-top: 8px; }
+.expenses-period-picker { display: block; width: 154px; margin-left: auto; }
+.expenses-period-picker .period-bar { margin-top: 8px; }
+.expenses-period-picker .expenses-range-panel { width: 330px; margin-left: auto; }
+
+/* Activity reuses the proven ledger instead of rendering a second history
+   with a competing data model. */
+#home-view.activity-mode .dashboard-overview,
+#home-view.activity-mode .metrics-strip,
+#home-view.activity-mode .dashboard-support { display: none; }
+#home-view.activity-mode .dashboard-grid { grid-template-columns: minmax(0, 1fr); margin-top: 0; }
+#home-view.activity-mode .ledger-card { max-width: none; }
+#home-view.activity-mode .ledger-title h2::after { content: ' del período'; }
+
+/* Configuration is organised by intent: personal details, import, security
+   and privacy are not a single undifferentiated profile form. */
+#form-profile .profile-settings-section,
+#form-profile .profile-privacy-section { grid-column: 1 / -1; }
+.profile-settings-section,
+.profile-privacy-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 6px;
+    padding: 14px 15px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--bg-3);
+}
+.profile-personal-section { margin-top: 0; padding: 0 0 10px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+.profile-settings-section h4,
+.profile-privacy-section h4 { margin: 3px 0 4px; color: var(--text); font-size: 14px; }
+.profile-settings-section p,
+.profile-privacy-section p { max-width: 390px; margin: 0; color: var(--text-3); font-size: 12px; line-height: 1.45; }
+.profile-settings-section > .cancel { flex: 0 0 auto; min-height: 36px; white-space: nowrap; }
+.profile-privacy-section { align-items: flex-start; border-color: rgba(239, 68, 68, .28); background: rgba(239, 68, 68, .045); }
+.profile-privacy-section .danger-kicker { color: var(--expense); }
+.profile-privacy-section .profile-danger-actions { margin-top: 3px; }
+
+.quick-add-modal { width: min(420px, calc(100vw - 40px)); text-align: left; }
+.quick-add-modal > p { margin: 7px 0 18px; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.quick-add-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.quick-add-actions button { min-height: 50px; border-radius: 10px; font-weight: 750; cursor: pointer; }
+.quick-add-income { border: 1px solid color-mix(in srgb, var(--income) 55%, var(--line)); color: var(--income); background: var(--income-dim); }
+.quick-add-expense { border: 1px solid color-mix(in srgb, var(--expense) 55%, var(--line)); color: var(--expense); background: var(--expense-dim); }
+.quick-add-cancel { display: block; width: 100%; margin-top: 10px; }
+.desktop-nav .nav-create { color: #241b08; background: var(--gold); border-color: var(--gold); }
+.desktop-nav .nav-create:hover { color: #241b08; background: color-mix(in srgb, var(--gold) 86%, white); }
+
+@media (max-width: 767px) {
+    .mobile-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .mobile-nav .app-nav-link { min-width: 0; padding-inline: 2px; }
+    .mobile-nav .app-nav-link small { font-size: 9px; }
+    .mobile-nav .nav-create { color: #241b08; background: var(--gold); border-radius: 10px 10px 0 0; }
+    .mobile-nav .nav-create > span { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; background: rgba(36, 27, 8, .11); }
+    .expenses-period-picker { width: 100%; margin-left: 0; }
+    .expenses-period-picker .expenses-range-panel { width: 100%; margin-left: 0; }
+    .profile-settings-section,
+    .profile-privacy-section { align-items: flex-start; flex-direction: column; }
+    .profile-settings-section > .cancel { width: 100%; }
+    .quick-add-actions { grid-template-columns: 1fr; }
 }

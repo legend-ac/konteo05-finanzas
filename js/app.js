@@ -4,7 +4,7 @@ import { auth, db, firebase } from './firebase/config.js';
 import { state, persistUiState }  from './state.js';
 import {
     showPage, fmt, normalizeText, normalizeNote,
-    todayString, sortTransactions, calculateProfileCompletion, toggleCustomRangePanel,
+    todayString, sortTransactions, toggleCustomRangePanel,
     startOfBusinessDate, endOfBusinessDate, businessDateToDate, businessDateString, transactionBusinessDate,
     formatBusinessDate, formatBusinessDateTime, BUSINESS_TIME_ZONE
 } from './ui/helpers.js';
@@ -98,7 +98,7 @@ function initInterfaceMotion() {
 // workspace separately for each signed-in user so a reload never resets the
 // person to Inicio. This stores only a view name and scroll position locally.
 const WORKSPACE_STORAGE_PREFIX = 'konteo.workspace.';
-const WORKSPACE_VIEWS = new Set(['home', 'wallets', 'sources', 'expenses']);
+const WORKSPACE_VIEWS = new Set(['home', 'wallets', 'activity', 'sources', 'expenses']);
 let workspaceScrollTimer = null;
 let workspaceRestoreInProgress = false;
 
@@ -110,6 +110,7 @@ function currentWorkspaceView() {
     if (!document.getElementById('expenses-view')?.classList.contains('hidden')) return 'expenses';
     if (!document.getElementById('sources-view')?.classList.contains('hidden')) return 'sources';
     if (!document.getElementById('wallets-view')?.classList.contains('hidden')) return 'wallets';
+    if (document.getElementById('home-view')?.classList.contains('activity-mode')) return 'activity';
     return 'home';
 }
 
@@ -185,10 +186,14 @@ const PERIOD_LABELS = {
 
 function updatePeriodLabel() {
     const el = document.getElementById('balance-period-label');
-    if (!el) return;
     const isToday = state.currentFilter === 'today';
-    el.textContent = PERIOD_LABELS[state.currentFilter] || 'Balance';
-    el.classList.toggle('period-label-today', isToday);
+    const label = PERIOD_LABELS[state.currentFilter] || 'Balance';
+    if (el) {
+        el.textContent = label;
+        el.classList.toggle('period-label-today', isToday);
+    }
+    const trigger = document.getElementById('dashboard-period-trigger');
+    if (trigger) trigger.textContent = label;
 }
 
 function updateDashboardTime() {
@@ -275,6 +280,8 @@ function syncExpensePeriodUi() {
         button.setAttribute('aria-pressed', String(active));
     });
     document.getElementById('expenses-range-panel')?.classList.toggle('hidden', state.expenseFilter !== 'custom');
+    const trigger = document.getElementById('expenses-period-trigger');
+    if (trigger) trigger.textContent = PERIOD_LABELS[state.expenseFilter] || 'Período';
 }
 
 function syncExpenseMovementTypeUi() {
@@ -387,12 +394,11 @@ async function loadUserProfile(profile = null) {
             birthday:         data.birthday         || '',
             city:             data.city             || '',
             country:          data.country          || '',
-            occupation:       data.occupation       || '',
             currency:         data.currency         || 'PEN',
-            monthlyTarget:    Number(data.monthlyTarget || 0),
-            bio:              data.bio              || '',
             recoveryEmail:    data.recoveryEmail    || '',
-            emergencyContact: data.emergencyContact || ''
+            // Preserve an old profile-only goal until the person saves it in
+            // Presupuesto. It is no longer part of personal data.
+            legacyMonthlyTarget: Number(data.monthlyTarget || 0)
         };
         if (state.userProfile.name) {
             document.getElementById('user-name').textContent = state.userProfile.name;
@@ -404,20 +410,18 @@ async function loadUserProfile(profile = null) {
             'profile-birthday':         state.userProfile.birthday,
             'profile-city':             state.userProfile.city,
             'profile-country':          state.userProfile.country,
-            'profile-occupation':       state.userProfile.occupation,
-            'profile-currency':         state.userProfile.currency,
-            'profile-bio':              state.userProfile.bio,
-            'profile-recovery-email':   state.userProfile.recoveryEmail,
-            'profile-emergency-contact':state.userProfile.emergencyContact
+            'profile-currency':         state.userProfile.currency
         };
         for (const [id, val] of Object.entries(map)) {
             const el = document.getElementById(id);
             if (el) el.value = val;
         }
-        const tgt = document.getElementById('profile-monthly-target');
-        if (tgt) tgt.value = state.userProfile.monthlyTarget > 0 ? String(state.userProfile.monthlyTarget) : '';
-        const pct = document.getElementById('profile-completion');
-        if (pct) pct.textContent = `${calculateProfileCompletion(state.userProfile)}%`;
+        // Previous versions stored this goal in the profile. Surface it in
+        // Presupuesto once, without silently changing the person's data.
+        const savingsInput = document.getElementById('plan-savings-goal');
+        if (state.planConfig.savingsGoal <= 0 && state.userProfile.legacyMonthlyTarget > 0 && savingsInput && !savingsInput.value) {
+            savingsInput.value = String(state.userProfile.legacyMonthlyTarget);
+        }
     } catch {
         showToast('No se pudo cargar el perfil', 'error');
     }
@@ -434,12 +438,7 @@ async function saveUserProfile() {
         birthday:         document.getElementById('profile-birthday')?.value || '',
         city:             normalizeText(document.getElementById('profile-city')?.value || '', 50),
         country:          normalizeText(document.getElementById('profile-country')?.value || '', 50),
-        occupation:       normalizeText(document.getElementById('profile-occupation')?.value || '', 60),
-        currency:         document.getElementById('profile-currency')?.value || 'PEN',
-        monthlyTarget:    Math.max(0, Number(document.getElementById('profile-monthly-target')?.value || 0)),
-        bio:              normalizeText(document.getElementById('profile-bio')?.value || '', 240),
-        recoveryEmail:    normalizeText(document.getElementById('profile-recovery-email')?.value || '', 120),
-        emergencyContact: normalizeText(document.getElementById('profile-emergency-contact')?.value || '', 20)
+        currency:         document.getElementById('profile-currency')?.value || 'PEN'
     };
 
     await dbService.saveUserProfile(state.currentUser.uid, profileData);
@@ -448,8 +447,6 @@ async function saveUserProfile() {
     }
     state.userProfile = { ...state.userProfile, ...profileData };
     document.getElementById('user-name').textContent = name;
-    const pct = document.getElementById('profile-completion');
-    if (pct) pct.textContent = `${calculateProfileCompletion(state.userProfile)}%`;
     closeModal('modal-profile');
     showToast('Perfil actualizado', 'success');
 }
@@ -551,6 +548,7 @@ async function loadData({ force = false } = {}) {
         if (plan) {
             state.planConfig.incomeTarget = Number(plan.incomeTarget || 0);
             state.planConfig.expenseLimit = Number(plan.expenseLimit || 0);
+            state.planConfig.savingsGoal = Number(plan.savingsGoal || 0);
             loadPlanConfigToUi();
         }
 
@@ -651,8 +649,6 @@ async function ensureAuthenticatedUserDocument(user) {
             photoURL: user.photoURL || '',
             authProvider: user.providerData?.[0]?.providerId || 'password',
             currency: 'PEN',
-            monthlyTarget: 0,
-            bio: '',
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
@@ -772,7 +768,7 @@ document.getElementById('register-form').onsubmit = async e => {
         const safeName = name.replace(/<[^>]*>/g, '');
         await cred.user.updateProfile({ displayName: safeName });
         await db.collection('users').doc(cred.user.uid).set({
-            name: safeName, phone, birthday, currency: 'PEN', monthlyTarget: 0, bio: '',
+            name: safeName, phone, birthday, currency: 'PEN',
             legalAcceptance: { termsVersion: LEGAL_VERSION, privacyVersion: LEGAL_VERSION, acceptedAt: firebase.firestore.FieldValue.serverTimestamp() },
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
@@ -1028,8 +1024,10 @@ document.querySelectorAll('.filter').forEach(btn => {
         toggleCustomRangePanel(state.currentFilter);
         updatePeriodLabel();
         if (state.currentFilter === 'custom') {
+            document.getElementById('dashboard-period-picker').open = true;
             document.getElementById('range-start')?.focus();
         } else {
+            document.getElementById('dashboard-period-picker').open = false;
             loadData();
         }
     });
@@ -1067,6 +1065,7 @@ document.getElementById('btn-apply-range')?.addEventListener('click', () => {
         b.setAttribute('aria-pressed', String(active));
     });
     updatePeriodLabel();
+    document.getElementById('dashboard-period-picker').open = false;
     loadData();
 });
 
@@ -1149,7 +1148,7 @@ function openWalletModal(wallet = null) {
 
 function openTransferModal() {
     if (activeWallets().length < 2) {
-        showToast('Crea al menos dos billeteras activas para transferir', 'warn');
+        showToast('Crea al menos dos cuentas activas para registrar este movimiento', 'warn');
         return;
     }
     setAccountOptions('transfer-from', state.selectedWalletId || activeWallets()[0].id);
@@ -1167,17 +1166,8 @@ document.querySelectorAll('.app-nav-link').forEach(button => {
     button.addEventListener('click', () => {
         if (button.dataset.view) changeAppView(button.dataset.view);
         // Gmail: delegar al botón del header que ya tiene el listener de initGmailImport
-        if (button.dataset.action === 'gmail') openGmailImport(state.currentUser?.uid).catch(error => {
-            showToast(error.message || 'No se pudo abrir Gmail', 'error');
-        });
         // Perfil: llamar directamente al modal sin delegación indirecta
-        if (button.dataset.action === 'profile') openModal('modal-profile');
-    });
-});
-
-document.getElementById('btn-gmail-import')?.addEventListener('click', () => {
-    openGmailImport(state.currentUser?.uid).catch(error => {
-        showToast(error.message || 'No se pudo abrir Gmail', 'error');
+        if (button.dataset.action === 'quick-add') openModal('modal-quick-add');
     });
 });
 
@@ -1185,9 +1175,19 @@ document.getElementById('profile-btn')?.addEventListener('click', () => {
     openModal('modal-profile');
 });
 
-document.getElementById('btn-gmail-entities')?.addEventListener('click', () => {
+document.getElementById('btn-open-gmail-sources')?.addEventListener('click', () => {
     closeModal('modal-profile');
     changeAppView('sources');
+});
+
+document.getElementById('btn-quick-income')?.addEventListener('click', () => {
+    closeModal('modal-quick-add');
+    openIncomeModal();
+});
+
+document.getElementById('btn-quick-expense')?.addEventListener('click', () => {
+    closeModal('modal-quick-add');
+    openExpenseModal();
 });
 
 document.getElementById('btn-sources-open-import')?.addEventListener('click', () => {
@@ -1689,6 +1689,9 @@ function renderWalletChoices() {
     const archived = state.wallets.filter(w => w.active === false);
     panel.classList.toggle('hidden', !review.length && !suggestedWallets.length && !archived.length);
     if (!review.length && !suggestedWallets.length && !archived.length) return;
+    // Pending records need attention; suggestions and archived accounts stay
+    // out of the way until the person explicitly wants to review them.
+    panel.open = review.length > 0;
     const heading = document.createElement('summary');
     heading.textContent = review.length
         ? `Revisar cuentas pendientes (${review.length})`
@@ -1749,9 +1752,9 @@ function renderWalletChoices() {
     );
     appendGroup(`Cuentas sugeridas (${suggestedWallets.length})`, suggestedWallets.map(w => addRow(w.name,
         `${w.configured ? 'Entidad configurada' : 'Detectada en tus movimientos'} · ${w.count} movimientos sin asignar`,
-        [['Crear y vincular', 'add', w.sourceKey]])));
+        [['Crear y vincular', 'add', w.sourceKey]])), { collapsible: true });
     appendGroup(`Cuentas archivadas (${archived.length})`, archived.map(w => addRow(w.name,
-        'No se muestra ni afecta tus saldos.', [['Reactivar y editar', 'keep', w.id]])));
+        'No se muestra ni afecta tus saldos.', [['Reactivar y editar', 'keep', w.id]])), { collapsible: true });
 }
 
 document.getElementById('wallet-choices')?.addEventListener('click', async event => {
@@ -1852,8 +1855,10 @@ function changeAppView(view, { scroll = true, persist = true, load = true } = {}
     const isWallets = nextView === 'wallets';
     const isSources = nextView === 'sources';
     const isExpenses = nextView === 'expenses';
+    const isActivity = nextView === 'activity';
     state.workspaceView = nextView;
     document.getElementById('home-view')?.classList.toggle('hidden', isWallets || isSources || isExpenses);
+    document.getElementById('home-view')?.classList.toggle('activity-mode', isActivity);
     document.getElementById('wallets-view')?.classList.toggle('hidden', !isWallets);
     document.getElementById('sources-view')?.classList.toggle('hidden', !isSources);
     document.getElementById('expenses-view')?.classList.toggle('hidden', !isExpenses);
@@ -1862,6 +1867,10 @@ function changeAppView(view, { scroll = true, persist = true, load = true } = {}
         button.classList.toggle('active', active);
         button.toggleAttribute('aria-current', active);
     });
+    const dashboardTitle = document.getElementById('dashboard-title');
+    const dashboardGreeting = document.getElementById('dashboard-greeting');
+    if (dashboardTitle) dashboardTitle.textContent = isActivity ? 'Actividad' : 'Resumen financiero';
+    if (dashboardGreeting) dashboardGreeting.textContent = isActivity ? 'Historial de movimientos' : 'Control financiero';
     replayInterfaceMotion(document.getElementById(isWallets ? 'wallets-view' : (isSources ? 'sources-view' : (isExpenses ? 'expenses-view' : 'home-view'))));
     if (load && isWallets) {
         const list = document.getElementById('wallets-list');
@@ -1876,6 +1885,7 @@ function changeAppView(view, { scroll = true, persist = true, load = true } = {}
         if (!state.wallets.length) loadWallets();
         loadExpenseAnalysis();
     }
+    if (load && isActivity) loadData();
     if (load && isSources) {
         openGmailEntities(state.currentUser?.uid).catch(error => {
             const host = document.getElementById('gmail-sources-workspace');
@@ -2155,7 +2165,7 @@ async function refreshAfterFinancialDataClear(uid) {
     state.expenseData = null;
     state.expenseEntityIds = null;
     state.currentBudget = 0;
-    state.planConfig = { incomeTarget: 0, expenseLimit: 0 };
+    state.planConfig = { incomeTarget: 0, expenseLimit: 0, savingsGoal: 0 };
     await Promise.all([loadData({ force: true }), loadWallets({ force: true })]);
     if (state.workspaceView === 'expenses') await loadExpenseAnalysis({ force: true });
     if (state.workspaceView === 'sources') await openGmailEntities(uid);

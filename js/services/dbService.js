@@ -92,7 +92,8 @@ export async function getPlan(uid) {
     const planConfig = userData.planConfig || {};
     const value = {
         incomeTarget: Number(planConfig.incomeTarget || 0),
-        expenseLimit: Number(planConfig.expenseLimit || 0)
+        expenseLimit: Number(planConfig.expenseLimit || 0),
+        savingsGoal: Number(planConfig.savingsGoal || 0)
     };
     planCache.set(uid, { value, savedAt: Date.now() });
     return value;
@@ -114,7 +115,8 @@ export async function savePlan(uid, planData) {
         await db.collection('users').doc(uid).set({
             planConfig: {
                 incomeTarget: Number(planData.incomeTarget || 0),
-                expenseLimit: Number(planData.expenseLimit || 0)
+                expenseLimit: Number(planData.expenseLimit || 0),
+                savingsGoal: Number(planData.savingsGoal || 0)
             },
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });

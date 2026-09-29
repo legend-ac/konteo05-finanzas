@@ -24,12 +24,12 @@ export const state = {
     customRangeEnd: localStorage.getItem('konteo.range.end') || '',
     planConfig: {
         incomeTarget: 0,
-        expenseLimit: 0
+        expenseLimit: 0,
+        savingsGoal: 0
     },
     userProfile: {
         name: '', phone: '', birthday: '', city: '', country: '',
-        occupation: '', currency: 'PEN', monthlyTarget: 0,
-        bio: '', recoveryEmail: '', emergencyContact: ''
+        currency: 'PEN', recoveryEmail: '', legacyMonthlyTarget: 0
     }
 };
 

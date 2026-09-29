@@ -51,17 +51,17 @@ export function updateStrategyPanel({ totalExpenses }) {
 }
 
 export function loadPlanConfigToUi() {
-    const income = document.getElementById('plan-income-target');
+    const savings = document.getElementById('plan-savings-goal');
     const expense = document.getElementById('plan-expense-limit');
-    if (income) income.value = state.planConfig.incomeTarget > 0 ? String(state.planConfig.incomeTarget) : '';
+    if (savings) savings.value = state.planConfig.savingsGoal > 0 ? String(state.planConfig.savingsGoal) : '';
     if (expense) expense.value = state.planConfig.expenseLimit > 0 ? String(state.planConfig.expenseLimit) : '';
 }
 
 export async function savePlanConfigFromUi() {
-    const incomeTarget = Number(document.getElementById('plan-income-target')?.value || 0);
+    const savingsGoal = Number(document.getElementById('plan-savings-goal')?.value || 0);
     const expenseLimit = Number(document.getElementById('plan-expense-limit')?.value || 0);
 
-    if (incomeTarget < 0 || expenseLimit < 0) {
+    if (savingsGoal < 0 || expenseLimit < 0) {
         showToast('Los objetivos no pueden ser negativos', 'error');
         return false;
     }
@@ -70,12 +70,16 @@ export async function savePlanConfigFromUi() {
         return false;
     }
 
-    state.planConfig.incomeTarget = incomeTarget;
+    state.planConfig.savingsGoal = savingsGoal;
     state.planConfig.expenseLimit = expenseLimit;
 
     try {
-        await dbService.savePlan(state.currentUser.uid, { incomeTarget, expenseLimit });
-        showToast('Plan guardado', 'success');
+        await dbService.savePlan(state.currentUser.uid, {
+            incomeTarget: state.planConfig.incomeTarget || 0,
+            expenseLimit,
+            savingsGoal
+        });
+        showToast('Presupuesto y meta guardados', 'success');
         return true;
     } catch (err) {
         showToast('Error guardando plan: ' + err.message, 'error');

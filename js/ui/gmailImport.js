@@ -94,7 +94,6 @@ async function disconnectGmail() {
     importedGmailIds.clear();
     try { sessionStorage.removeItem(`konteo_gmail_${currentUid}`); } catch {}
     try { sessionStorage.removeItem('konteo_gmail_imported'); } catch {}
-    renderHeaderBadge(null);
 }
 
 // ─────────────────────────────────────────────
@@ -112,33 +111,6 @@ function persistImportedId(id) {
     try {
         sessionStorage.setItem(`konteo_gmail_${currentUid}`, JSON.stringify([...importedGmailIds]));
     } catch {}
-}
-
-// ─────────────────────────────────────────────
-// HEADER BADGE
-// ─────────────────────────────────────────────
-function renderHeaderBadge(email) {
-    const btn = document.getElementById('btn-gmail-import');
-    if (!btn) return;
-    if (email) {
-        btn.classList.add('gmail-connected');
-        btn.title = `Gmail conectado: ${email}`;
-        btn.setAttribute('aria-label', 'Importar desde Gmail, cuenta conectada');
-        btn.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-            </svg>
-            <span>Importar</span>`;
-    } else {
-        btn.classList.remove('gmail-connected');
-        btn.title = 'Conectar Gmail para revisar movimientos';
-        btn.setAttribute('aria-label', 'Importar desde Gmail');
-        btn.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-            </svg>
-            <span>Importar</span>`;
-    }
 }
 
 // ─────────────────────────────────────────────
@@ -796,7 +768,6 @@ function bindSourcesWorkspace(host) {
                 await requestGmailToken();
                 const email = getConnectedEmail();
                 await saveGmailPref({ enabled: true, email });
-                renderHeaderBadge(email);
                 renderSourcesWorkspace();
                 sourceWorkspaceFeedback('Gmail conectado. Ya puedes revisar operaciones.', 'success');
                 return;
@@ -909,7 +880,6 @@ async function connectAndSearch(daysBack) {
         await requestGmailToken();
         const connectedEmail = getConnectedEmail();
         await saveGmailPref({ enabled: true, email: connectedEmail });
-        renderHeaderBadge(connectedEmail);
         await doSearch(daysBack);
     } catch (err) {
         handleError(err);
@@ -1330,7 +1300,6 @@ export async function initGmailImport(uid) {
     walletOptions = await getWallets(uid).catch(() => []);
     buildModal();
     wireListeners(pref);
-    renderHeaderBadge(pref?.enabled ? pref.email : null);
     renderSourcesWorkspace();
     initGmailService().catch(() => {});
     initializedUid = uid;
@@ -1363,7 +1332,6 @@ export async function openGmailEntities(uid) {
     if (!uid || currentUid !== uid) return;
     await getGmailPref();
     walletOptions = await getWallets(uid).catch(() => walletOptions);
-    renderHeaderBadge(gmailPreference?.enabled ? gmailPreference.email : null);
     renderSourcesWorkspace();
 }
 
